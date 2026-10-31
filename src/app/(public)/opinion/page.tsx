@@ -1,0 +1,106 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
+import { Quote } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "মতামত ও সম্পাদকীয় | বাংলা নিউজ",
+  description: "বিশিষ্ট চিন্তাবিদ, শিক্ষাবিদ ও অর্থনীতিবিদদের কলাম ও সম্পাদকীয় বিশ্লেষণ।",
+};
+
+const OPINIONS = [
+  {
+    id: "op-1",
+    columnistName: "ড. কামাল উদ্দিন",
+    columnistDesignation: "অর্থনীতিবিদ ও গবেষক",
+    columnistImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&h=200&q=80",
+    articleTitle: "অর্থনৈতিক পুনর্গঠনে প্রাতিষ্ঠানিক জবাবদিহিতার গুরুত্ব",
+    excerpt: "মুদ্রাস্ফীতি নিয়ন্ত্রণ ও রাজস্ব নীতিতে শৃঙ্খলা ফেরাতে স্বচ্ছতা অপরিহার্য। প্রতিটি ক্ষেত্রে সুশাসনই আমাদের আগামী দিনের মূল রক্ষাকবচ।",
+    slug: "economic-stability-ten-point-roadmap",
+  },
+  {
+    id: "op-2",
+    columnistName: "সুলতানা রহমান",
+    columnistDesignation: "আইনজীবী ও মানবাধিকারকর্মী",
+    columnistImage: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&h=200&q=80",
+    articleTitle: "বিচার বিভাগের স্বাধীনতা ও নাগরিক অধিকার নিশ্চিতকরণ",
+    excerpt: "আইনের শাসন প্রতিষ্ঠা এবং প্রতিটি নাগরিকের ন্যায়বিচার পাওয়ার অধিকারকে মৌলিক প্রাতিষ্ঠানিক কাঠামোর আওতায় সুরক্ষিত করতে হবে।",
+    slug: "judicial-independence-civil-rights",
+  },
+  {
+    id: "op-3",
+    columnistName: "প্রফেসর রফিকুল আলম",
+    columnistDesignation: "শিক্ষাবিদ",
+    columnistImage: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&h=200&q=80",
+    articleTitle: "শিক্ষাব্যবস্থার আধুনিকায়ন ও চতুর্থ শিল্প বিপ্লবের প্রস্তুতি",
+    excerpt: "মুখস্থ বিদ্যার পরিবর্তে ব্যবহারিক ও প্রযুক্তিগত দক্ষতার সমন্বয় না ঘটালে আন্তর্জাতিক শ্রমবাজারে আমাদের তরুণ প্রজন্ম পিছিয়ে পড়বে।",
+    slug: "modernizing-education-fourth-industrial-revolution",
+  },
+  {
+    id: "op-4",
+    columnistName: "তানজিলা আনজুম",
+    columnistDesignation: "পরিবেশ গবেষক",
+    columnistImage: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&h=200&q=80",
+    articleTitle: "নদী দখল ও দূষণমুক্ত করতে সমন্বিত জাতীয় উদ্যোগ জরুরি",
+    excerpt: "আমাদের নদীগুলো হারিয়ে গেলে ভূগর্ভস্থ পানির স্তর বিপর্যয়ের মুখে পড়বে। নদীর প্রবাহ স্বাভাবিক রাখা পরিবেশের অগ্রাধিকার হওয়া উচিত।",
+    slug: "river-protection-pollution-control-national-initiative",
+  },
+];
+
+export default function OpinionPage() {
+  return (
+    <div className="max-w-[1200px] mx-auto px-4 py-6">
+      <div className="border-b-2 border-[var(--color-primary)] pb-3 mb-6 flex items-center justify-between">
+        <h1 className="bengali-headline text-2xl md:text-3xl font-extrabold text-[var(--color-text)] flex items-center gap-2">
+          <Quote size={28} className="text-[var(--color-primary)]" />
+          মতামত ও সম্পাদকীয়
+        </h1>
+        <Link href="/" className="text-xs font-semibold text-[var(--color-primary)] hover:underline">
+          &larr; প্রচ্ছদে ফিরুন
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {OPINIONS.map((item) => (
+          <Link
+            key={item.id}
+            href={`/news/${item.slug}`}
+            className="group block border border-[var(--color-border)] p-6 bg-[var(--color-bg)] hover:border-[var(--color-primary)] transition-colors"
+          >
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative w-14 h-14 rounded-full overflow-hidden bg-[var(--color-bg-secondary)] flex-shrink-0 border border-[var(--color-border)]">
+                {item.columnistImage ? (
+                  <Image
+                    src={item.columnistImage}
+                    alt={item.columnistName}
+                    fill
+                    className="object-cover"
+                    sizes="56px"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-[var(--color-text-muted)]">
+                    লেখক
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="bengali-headline text-base font-bold text-[var(--color-text)]">
+                  {item.columnistName}
+                </h3>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  {item.columnistDesignation}
+                </p>
+              </div>
+            </div>
+            <h2 className="bengali-serif-headline text-lg sm:text-xl font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors leading-snug mb-2">
+              &ldquo;{item.articleTitle}&rdquo;
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed line-clamp-3">
+              {item.excerpt}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
