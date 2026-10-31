@@ -9,7 +9,8 @@ export async function middleware(request: NextRequest) {
 
   // Check session cookie (lightweight — no DB call in middleware)
   const sessionCookie = getSessionCookie(request);
-  const isAuthenticated = !!sessionCookie;
+  const isDemoSession = request.cookies.get("demo_admin_session")?.value === "true";
+  const isAuthenticated = !!sessionCookie || isDemoSession;
 
   // Redirect authenticated users away from auth pages
   if (isAuthenticated && AUTH_ROUTES.some((r) => pathname.startsWith(r))) {

@@ -52,6 +52,12 @@ export function TopBar({ settings }: TopBarProps) {
           >
             ভিডিও
           </Link>
+          <Link
+            href="/admin"
+            className="hover:text-[var(--color-primary)] font-semibold transition-colors text-[var(--color-text-muted)]"
+          >
+            অ্যাডমিন
+          </Link>
           <span className="text-[var(--color-border-strong)]">|</span>
 
           {/* Social Icons */}

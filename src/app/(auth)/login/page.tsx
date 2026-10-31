@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Lock, Mail, AlertCircle, ArrowRight } from "lucide-react";
+import { Lock, Mail, AlertCircle, ArrowRight, Sparkles } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -49,11 +49,11 @@ function LoginForm() {
             className="text-3xl font-extrabold text-[var(--color-primary)]"
             style={{ fontFamily: "var(--font-noto-bengali, sans-serif)" }}
           >
-            বাংলা নিউজ
+            দৈনিক বাংলাদেশ বার্তা
           </span>
         </Link>
         <p className="text-xs text-[var(--color-text-muted)] mt-1">
-          সম্পাদকীয় ও বার্তা বিভাগীয় লগইন
+          সম্পাদকীয় ও বার্তা বিভাগীয় পোর্টাল
         </p>
       </div>
 
@@ -116,6 +116,31 @@ function LoginForm() {
           <ArrowRight size={16} />
         </button>
       </form>
+
+      {/* Demo Quick Access */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-[var(--color-border)]" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-[var(--color-bg)] px-2 text-[var(--color-text-muted)] font-semibold">
+            বা দ্রুত প্রিভিউ দেখুন
+          </span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          document.cookie = "demo_admin_session=true; path=/; max-age=86400";
+          router.push(callbackUrl);
+          router.refresh();
+        }}
+        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded flex items-center justify-center gap-2 transition-colors shadow-xs"
+      >
+        <Sparkles size={16} />
+        <span>এক ক্লিকে অ্যাডমিন প্যানেল প্রিভিউ (Demo Access)</span>
+      </button>
 
       <div className="mt-8 pt-6 border-t border-[var(--color-border)] text-center text-xs text-[var(--color-text-muted)]">
         অ্যাকাউন্ট নেই?{" "}

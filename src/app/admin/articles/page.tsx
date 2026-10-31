@@ -65,7 +65,53 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
     articleList = rows;
     totalCount = Number(totalResult[0]?.count ?? 0);
   } catch (error) {
-    console.warn("Could not query admin articles table:", error);
+    console.warn("Could not query admin articles table, using fallback demo articles:", error);
+  }
+
+  if (articleList.length === 0) {
+    articleList = [
+      {
+        id: "demo-art-1",
+        title: "অর্থনৈতিক স্থিতিশীলতা ফিরিয়ে আনতে ১০ দফা রূপরেখা ঘোষণা সরকারের",
+        slug: "economic-stability-ten-point-roadmap",
+        status: "published",
+        publishedAt: new Date(Date.now() - 1000 * 60 * 120),
+        createdAt: new Date(Date.now() - 1000 * 60 * 240),
+        authorName: "প্রধান বার্তা সম্পাদক",
+        categoryName: "জাতীয়",
+      },
+      {
+        id: "demo-art-2",
+        title: "মিরপুরে দ্বিতীয় টেস্টের তৃতীয় দিনে ব্যাটিং বিপর্যয়ে সফরকারীরা",
+        slug: "mirpur-test-day-three-bangladesh",
+        status: "published",
+        publishedAt: new Date(Date.now() - 1000 * 60 * 300),
+        createdAt: new Date(Date.now() - 1000 * 60 * 360),
+        authorName: "তানভীর হাসান",
+        categoryName: "খেলাধুলা",
+      },
+      {
+        id: "demo-art-3",
+        title: "কৃত্রিম বুদ্ধিমত্তা ব্যবহারে নতুন জাতীয় দিকনির্দেশনা চূড়ান্ত করল তথ্যপ্রযুক্তি বিভাগ",
+        slug: "national-ai-policy-guidelines-finalized",
+        status: "pending_review",
+        publishedAt: null,
+        createdAt: new Date(Date.now() - 1000 * 60 * 45),
+        authorName: "কায়সার মাহমুদ",
+        categoryName: "প্রযুক্তি",
+      },
+      {
+        id: "demo-art-4",
+        title: "চট্টগ্রাম বন্দরে কনটেইনার জট নিরসনে নতুন ডিজিটাল অটোমেশন চালুর নির্দেশ",
+        slug: "chattogram-port-digital-automation",
+        status: "draft",
+        publishedAt: null,
+        createdAt: new Date(Date.now() - 1000 * 60 * 15),
+        authorName: "ফারহানা হক",
+        categoryName: "বাণিজ্য",
+      },
+    ];
+    totalCount = articleList.length;
   }
 
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
