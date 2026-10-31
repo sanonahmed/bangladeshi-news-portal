@@ -24,7 +24,7 @@ const inter = Inter({
   display: "swap",
 });
 
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "বাংলা নিউজ";
+const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "দৈনিক বাংলাদেশ বার্তা";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {

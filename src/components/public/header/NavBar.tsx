@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, Menu, X, Search } from "lucide-react";
+import { ChevronDown, Menu, X, Search, Home } from "lucide-react";
 import type { NavigationItem } from "@/types";
 
 interface NavBarProps {
@@ -51,15 +51,15 @@ export function NavBar({ items }: NavBarProps) {
     <>
       <nav
         ref={navRef}
-        className={`bg-[var(--color-primary)] text-white z-50 transition-shadow duration-200 ${
-          isSticky ? "fixed top-0 left-0 right-0 shadow-lg" : "relative"
+        className={`bg-[#C8102E] text-white z-50 transition-shadow duration-200 border-b-2 border-[#B8860B] shadow-md ${
+          isSticky ? "fixed top-0 left-0 right-0 shadow-xl" : "relative"
         }`}
         aria-label="প্রধান নেভিগেশন"
       >
         <div className="max-w-[1400px] mx-auto px-4">
           <div className="flex items-center">
             {/* Desktop nav items */}
-            <ul className="hidden lg:flex items-center overflow-x-auto no-scrollbar">
+            <ul className="hidden lg:flex items-center overflow-x-auto no-scrollbar divide-x divide-white/10">
               {topLevelItems.map((item) => {
                 const children = items
                   .filter((i) => i.parentId === item.id && i.isActive)
@@ -68,6 +68,8 @@ export function NavBar({ items }: NavBarProps) {
                 const isActive =
                   pathname === item.href ||
                   (item.href !== "/" && pathname.startsWith(item.href));
+
+                const isHome = item.href === "/";
 
                 return (
                   <li key={item.id} className="relative flex-shrink-0">
@@ -78,12 +80,13 @@ export function NavBar({ items }: NavBarProps) {
                             activeDropdown === item.id ? null : item.id
                           )
                         }
-                        className={`flex items-center gap-1 px-3 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--color-primary-hover)] transition-colors ${
-                          isActive ? "bg-[var(--color-primary-hover)]" : ""
+                        className={`flex items-center gap-1 px-3 py-2.5 text-[14px] font-bold whitespace-nowrap hover:bg-[#A50E26] transition-colors ${
+                          isActive ? "bg-[#A50E26]" : ""
                         }`}
                         aria-expanded={activeDropdown === item.id}
                         aria-haspopup="true"
                       >
+                        {isHome && <Home size={15} className="mr-1 inline-block" />}
                         {item.label}
                         <ChevronDown
                           size={12}
@@ -97,10 +100,11 @@ export function NavBar({ items }: NavBarProps) {
                         href={item.href}
                         target={item.openInNewTab ? "_blank" : undefined}
                         rel={item.openInNewTab ? "noopener noreferrer" : undefined}
-                        className={`flex items-center px-3 py-3 text-sm font-medium whitespace-nowrap hover:bg-[var(--color-primary-hover)] transition-colors ${
-                          isActive ? "bg-[var(--color-primary-hover)]" : ""
+                        className={`flex items-center px-3 py-2.5 text-[14px] font-bold whitespace-nowrap hover:bg-[#A50E26] transition-colors ${
+                          isActive ? "bg-[#A50E26]" : ""
                         }`}
                       >
+                        {isHome && <Home size={15} className="mr-1 inline-block" />}
                         {item.label}
                       </Link>
                     )}

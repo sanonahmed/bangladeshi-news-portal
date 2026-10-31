@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
 import { FacebookIcon, TwitterXIcon, YoutubeIcon } from "@/components/ui/icons";
 import { useTheme } from "next-themes";
-import { formatBengaliDate, formatBengaliDay, formatBengaliTime, getDhakaDate } from "@/lib/bengali-date";
+import { formatBengaliDate, formatBengaliDay, formatBengaliTime, formatBanglaCalendarDate, getDhakaDate } from "@/lib/bengali-date";
 import type { SiteSettings } from "@/types";
 
 interface TopBarProps {
@@ -26,12 +26,16 @@ export function TopBar({ settings }: TopBarProps) {
     <div className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-xs">
       <div className="max-w-[1400px] mx-auto px-4 flex items-center justify-between h-8">
         {/* Left: Date & Time */}
-        <div className="flex items-center gap-3 text-[var(--color-text-muted)]">
-          <span className="font-medium">
+        <div className="flex items-center gap-2 md:gap-3 text-[var(--color-text-muted)] text-[11px] md:text-xs">
+          <span className="font-semibold text-[var(--color-text)]">
             {formatBengaliDay(now)}, {formatBengaliDate(now)}
           </span>
           <span className="text-[var(--color-border-strong)]">|</span>
-          <span>{formatBengaliTime(now)}</span>
+          <span className="text-[#B8860B] font-medium hidden sm:inline">
+            {formatBanglaCalendarDate(now)}
+          </span>
+          <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
+          <span>বাংলাদেশ সময় {formatBengaliTime(now)}</span>
         </div>
 
         {/* Right: Links + Social + Dark Mode */}

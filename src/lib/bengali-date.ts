@@ -124,6 +124,63 @@ export function formatBengaliDay(date: Date): string {
 }
 
 /**
+ * Official Bangladeshi Revised Bengali Calendar (Bangla Academy rules).
+ * Pohela Boishakh is April 14.
+ */
+const BANGLA_MONTHS = [
+  "বৈশাখ",
+  "জ্যৈষ্ঠ",
+  "আষাঢ়",
+  "শ্রাবণ",
+  "ভাদ্র",
+  "আশ্বিন",
+  "কার্তিক",
+  "অগ্রহায়ণ",
+  "পৌষ",
+  "মাঘ",
+  "ফাল্গুন",
+  "চৈত্র",
+];
+
+export function formatBanglaCalendarDate(date: Date): string {
+  const { day, month, year } = getDhakaParts(date);
+  // Calculate day of year
+  const startOfYear = new Date(Date.UTC(year, 0, 1));
+  const current = new Date(Date.UTC(year, month, day));
+  const dayOfYear = Math.floor((current.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+
+  // Pohela Boishakh is day 104 in standard year (April 14), day 105 in leap year
+  const boishakhDay = isLeap ? 105 : 104;
+
+  let banglaYear = year - 593;
+  let diff = dayOfYear - boishakhDay;
+
+  if (diff < 0) {
+    banglaYear -= 1;
+    diff += isLeap ? 366 : 365;
+  }
+
+  // Month lengths: Boishakh to Bhadro (31 days each), Ashwin to Choitro (30 days each)
+  const monthDays = [31, 31, 31, 31, 31, 30, 30, 30, 30, 30, isLeap ? 31 : 30, 30];
+  let banglaMonth = 0;
+  let rem = diff;
+
+  for (let i = 0; i < monthDays.length; i++) {
+    const mDays = monthDays[i] ?? 30;
+    if (rem < mDays) {
+      banglaMonth = i;
+      break;
+    }
+    rem -= mDays;
+  }
+
+  const bDay = toBengaliDigits(rem + 1);
+  const bYear = toBengaliDigits(banglaYear);
+  return `${bDay} ${BANGLA_MONTHS[banglaMonth]} ${bYear} বঙ্গাব্দ`;
+}
+
+/**
  * Formats a Date as Bengali time with period-of-day: রাত ৮:৩০
  */
 export function formatBengaliTime(date: Date): string {

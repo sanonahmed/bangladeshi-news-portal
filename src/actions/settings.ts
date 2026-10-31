@@ -7,17 +7,17 @@ import { unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
 
 const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "বাংলা নিউজ",
-  siteSlogan: "সত্য ও ন্যায়ের পথে অবিচল",
+  siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "দৈনিক বাংলাদেশ বার্তা",
+  siteSlogan: "সত্য ও সাহসের পক্ষে অবিচল",
   logoUrl: "",
   faviconUrl: "",
   facebookUrl: "https://facebook.com",
   twitterUrl: "https://twitter.com",
   youtubeUrl: "https://youtube.com",
   instagramUrl: "https://instagram.com",
-  contactEmail: "editor@banglanews.com",
+  contactEmail: "editor@bangladeshbarta.com",
   contactPhone: "+880 1700-000000",
-  address: "কারওয়ান বাজার, ঢাকা-১২১৫, বাংলাদেশ",
+  address: "কাওরান বাজার, ঢাকা-১২১৫, বাংলাদেশ",
   epaper: "/epaper",
   googleAnalyticsId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "",
 };
