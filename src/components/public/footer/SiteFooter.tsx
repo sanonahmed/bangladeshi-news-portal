@@ -10,6 +10,7 @@ export function SiteFooter({ settings }: SiteFooterProps) {
 
   const footerLinks = [
     { label: "আমাদের সম্পর্কে", href: "/about" },
+    { label: "মতামত জরিপ ও বিতর্ক ফোরাম", href: "/debates" },
     { label: "সংরক্ষিত সংবাদ (রিডিং লিস্ট)", href: "/bookmarks" },
     { label: "সাংবাদিক ও বার্তা দল", href: "/authors" },
     { label: "সারাদেশ সংবাদ হাব", href: "/saradesh" },

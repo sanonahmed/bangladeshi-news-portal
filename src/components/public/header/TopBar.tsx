@@ -46,6 +46,13 @@ export function TopBar({ settings }: TopBarProps) {
           <BookmarksNavBadge />
           <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <Link
+            href="/debates"
+            className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] hidden sm:inline"
+            title="সাপ্তাহিক জনমত জরিপ ও পাঠক বিতর্ক"
+          >
+            বিতর্ক
+          </Link>
+          <Link
             href="/archive"
             className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
           >

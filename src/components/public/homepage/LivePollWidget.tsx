@@ -225,16 +225,21 @@ export function LivePollWidget({ initialPoll }: LivePollWidgetProps) {
         </div>
       )}
 
-      {/* Footer Link to /polls */}
-      <div className="mt-5 pt-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
-        <span className="text-[var(--color-text-muted)] hidden sm:inline-block">
-          প্রতিটি পাঠক ১টি মতামত প্রকাশ করতে পারেন
-        </span>
+      {/* Footer Links to Debates */}
+      <div className="mt-5 pt-3 border-t border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
         <Link
-          href="/polls"
+          href={poll.slug ? `/debates/${poll.slug}` : "/debates"}
+          className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1.5"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>লাইভ বিতর্ক: পক্ষে-বিপক্ষে পাঠকদের যুক্তি দেখুন ও মতামত দিন</span>
+          <ArrowRight size={13} />
+        </Link>
+        <Link
+          href="/debates"
           className="text-[var(--color-primary)] font-bold hover:underline flex items-center gap-1"
         >
-          <span>আগের সব জরিপ ও বিস্তারিত ফলাফল দেখুন</span>
+          <span>সকল বিতর্ক ও জনমত আর্কাইভ</span>
           <ArrowRight size={13} />
         </Link>
       </div>

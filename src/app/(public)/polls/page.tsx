@@ -137,6 +137,18 @@ export default async function PollsArchivePage() {
                     );
                   })}
                 </div>
+
+                <div className="border-t border-[var(--color-border)] pt-3 flex items-center justify-between text-xs">
+                  <span className="text-[var(--color-text-muted)]">
+                    উন্মুক্ত মতামত ও পর্যালোচনা
+                  </span>
+                  <Link
+                    href={poll.slug ? `/debates/${poll.slug}` : `/debates/${poll.id}`}
+                    className="font-bold text-[var(--color-primary)] hover:underline flex items-center gap-1"
+                  >
+                    <span>এই প্রশ্নের পক্ষে-বিপক্ষে বিতর্ক ও যুক্তি দেখুন &rarr;</span>
+                  </Link>
+                </div>
               </div>
             );
           })}
