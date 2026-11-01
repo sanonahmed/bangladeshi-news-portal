@@ -25,9 +25,11 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     return { title: "সংবাদ পাওয়া যায়নি | বাংলা নিউজ" };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "বাংলা নিউজ";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bangladeshi-news-portal.onrender.com";
+  const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "দৈনিক বাংলাদেশ বার্তা";
   const url = `${siteUrl}/news/${slug}`;
+
+  const ogImageUrl = `${siteUrl}/api/og?title=${encodeURIComponent(article.title)}&category=${encodeURIComponent(article.categoryName ?? "জাতীয়")}&image=${encodeURIComponent(article.featuredImageUrl ?? "")}&author=${encodeURIComponent(article.authorName ?? "নিজস্ব প্রতিবেদক")}`;
 
   return {
     title: `${article.seoTitle ?? article.title} | ${siteName}`,
@@ -37,9 +39,15 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       url,
       title: article.title,
       description: article.excerpt ?? undefined,
-      images: article.featuredImageUrl
-        ? [{ url: article.featuredImageUrl, alt: article.featuredImageAlt ?? article.title }]
-        : [],
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: article.title,
+          type: "image/png",
+        },
+      ],
       publishedTime: article.publishedAt?.toISOString(),
       modifiedTime: article.updatedAt?.toISOString(),
       locale: "bn_BD",
@@ -49,7 +57,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       card: "summary_large_image",
       title: article.title,
       description: article.excerpt ?? undefined,
-      images: article.featuredImageUrl ? [article.featuredImageUrl] : [],
+      images: [ogImageUrl],
     },
     alternates: {
       canonical: url,

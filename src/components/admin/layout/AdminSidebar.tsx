@@ -21,6 +21,7 @@ import {
   Video as VideoIcon,
   MessageSquare,
   Vote,
+  Share2,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -39,6 +40,7 @@ const NAV_ITEMS = [
   { label: "নেভিগেশন মেনু", href: "/admin/navigation", icon: Compass },
   { label: "ব্রেকিং নিউজ", href: "/admin/breaking-news", icon: Zap },
   { label: "বিজ্ঞাপন ব্যবস্থাপনা", href: "/admin/advertisements", icon: DollarSign },
+  { label: "সোশ্যাল কার্ড প্রিভিউ", href: "/admin/social-preview", icon: Share2 },
   { label: "পাঠক বিশ্লেষণ ও মেট্রিক্স", href: "/admin/analytics", icon: BarChart3 },
   { label: "ওয়েবসাইট সেটিংস", href: "/admin/settings", icon: Settings },
   { label: "অডিট লগ", href: "/admin/audit-logs", icon: ScrollText },
