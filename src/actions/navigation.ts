@@ -17,7 +17,7 @@ const DEFAULT_NAVIGATION: NavigationItem[] = [
   { id: "nav-7", label: "খেলাধুলা", href: "/category/sports", sortOrder: 7, isActive: true, openInNewTab: false },
   { id: "nav-8", label: "বিনোদন", href: "/category/entertainment", sortOrder: 8, isActive: true, openInNewTab: false },
   { id: "nav-9", label: "প্রযুক্তি", href: "/category/technology", sortOrder: 9, isActive: true, openInNewTab: false },
-  { id: "nav-10", label: "সারাদেশ", href: "/division/dhaka", sortOrder: 10, isActive: true, openInNewTab: false },
+  { id: "nav-10", label: "সারাদেশ", href: "/saradesh", sortOrder: 10, isActive: true, openInNewTab: false },
   { id: "nav-11", label: "মতামত", href: "/opinion", sortOrder: 11, isActive: true, openInNewTab: false },
   { id: "nav-12", label: "শিক্ষা", href: "/category/education", sortOrder: 12, isActive: true, openInNewTab: false },
   { id: "nav-13", label: "স্বাস্থ্য", href: "/category/health", sortOrder: 13, isActive: true, openInNewTab: false },

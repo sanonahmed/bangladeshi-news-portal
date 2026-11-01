@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getPublishedArticles, getLatestArticles, getPopularArticles } from "@/actions/articles";
+import { getDivisionsWithDistricts, getRegionalArticles } from "@/actions/geography";
 import { LeadStoryGrid } from "@/components/public/homepage/LeadStoryGrid";
 import { LatestNewsSection } from "@/components/public/homepage/LatestNewsSection";
 import { MostReadSection } from "@/components/public/homepage/MostReadSection";
@@ -20,11 +21,18 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [featuredResult, latestArticles, popularArticles] = await Promise.all([
+  const [featuredResult, latestArticles, popularArticles, divisionsData] = await Promise.all([
     getPublishedArticles({ pageSize: 5 }),
     getLatestArticles(8),
     getPopularArticles(6),
+    getDivisionsWithDistricts(),
   ]);
+
+  const defaultDivSlug = divisionsData[0]?.slug || "dhaka";
+  const initialRegionalArticles = await getRegionalArticles({
+    divisionSlug: defaultDivSlug,
+    pageSize: 4,
+  });
 
   const featuredList = featuredResult.data;
   const leadStory = featuredList[0];
@@ -61,7 +69,10 @@ export default async function HomePage() {
       </div>
 
       {/* Section G: Bangladesh Districts (সারাদেশ) */}
-      <DivisionNewsSection initialArticles={latestArticles} />
+      <DivisionNewsSection
+        initialDivisions={divisionsData}
+        initialArticles={initialRegionalArticles.articles}
+      />
 
       {/* Section F: International (আন্তর্জাতিক) */}
       <CategorySection title="আন্তর্জাতিক সংবাদ" categorySlug="international" />

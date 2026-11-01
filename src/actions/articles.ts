@@ -5,6 +5,7 @@ import { articles, articleAuthors, articleCategories, articleRevisions } from "@
 import { mediaAssets } from "@/db/schema/media";
 import { user } from "@/db/schema/auth";
 import { categories } from "@/db/schema/categories";
+import { articleLocations } from "@/db/schema/geography";
 import { eq, desc, and, sql, count, isNotNull, lte, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -185,6 +186,8 @@ const ArticleCreateSchema = z.object({
   isBreaking: z.boolean().default(false),
   isFeatured: z.boolean().default(false),
   newsLocation: z.string().max(200).optional(),
+  divisionId: z.string().optional(),
+  districtId: z.string().optional(),
   language: z.enum(["bn", "en"]).default("bn"),
 });
 
@@ -300,6 +303,14 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
         articleId,
         categoryId: data.categoryId,
       });
+    }
+
+    if (data.divisionId || data.districtId) {
+      await db.insert(articleLocations).values({
+        articleId,
+        divisionId: data.divisionId || null,
+        districtId: data.districtId || null,
+      }).onConflictDoNothing();
     }
 
     if (finalStatus === "published") {

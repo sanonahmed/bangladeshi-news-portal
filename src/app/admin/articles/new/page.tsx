@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createArticle } from "@/actions/articles";
 import { getCategories, type CategoryItem } from "@/actions/categories";
+import { getDivisionsWithDistricts, type DivisionWithDistricts } from "@/actions/geography";
 import { TiptapEditor } from "@/components/admin/editor/TiptapEditor";
 import {
   ArrowLeft,
@@ -36,6 +37,9 @@ export default function NewArticlePage() {
   const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const [featuredImageAlt, setFeaturedImageAlt] = useState("");
   const [newsLocation, setNewsLocation] = useState("ঢাকা");
+  const [divisionsList, setDivisionsList] = useState<DivisionWithDistricts[]>([]);
+  const [selectedDivisionId, setSelectedDivisionId] = useState("");
+  const [selectedDistrictId, setSelectedDistrictId] = useState("");
   const [isBreaking, setIsBreaking] = useState(false);
   const [isFeatured, setIsFeatured] = useState(false);
   const [seoTitle, setSeoTitle] = useState("");
@@ -54,7 +58,7 @@ export default function NewArticlePage() {
     data: any;
   } | null>(null);
 
-  // Load categories
+  // Load categories and divisions
   useEffect(() => {
     getCategories()
       .then((cats) => {
@@ -64,6 +68,12 @@ export default function NewArticlePage() {
         }
       })
       .catch((err) => console.error("Error loading categories:", err));
+
+    getDivisionsWithDistricts()
+      .then((divs) => {
+        setDivisionsList(divs);
+      })
+      .catch((err) => console.error("Error loading divisions:", err));
   }, []);
 
   // Check for existing autosaved draft on mount
@@ -270,6 +280,8 @@ export default function NewArticlePage() {
         featuredImageUrl: featuredImageUrl.trim() || undefined,
         featuredImageAlt: featuredImageAlt.trim() || undefined,
         newsLocation: newsLocation.trim() || undefined,
+        divisionId: selectedDivisionId || undefined,
+        districtId: selectedDistrictId || undefined,
         isBreaking,
         isFeatured,
         seoTitle: seoTitle.trim() || title.trim(),
@@ -555,7 +567,7 @@ export default function NewArticlePage() {
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                সংবাদের অবস্থান (Location)
+                সংবাদের অবস্থান (টেক্সট)
               </label>
               <input
                 type="text"
@@ -564,6 +576,50 @@ export default function NewArticlePage() {
                 placeholder="ঢাকা / চট্টগ্রাম / সিলেট / রাজশাহী..."
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
+                  বিভাগ (Division)
+                </label>
+                <select
+                  value={selectedDivisionId}
+                  onChange={(e) => {
+                    setSelectedDivisionId(e.target.value);
+                    setSelectedDistrictId("");
+                  }}
+                  className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
+                >
+                  <option value="">-- বিভাগ নেই --</option>
+                  {divisionsList.map((div) => (
+                    <option key={div.id} value={div.id}>
+                      {div.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
+                  জেলা (District)
+                </label>
+                <select
+                  value={selectedDistrictId}
+                  onChange={(e) => setSelectedDistrictId(e.target.value)}
+                  disabled={!selectedDivisionId}
+                  className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] disabled:opacity-50"
+                >
+                  <option value="">-- জেলা নেই --</option>
+                  {divisionsList
+                    .find((d) => d.id === selectedDivisionId)
+                    ?.districts.map((dist) => (
+                      <option key={dist.id} value={dist.id}>
+                        {dist.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
 
             <div className="pt-2 space-y-2 border-t border-[var(--color-border)]">
