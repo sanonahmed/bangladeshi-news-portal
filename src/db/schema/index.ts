@@ -197,3 +197,17 @@ export type {
   NewBreakingAlert,
 } from "./notifications";
 
+// Fact-Check & Verification
+export {
+  factChecks,
+  factChecksRelations,
+  factCheckSubmissions,
+} from "./fact-checks";
+export type {
+  FactCheck,
+  NewFactCheck,
+  FactCheckSubmission,
+  NewFactCheckSubmission,
+} from "./fact-checks";
+
+

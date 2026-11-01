@@ -48,6 +48,14 @@ export function TopBar({ settings }: TopBarProps) {
           <BookmarksNavBadge />
           <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <Link
+            href="/fact-check"
+            className="hover:text-[var(--color-primary)] font-bold transition-colors text-emerald-700 dark:text-emerald-400 flex items-center gap-1"
+            title="ভুয়া খবর প্রতিরোধ ও সত্যসন্ধান কর্নার"
+          >
+            <span>ফ্যাক্ট-চেক</span>
+          </Link>
+          <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
+          <Link
             href="/live-score"
             className="hover:text-[var(--color-primary)] font-bold transition-colors text-red-600 dark:text-red-400 flex items-center gap-1"
             title="লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড"
