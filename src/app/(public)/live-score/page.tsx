@@ -1,0 +1,21 @@
+import type { Metadata } from "next";
+import { getAllMatches } from "@/lib/sports-data";
+import { LiveScoreHubClient } from "./LiveScoreHubClient";
+
+export const metadata: Metadata = {
+  title: "লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড | দৈনিক বাংলাদেশ বার্তা",
+  description:
+    "বাংলাদেশ জাতীয় দল, বিপিএল, আন্তর্জাতিক ক্রিকেট এবং বিশ্ব ফুটবলের লাইভ রান, ওভার, কমেন্ট্রি ও রিয়েল-টাইম বল-বাই-বল ট্র্যাকার।",
+  openGraph: {
+    title: "লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড | দৈনিক বাংলাদেশ বার্তা",
+    description: "রিয়েল-টাইম বল-বাই-বল কমেন্ট্রি ও স্কোরবোর্ড ট্র্যাকার।",
+  },
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function LiveScorePage() {
+  const matches = getAllMatches();
+
+  return <LiveScoreHubClient initialMatches={matches} />;
+}

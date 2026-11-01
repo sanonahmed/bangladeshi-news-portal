@@ -10,6 +10,7 @@ export function SiteFooter({ settings }: SiteFooterProps) {
 
   const footerLinks = [
     { label: "আমাদের সম্পর্কে", href: "/about" },
+    { label: "লাইভ স্পোর্টস স্কোরবোর্ড", href: "/live-score" },
     { label: "ডিজিটাল ই-পেপার", href: "/epaper" },
     { label: "ই-পেপার আর্কাইভ", href: "/epaper/archive" },
     { label: "মতামত জরিপ ও বিতর্ক ফোরাম", href: "/debates" },

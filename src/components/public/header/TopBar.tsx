@@ -46,6 +46,15 @@ export function TopBar({ settings }: TopBarProps) {
           <BookmarksNavBadge />
           <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <Link
+            href="/live-score"
+            className="hover:text-[var(--color-primary)] font-bold transition-colors text-red-600 dark:text-red-400 flex items-center gap-1"
+            title="লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span>লাইভ স্কোর</span>
+          </Link>
+          <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
+          <Link
             href="/epaper"
             className="hover:text-[var(--color-primary)] font-semibold transition-colors text-[var(--color-primary)] flex items-center gap-1"
             title="দৈনিক বাংলাদেশ বার্তা মুদ্রিত ডিজিটাল ই-পেপার"
