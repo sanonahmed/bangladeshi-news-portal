@@ -297,10 +297,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 আজকের মুদ্রিত পত্রিকার প্রতিচ্ছবি অনলাইনে পড়তে আমাদের ডিজিটাল ই-পেপার সংস্করণে প্রবেশ করুন।
               </p>
               <Link
-                href="/archive"
+                href="/epaper"
                 className="block text-center bg-[var(--color-primary)] text-white text-xs font-bold py-2 hover:bg-[var(--color-primary-hover)] transition-colors"
               >
-                ই-পেপার দেখুন
+                ই-পেপার পড়ুন &rarr;
               </Link>
             </div>
           </aside>
