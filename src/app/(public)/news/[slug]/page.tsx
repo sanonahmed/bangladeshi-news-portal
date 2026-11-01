@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getArticleBySlug, getLatestArticles } from "@/actions/articles";
+import { getArticleComments } from "@/actions/comments";
 import { formatBengaliDateTime } from "@/lib/bengali-date";
 import { RelatedArticles } from "@/components/public/article/RelatedArticles";
 import { SocialShare } from "@/components/public/article/SocialShare";
 import { FontSizeControl } from "@/components/public/article/FontSizeControl";
 import { CorrectionNotice } from "@/components/public/article/CorrectionNotice";
 import { ArticleReadingTracker } from "@/components/public/article/ArticleReadingTracker";
+import { ArticleCommentsSection } from "@/components/public/article/ArticleCommentsSection";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
 
 interface ArticlePageProps {
@@ -57,12 +59,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
-  const [article, latestNews] = await Promise.all([
-    getArticleBySlug(slug),
-    getLatestArticles(6),
-  ]);
+  const article = await getArticleBySlug(slug);
 
   if (!article) notFound();
+
+  const [latestNews, initialComments] = await Promise.all([
+    getLatestArticles(6),
+    getArticleComments(article.id),
+  ]);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const articleUrl = `${siteUrl}/news/${slug}`;
@@ -224,6 +228,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 &larr; আরও খবর পড়ুন
               </Link>
             </div>
+
+            {/* Reader Comments & Reaction Section */}
+            <ArticleCommentsSection
+              articleId={article.id}
+              articleTitle={article.title}
+              initialComments={initialComments}
+            />
           </article>
 
           {/* Sidebar: 4 Columns */}

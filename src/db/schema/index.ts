@@ -157,3 +157,7 @@ export type { AuditLog, NewAuditLog } from "./security";
 // Videos
 export { videos } from "./videos";
 export type { Video, NewVideo } from "./videos";
+
+// Comments
+export { comments, commentsRelations } from "./comments";
+export type { Comment, NewComment } from "./comments";

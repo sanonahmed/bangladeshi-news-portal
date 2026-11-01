@@ -19,12 +19,14 @@ import {
   Settings,
   ScrollText,
   Video as VideoIcon,
+  MessageSquare,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "ড্যাশবোর্ড", href: "/admin", icon: LayoutDashboard },
   { label: "সংবাদ ব্যবস্থাপনা", href: "/admin/articles", icon: FileText },
   { label: "পর্যালোচনা ও অনুমোদন", href: "/admin/reviews", icon: CheckSquare },
+  { label: "পাঠক মন্তব্য মডারেশন", href: "/admin/comments", icon: MessageSquare },
   { label: "বিভাগ ও ক্যাটাগরি", href: "/admin/categories", icon: FolderTree },
   { label: "ট্যাগসমূহ", href: "/admin/tags", icon: Tag },
   { label: "মিডিয়া লাইব্রেরি", href: "/admin/media", icon: ImageIcon },
