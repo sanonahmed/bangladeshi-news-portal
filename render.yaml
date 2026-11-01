@@ -1,0 +1,81 @@
+services:
+  # Web Service: Next.js App Router (Fullstack News Portal)
+  - type: web
+    name: bangladeshi-news-portal
+    runtime: node
+    plan: starter
+    region: singapore # Closest region to Bangladesh for low latency
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Set your Neon PostgreSQL Connection String (pooled)
+      - key: BETTER_AUTH_SECRET
+        generateValue: true # Render automatically generates a 32-character secret
+      - key: BETTER_AUTH_URL
+        sync: false # e.g. https://bangladeshi-news-portal.onrender.com
+      - key: ADMIN_BOOTSTRAP_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: NEXT_PUBLIC_SITE_NAME
+        value: "দৈনিক বাংলাদেশ বার্তা"
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false # e.g. https://bangladeshi-news-portal.onrender.com
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: CLOUDFLARE_R2_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_R2_ACCESS_KEY_ID
+        sync: false
+      - key: CLOUDFLARE_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: CLOUDFLARE_R2_BUCKET_NAME
+        sync: false
+      - key: CLOUDFLARE_R2_PUBLIC_DOMAIN
+        sync: false
+
+  # Cron Job 1: Flush Redis Buffered Views to Neon PostgreSQL (Every 10 mins)
+  - type: cron
+    name: news-portal-flush-views
+    runtime: node
+    plan: starter
+    region: singapore
+    schedule: "*/10 * * * *"
+    buildCommand: ""
+    startCommand: "curl -s -f -H \"Authorization: Bearer $CRON_SECRET\" $RENDER_EXTERNAL_URL/api/cron/aggregate-views || true"
+    envVars:
+      - fromService:
+          type: web
+          name: bangladeshi-news-portal
+          envVarKey: CRON_SECRET
+      - fromService:
+          type: web
+          name: bangladeshi-news-portal
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # Cron Job 2: Publish Scheduled Editorial Articles (Every 5 mins)
+  - type: cron
+    name: news-portal-publish-scheduled
+    runtime: node
+    plan: starter
+    region: singapore
+    schedule: "*/5 * * * *"
+    buildCommand: ""
+    startCommand: "curl -s -f -H \"Authorization: Bearer $CRON_SECRET\" $RENDER_EXTERNAL_URL/api/cron/publish-scheduled || true"
+    envVars:
+      - fromService:
+          type: web
+          name: bangladeshi-news-portal
+          envVarKey: CRON_SECRET
+      - fromService:
+          type: web
+          name: bangladeshi-news-portal
+          envVarKey: RENDER_EXTERNAL_URL

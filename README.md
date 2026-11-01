@@ -56,7 +56,7 @@ A complete, production-ready, high-performance Bangladeshi online newspaper plat
 | **Cache & Rate Limiting**| Upstash Redis, `@upstash/ratelimit` |
 | **Transactional Email** | Resend |
 | **Testing** | Vitest (Unit tests), Playwright (E2E tests) |
-| **Deployment** | Vercel Serverless & Edge |
+| **Deployment** | **Render** (via `render.yaml`) or **Vercel** (via `vercel.json`) |
 
 ---
 
@@ -134,6 +134,13 @@ curl -X POST http://localhost:3000/api/bootstrap \
 ```
 2. Navigate to `/login` and sign in with your credentials.
 3. Access the full newsroom dashboard at `/admin`.
+
+---
+
+## ☁️ Production Deployment
+
+* **Deploy on Render + Neon PostgreSQL**: See the comprehensive [Render Deployment Guide](docs/RENDER_DEPLOYMENT.md) using the automated [`render.yaml`](render.yaml) Blueprint.
+* **Deploy on Vercel + Neon PostgreSQL**: See the [Vercel Deployment Guide](docs/DEPLOYMENT.md) with automated [`vercel.json`](vercel.json) cron schedules.
 
 ---
 
