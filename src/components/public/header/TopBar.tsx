@@ -6,6 +6,7 @@ import { FacebookIcon, TwitterXIcon, YoutubeIcon } from "@/components/ui/icons";
 import { useTheme } from "next-themes";
 import { formatBengaliDate, formatBengaliDay, formatBengaliTime, formatBanglaCalendarDate, getDhakaDate } from "@/lib/bengali-date";
 import { WeatherPrayerTickerPill } from "./WeatherPrayerTickerPill";
+import { BookmarksNavBadge } from "./BookmarksNavBadge";
 import type { SiteSettings } from "@/types";
 
 interface TopBarProps {
@@ -42,6 +43,8 @@ export function TopBar({ settings }: TopBarProps) {
 
         {/* Right: Links + Social + Dark Mode */}
         <div className="flex items-center gap-3">
+          <BookmarksNavBadge />
+          <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <Link
             href="/archive"
             className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"

@@ -8,6 +8,7 @@ import { formatBengaliDateTime } from "@/lib/bengali-date";
 import { RelatedArticles } from "@/components/public/article/RelatedArticles";
 import { SocialShare } from "@/components/public/article/SocialShare";
 import { FontSizeControl } from "@/components/public/article/FontSizeControl";
+import { BookmarkButton } from "@/components/public/article/BookmarkButton";
 import { CorrectionNotice } from "@/components/public/article/CorrectionNotice";
 import { ArticleReadingTracker } from "@/components/public/article/ArticleReadingTracker";
 import { ArticleCommentsSection } from "@/components/public/article/ArticleCommentsSection";
@@ -193,7 +194,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                   )}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <BookmarkButton
+                  articleId={article.id}
+                  slug={article.slug}
+                  title={article.title}
+                  categoryName={article.categoryName || undefined}
+                  featuredImageUrl={article.featuredImageUrl || undefined}
+                />
                 <FontSizeControl />
                 <SocialShare url={articleUrl} title={article.title} />
               </div>
@@ -237,7 +245,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
             {/* Bottom Sharing & Tagging Bar */}
             <div className="border-t-2 border-[var(--color-border)] pt-4 mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <SocialShare url={articleUrl} title={article.title} showLabel />
+              <div className="flex flex-wrap items-center gap-3">
+                <SocialShare url={articleUrl} title={article.title} showLabel />
+                <BookmarkButton
+                  articleId={article.id}
+                  slug={article.slug}
+                  title={article.title}
+                  categoryName={article.categoryName || undefined}
+                  featuredImageUrl={article.featuredImageUrl || undefined}
+                />
+              </div>
               <Link
                 href="/latest"
                 className="text-xs font-semibold text-[var(--color-primary)] hover:underline"
