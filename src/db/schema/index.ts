@@ -165,3 +165,7 @@ export type { Comment, NewComment } from "./comments";
 // Polls
 export { polls, pollVotes, pollsRelations, pollVotesRelations } from "./polls";
 export type { Poll, NewPoll, PollVote, NewPollVote } from "./polls";
+
+// Authors & Reporters
+export { authorProfiles, authorProfilesRelations } from "./authors";
+export type { AuthorProfile, NewAuthorProfile } from "./authors";

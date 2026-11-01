@@ -6,6 +6,7 @@ import { mediaAssets } from "@/db/schema/media";
 import { user } from "@/db/schema/auth";
 import { categories } from "@/db/schema/categories";
 import { articleLocations } from "@/db/schema/geography";
+import { authorProfiles } from "@/db/schema/authors";
 import { eq, desc, and, sql, count, isNotNull, lte, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -419,12 +420,14 @@ export async function getPublishedArticles(opts: {
         categoryName: categories.name,
         categorySlug: categories.slug,
         authorName: user.name,
+        authorSlug: authorProfiles.slug,
       })
       .from(articles)
       .leftJoin(mediaAssets, eq(articles.featuredImageId, mediaAssets.id))
       .leftJoin(articleCategories, eq(articles.id, articleCategories.articleId))
       .leftJoin(categories, eq(articleCategories.categoryId, categories.id))
       .leftJoin(user, eq(articles.authorId, user.id))
+      .leftJoin(authorProfiles, eq(articles.authorId, authorProfiles.userId))
       .where(and(...conditions))
       .orderBy(desc(articles.publishedAt))
       .limit(pageSize)
@@ -462,7 +465,7 @@ export async function getPublishedArticles(opts: {
         featuredImageUrl: r.featuredImageUrl,
         featuredImageAlt: r.featuredImageAlt,
         category: r.categoryName ? { name: r.categoryName, slug: r.categorySlug! } : null,
-        author: r.authorName ? { name: r.authorName, slug: "" } : null,
+        author: r.authorName ? { name: r.authorName, slug: r.authorSlug || "mahmudur-rahman" } : null,
       })),
       total: Number(totalCount),
       page,
@@ -508,6 +511,13 @@ export async function getArticleBySlug(slug: string) {
         newsLocation: articles.newsLocation,
         authorId: articles.authorId,
         authorName: user.name,
+        authorSlug: authorProfiles.slug,
+        authorDesignation: authorProfiles.designation,
+        authorBio: authorProfiles.bio,
+        authorAvatarUrl: authorProfiles.avatarUrl,
+        authorBureau: authorProfiles.bureau,
+        authorTwitter: authorProfiles.twitterHandle,
+        authorFacebook: authorProfiles.facebookUrl,
         categoryName: categories.name,
         categorySlug: categories.slug,
       })
@@ -516,6 +526,7 @@ export async function getArticleBySlug(slug: string) {
       .leftJoin(articleCategories, eq(articles.id, articleCategories.articleId))
       .leftJoin(categories, eq(articleCategories.categoryId, categories.id))
       .leftJoin(user, eq(articles.authorId, user.id))
+      .leftJoin(authorProfiles, eq(articles.authorId, authorProfiles.userId))
       .where(and(eq(articles.slug, slug), eq(articles.status, "published")))
       .limit(1);
 
@@ -544,6 +555,13 @@ export async function getArticleBySlug(slug: string) {
         newsLocation: demo.newsLocation ?? "ঢাকা",
         authorId: "demo-author",
         authorName: demo.author?.name ?? "সম্পাদকীয় বিভাগ",
+        authorSlug: demo.author?.slug ?? "mahmudur-rahman",
+        authorDesignation: "বিশেষ প্রতিনিধি",
+        authorBio: "দৈনিক বাংলাদেশ বার্তার বিশেষ অনুসন্ধানী ও মাঠপর্যায়ের সাংবাদিক।",
+        authorAvatarUrl: null,
+        authorBureau: "কেন্দ্রীয় বার্তা কক্ষ, ঢাকা",
+        authorTwitter: null,
+        authorFacebook: null,
         categoryName: demo.category?.name ?? "জাতীয়",
         categorySlug: demo.category?.slug ?? "national",
       };
@@ -574,6 +592,13 @@ export async function getArticleBySlug(slug: string) {
         newsLocation: demo.newsLocation ?? "ঢাকা",
         authorId: "demo-author",
         authorName: demo.author?.name ?? "সম্পাদকীয় বিভাগ",
+        authorSlug: demo.author?.slug ?? "mahmudur-rahman",
+        authorDesignation: "বিশেষ প্রতিনিধি",
+        authorBio: "দৈনিক বাংলাদেশ বার্তার বিশেষ অনুসন্ধানী ও মাঠপর্যায়ের সাংবাদিক।",
+        authorAvatarUrl: null,
+        authorBureau: "কেন্দ্রীয় বার্তা কক্ষ, ঢাকা",
+        authorTwitter: null,
+        authorFacebook: null,
         categoryName: demo.category?.name ?? "জাতীয়",
         categorySlug: demo.category?.slug ?? "national",
       };

@@ -10,6 +10,8 @@ export function SiteFooter({ settings }: SiteFooterProps) {
 
   const footerLinks = [
     { label: "আমাদের সম্পর্কে", href: "/about" },
+    { label: "সাংবাদিক ও বার্তা দল", href: "/authors" },
+    { label: "সারাদেশ সংবাদ হাব", href: "/saradesh" },
     { label: "যোগাযোগ", href: "/contact" },
     { label: "সম্পাদকীয় নীতি", href: "/editorial-policy" },
     { label: "সংশোধনী নীতি", href: "/corrections-policy" },

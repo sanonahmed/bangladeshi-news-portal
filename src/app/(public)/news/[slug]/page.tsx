@@ -11,6 +11,7 @@ import { FontSizeControl } from "@/components/public/article/FontSizeControl";
 import { CorrectionNotice } from "@/components/public/article/CorrectionNotice";
 import { ArticleReadingTracker } from "@/components/public/article/ArticleReadingTracker";
 import { ArticleCommentsSection } from "@/components/public/article/ArticleCommentsSection";
+import { AuthorBioCard } from "@/components/public/author/AuthorBioCard";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
 
 interface ArticlePageProps {
@@ -162,9 +163,17 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             <div className="border-y border-[var(--color-border)] py-3 my-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-text-muted)]">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {article.authorName && (
-                  <span className="font-bold text-[var(--color-text)] text-sm">
-                    {article.authorName}
-                  </span>
+                  <Link
+                    href={`/author/${article.authorSlug || "mahmudur-rahman"}`}
+                    className="font-bold text-[var(--color-primary)] hover:underline text-sm inline-flex items-center gap-1"
+                  >
+                    <span>✍️ {article.authorName}</span>
+                    {article.authorDesignation && (
+                      <span className="text-xs font-normal text-[var(--color-text-muted)] hidden sm:inline">
+                        ({article.authorDesignation})
+                      </span>
+                    )}
+                  </Link>
                 )}
                 {article.newsLocation && (
                   <span className="bg-[var(--color-bg-secondary)] px-2 py-0.5 border border-[var(--color-border)]">
@@ -236,6 +245,20 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 &larr; আরও খবর পড়ুন
               </Link>
             </div>
+
+            {/* Author Profile & Bio Card */}
+            {article.authorName && (
+              <AuthorBioCard
+                name={article.authorName}
+                slug={article.authorSlug}
+                designation={article.authorDesignation}
+                bio={article.authorBio}
+                avatarUrl={article.authorAvatarUrl}
+                bureau={article.authorBureau}
+                twitter={article.authorTwitter}
+                facebook={article.authorFacebook}
+              />
+            )}
 
             {/* Reader Comments & Reaction Section */}
             <ArticleCommentsSection
