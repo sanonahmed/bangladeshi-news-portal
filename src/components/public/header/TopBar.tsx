@@ -5,6 +5,7 @@ import { Moon, Sun } from "lucide-react";
 import { FacebookIcon, TwitterXIcon, YoutubeIcon } from "@/components/ui/icons";
 import { useTheme } from "next-themes";
 import { formatBengaliDate, formatBengaliDay, formatBengaliTime, formatBanglaCalendarDate, getDhakaDate } from "@/lib/bengali-date";
+import { WeatherPrayerTickerPill } from "./WeatherPrayerTickerPill";
 import type { SiteSettings } from "@/types";
 
 interface TopBarProps {
@@ -36,6 +37,7 @@ export function TopBar({ settings }: TopBarProps) {
           </span>
           <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <span>বাংলাদেশ সময় {formatBengaliTime(now)}</span>
+          <WeatherPrayerTickerPill />
         </div>
 
         {/* Right: Links + Social + Dark Mode */}

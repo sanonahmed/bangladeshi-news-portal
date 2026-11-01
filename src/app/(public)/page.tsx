@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getPublishedArticles, getLatestArticles, getPopularArticles } from "@/actions/articles";
 import { getDivisionsWithDistricts, getRegionalArticles } from "@/actions/geography";
+import { getDivisionWeatherPrayer } from "@/actions/weather-prayer";
 import { LeadStoryGrid } from "@/components/public/homepage/LeadStoryGrid";
 import { LatestNewsSection } from "@/components/public/homepage/LatestNewsSection";
 import { MostReadSection } from "@/components/public/homepage/MostReadSection";
@@ -10,6 +11,7 @@ import { VideoNewsSection } from "@/components/public/homepage/VideoNewsSection"
 import { OpinionSection } from "@/components/public/homepage/OpinionSection";
 import { LivePollSection } from "@/components/public/homepage/LivePollSection";
 import { PhotoGallerySection } from "@/components/public/homepage/PhotoGallerySection";
+import { WeatherPrayerWidget } from "@/components/public/homepage/WeatherPrayerWidget";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
 import type { Metadata } from "next";
 
@@ -21,11 +23,12 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [featuredResult, latestArticles, popularArticles, divisionsData] = await Promise.all([
+  const [featuredResult, latestArticles, popularArticles, divisionsData, weatherPrayerData] = await Promise.all([
     getPublishedArticles({ pageSize: 5 }),
     getLatestArticles(8),
     getPopularArticles(6),
     getDivisionsWithDistricts(),
+    getDivisionWeatherPrayer("dhaka"),
   ]);
 
   const defaultDivSlug = divisionsData[0]?.slug || "dhaka";
@@ -73,6 +76,9 @@ export default async function HomePage() {
         initialDivisions={divisionsData}
         initialArticles={initialRegionalArticles.articles}
       />
+
+      {/* Daily Weather & Islamic Prayer Times Widget (দৈনিক আবহাওয়া ও নামাজের সময়সূচি) */}
+      <WeatherPrayerWidget initialData={weatherPrayerData} />
 
       {/* Section F: International (আন্তর্জাতিক) */}
       <CategorySection title="আন্তর্জাতিক সংবাদ" categorySlug="international" />

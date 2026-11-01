@@ -12,6 +12,7 @@ export function SiteFooter({ settings }: SiteFooterProps) {
     { label: "আমাদের সম্পর্কে", href: "/about" },
     { label: "সাংবাদিক ও বার্তা দল", href: "/authors" },
     { label: "সারাদেশ সংবাদ হাব", href: "/saradesh" },
+    { label: "আবহাওয়া ও নামাজের সময়সূচি", href: "/weather-prayer" },
     { label: "যোগাযোগ", href: "/contact" },
     { label: "সম্পাদকীয় নীতি", href: "/editorial-policy" },
     { label: "সংশোধনী নীতি", href: "/corrections-policy" },
