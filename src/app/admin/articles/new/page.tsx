@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createArticle } from "@/actions/articles";
+import { getCategories, type CategoryItem } from "@/actions/categories";
 import { TiptapEditor } from "@/components/admin/editor/TiptapEditor";
-import { ArrowLeft, Save, Send, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Send, AlertCircle, CheckCircle2, Image as ImageIcon } from "lucide-react";
 
 export default function NewArticlePage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function NewArticlePage() {
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
   const [status, setStatus] = useState<"draft" | "pending_review" | "published">("published");
   const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const [featuredImageAlt, setFeaturedImageAlt] = useState("");
@@ -29,7 +31,17 @@ export default function NewArticlePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  // Auto-slugify generator for Bengali transliteration / friendly slug
+  useEffect(() => {
+    getCategories()
+      .then((cats) => {
+        setCategoriesList(cats);
+        if (cats.length > 0 && cats[0]?.id) {
+          setCategoryId(cats[0].id);
+        }
+      })
+      .catch((err) => console.error("Error loading categories:", err));
+  }, []);
+
   function handleTitleChange(val: string) {
     setTitle(val);
     if (!slug) {
@@ -43,35 +55,50 @@ export default function NewArticlePage() {
     }
   }
 
+  function handleTitleEnChange(val: string) {
+    setTitleEn(val);
+    const generated = val
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/[\s_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (generated) {
+      setSlug(generated);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
     if (!title.trim()) {
-      setError("সংবাদের শিরোনাম আবশ্যক");
+      setError("সংবাদের মূল শিরোনাম আবশ্যক");
       return;
     }
     if (!content.trim()) {
-      setError("সংবাদের বিষয়বস্তু লিখুন");
+      setError("সংবাদের বিস্তারিত বিষয়বস্তু লিখুন");
       return;
     }
 
     setLoading(true);
     try {
+      const finalSlug = slug.trim() || `barta-${Date.now()}`;
       const res = await createArticle({
-        title,
-        titleEn: titleEn || undefined,
-        slug: slug.trim() || `news-${Date.now()}`,
-        excerpt: excerpt || undefined,
+        title: title.trim(),
+        titleEn: titleEn.trim() || undefined,
+        slug: finalSlug,
+        excerpt: excerpt.trim() || undefined,
         content,
         categoryId: categoryId || undefined,
         status,
-        featuredImageAlt: featuredImageAlt || undefined,
-        newsLocation: newsLocation || undefined,
+        featuredImageUrl: featuredImageUrl.trim() || undefined,
+        featuredImageAlt: featuredImageAlt.trim() || undefined,
+        newsLocation: newsLocation.trim() || undefined,
         isBreaking,
         isFeatured,
-        seoTitle: seoTitle || title,
-        seoDescription: seoDescription || excerpt,
+        seoTitle: seoTitle.trim() || title.trim(),
+        seoDescription: seoDescription.trim() || excerpt.trim(),
         language: "bn",
       });
 
@@ -82,7 +109,7 @@ export default function NewArticlePage() {
         setTimeout(() => {
           router.push("/admin/articles");
           router.refresh();
-        }, 1000);
+        }, 1200);
       }
     } catch (err: any) {
       setError(err?.message || "সার্ভার এরর ঘটেছে");
@@ -107,7 +134,7 @@ export default function NewArticlePage() {
               নতুন সংবাদ তৈরি করুন
             </h1>
             <p className="text-xs text-[var(--color-text-muted)]">
-              জাতীয় ও আন্তর্জাতিক প্রতিবেদন রচনা ও প্রকাশনা
+              জাতীয় ও আন্তর্জাতিক প্রতিবেদন রচনা ও সরাসরি প্রকাশনা
             </p>
           </div>
         </div>
@@ -120,12 +147,12 @@ export default function NewArticlePage() {
             }}
             className="px-4 py-2 border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-bg-secondary)]"
           >
-            খসড়া সংরক্ষণ
+            খসড়া হিসেবে রাখুন
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+            className="px-5 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <Send size={14} />
             {loading ? "সংরক্ষণ হচ্ছে..." : "সংবাদ প্রকাশ করুন"}
@@ -143,7 +170,7 @@ export default function NewArticlePage() {
       {success && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-600 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 size={16} className="flex-shrink-0" />
-          <span>সংবাদ সফলভাবে প্রকাশিত হয়েছে! রিডাইরেক্ট করা হচ্ছে...</span>
+          <span>সংবাদ সফলভাবে প্রকাশিত হয়েছে! সংবাদ তালিকায় রিডাইরেক্ট করা হচ্ছে...</span>
         </div>
       )}
 
@@ -166,13 +193,13 @@ export default function NewArticlePage() {
 
           <div>
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              ইংরেজি শিরোনাম (ঐচ্ছিক)
+              ইংরেজি শিরোনাম (English Title / Slug Generator)
             </label>
             <input
               type="text"
               value={titleEn}
-              onChange={(e) => setTitleEn(e.target.value)}
-              placeholder="English title for translation or global feed..."
+              onChange={(e) => handleTitleEnChange(e.target.value)}
+              placeholder="e.g. Bangladesh wins series opener at Mirpur..."
               className="w-full p-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
             />
           </div>
@@ -192,7 +219,7 @@ export default function NewArticlePage() {
 
           <div>
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              বিস্তারিত সংবাদ বিষয়বস্তু *
+              বিস্তারিত সংবাদ বিষয়বস্তু (Rich Article Body) *
             </label>
             <TiptapEditor
               content={content}
@@ -212,14 +239,35 @@ export default function NewArticlePage() {
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
+                সংবাদ বিভাগ (Category) *
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
+              >
+                {categoriesList.length === 0 ? (
+                  <option value="">লোড হচ্ছে...</option>
+                ) : (
+                  categoriesList.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name} ({cat.slug})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
                 অবস্থা (Status)
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
+                className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
               >
-                <option value="published">সরাসরি প্রকাশ (Publish)</option>
+                <option value="published">সরাসরি প্রকাশ (Publish Now)</option>
                 <option value="draft">খসড়া (Draft)</option>
                 <option value="pending_review">অনুমোদনের জন্য জমা (Review)</option>
               </select>
@@ -233,7 +281,7 @@ export default function NewArticlePage() {
                 type="text"
                 value={newsLocation}
                 onChange={(e) => setNewsLocation(e.target.value)}
-                placeholder="ঢাকা / চট্টগ্রাম / সিলেট..."
+                placeholder="ঢাকা / চট্টগ্রাম / সিলেট / রাজশাহী..."
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>
@@ -263,21 +311,34 @@ export default function NewArticlePage() {
 
           {/* Featured Image */}
           <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center gap-1.5">
+              <ImageIcon size={14} className="text-[var(--color-primary)]" />
               মূল ছবি (Featured Image)
             </h3>
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                ছবির URL (বা ক্লাউডফ্লেয়ার R2 লিঙ্ক)
+                ছবির URL (Unsplash / CDN / R2 লিংক)
               </label>
               <input
                 type="url"
                 value={featuredImageUrl}
                 onChange={(e) => setFeaturedImageUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://images.unsplash.com/..."
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>
+            {featuredImageUrl && (
+              <div className="relative aspect-[16/9] w-full rounded border border-[var(--color-border)] overflow-hidden bg-[var(--color-bg-secondary)]">
+                <img
+                  src={featuredImageUrl}
+                  alt={featuredImageAlt || "সংবাদ ছবি প্রিভিউ"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            )}
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
                 ছবির ক্যাপশন ও ক্রেডিট
@@ -286,7 +347,7 @@ export default function NewArticlePage() {
                 type="text"
                 value={featuredImageAlt}
                 onChange={(e) => setFeaturedImageAlt(e.target.value)}
-                placeholder="ছবি: নিজস্ব আলোকচিত্রী"
+                placeholder="ছবি: নিজস্ব আলোকচিত্রী / সংগৃহীত"
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>
@@ -299,16 +360,19 @@ export default function NewArticlePage() {
             </h3>
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                URL Slug *
+                ইউআরএল স্লাগ (URL Slug) *
               </label>
               <input
                 type="text"
                 required
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="economic-stability-roadmap"
+                placeholder="e.g. bd-economic-stability-roadmap"
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)]"
               />
+              <p className="text-[10px] text-[var(--color-text-faint)] mt-1">
+                লিংক হবে: /news/{slug || "slug"}
+              </p>
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">

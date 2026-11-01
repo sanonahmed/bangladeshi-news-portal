@@ -6,6 +6,8 @@ import { user } from "@/db/schema/auth";
 import { eq, desc, and, count, ilike, or } from "drizzle-orm";
 import { PlusCircle, Search, Filter, ExternalLink, Edit } from "lucide-react";
 import { formatBengaliDateTime } from "@/lib/bengali-date";
+import { deleteArticle } from "@/actions/articles";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +117,15 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
   }
 
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
+
+  async function handleDelete(formData: FormData) {
+    "use server";
+    const articleId = formData.get("articleId") as string;
+    if (articleId) {
+      await deleteArticle(articleId);
+      revalidatePath("/admin/articles");
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -231,6 +242,17 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
                         >
                           <ExternalLink size={12} className="inline ml-1" />
                         </Link>
+                      )}
+                      {!art.id.startsWith("demo-") && (
+                        <form action={handleDelete} className="inline ml-2">
+                          <input type="hidden" name="articleId" value={art.id} />
+                          <button
+                            type="submit"
+                            className="text-red-600 hover:text-red-800 hover:underline cursor-pointer font-semibold ml-1"
+                          >
+                            মুছুন
+                          </button>
+                        </form>
                       )}
                     </td>
                   </tr>
