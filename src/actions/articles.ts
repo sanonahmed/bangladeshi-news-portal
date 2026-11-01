@@ -238,60 +238,58 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
     const articleId = crypto.randomUUID();
     const now = new Date();
 
-    await db.transaction(async (tx) => {
-      let finalFeaturedImageId = data.featuredImageId;
+    let finalFeaturedImageId = data.featuredImageId;
 
-      if (data.featuredImageUrl && data.featuredImageUrl.trim().length > 0) {
-        const [asset] = await tx
-          .insert(mediaAssets)
-          .values({
-            filename: `img-${Date.now()}.jpg`,
-            originalName: data.featuredImageAlt || "featured-image.jpg",
-            mimeType: "image/jpeg",
-            fileSize: 1024,
-            r2Key: `uploads/${Date.now()}.jpg`,
-            publicUrl: data.featuredImageUrl.trim(),
-            altText: data.featuredImageAlt || data.title,
-            uploadedBy: userId,
-          })
-          .returning({ id: mediaAssets.id });
-        finalFeaturedImageId = asset?.id;
-      }
+    if (data.featuredImageUrl && data.featuredImageUrl.trim().length > 0) {
+      const [asset] = await db
+        .insert(mediaAssets)
+        .values({
+          filename: `img-${Date.now()}.jpg`,
+          originalName: data.featuredImageAlt || "featured-image.jpg",
+          mimeType: "image/jpeg",
+          fileSize: 1024,
+          r2Key: `uploads/${Date.now()}.jpg`,
+          publicUrl: data.featuredImageUrl.trim(),
+          altText: data.featuredImageAlt || data.title,
+          uploadedBy: userId,
+        })
+        .returning({ id: mediaAssets.id });
+      finalFeaturedImageId = asset?.id;
+    }
 
-      await tx.insert(articles).values({
-        id: articleId,
-        title: data.title,
-        titleEn: data.titleEn,
-        slug: data.slug,
-        excerpt: data.excerpt,
-        content: safeContent,
-        featuredImageId: finalFeaturedImageId,
-        featuredImageAlt: data.featuredImageAlt,
-        authorId: userId,
-        status: data.status,
-        scheduledAt: data.scheduledAt,
-        publishedAt: data.status === "published" ? now : undefined,
-        seoTitle: data.seoTitle,
-        seoDescription: data.seoDescription,
-        isBreaking: data.isBreaking,
-        isFeatured: data.isFeatured,
-        newsLocation: data.newsLocation,
-        language: data.language,
-      });
-
-      await tx.insert(articleAuthors).values({
-        articleId,
-        userId: userId,
-        role: "primary",
-      });
-
-      if (data.categoryId) {
-        await tx.insert(articleCategories).values({
-          articleId,
-          categoryId: data.categoryId,
-        });
-      }
+    await db.insert(articles).values({
+      id: articleId,
+      title: data.title,
+      titleEn: data.titleEn,
+      slug: data.slug,
+      excerpt: data.excerpt,
+      content: safeContent,
+      featuredImageId: finalFeaturedImageId,
+      featuredImageAlt: data.featuredImageAlt,
+      authorId: userId,
+      status: data.status,
+      scheduledAt: data.scheduledAt,
+      publishedAt: data.status === "published" ? now : undefined,
+      seoTitle: data.seoTitle,
+      seoDescription: data.seoDescription,
+      isBreaking: data.isBreaking,
+      isFeatured: data.isFeatured,
+      newsLocation: data.newsLocation,
+      language: data.language,
     });
+
+    await db.insert(articleAuthors).values({
+      articleId,
+      userId: userId,
+      role: "primary",
+    });
+
+    if (data.categoryId) {
+      await db.insert(articleCategories).values({
+        articleId,
+        categoryId: data.categoryId,
+      });
+    }
 
     if (data.status === "published") {
       revalidateArticle(data.slug);
