@@ -153,3 +153,7 @@ export type {
 // Security
 export { auditLogs, auditLogsRelations } from "./security";
 export type { AuditLog, NewAuditLog } from "./security";
+
+// Videos
+export { videos } from "./videos";
+export type { Video, NewVideo } from "./videos";

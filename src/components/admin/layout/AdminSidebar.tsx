@@ -18,6 +18,7 @@ import {
   BarChart3,
   Settings,
   ScrollText,
+  Video as VideoIcon,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { label: "বিভাগ ও ক্যাটাগরি", href: "/admin/categories", icon: FolderTree },
   { label: "ট্যাগসমূহ", href: "/admin/tags", icon: Tag },
   { label: "মিডিয়া লাইব্রেরি", href: "/admin/media", icon: ImageIcon },
+  { label: "ভিডিও সংবাদ", href: "/admin/videos", icon: VideoIcon },
   { label: "ব্যবহারকারী ও সাংবাদিক", href: "/admin/users", icon: Users },
   { label: "রোল ও পারমিশন", href: "/admin/roles", icon: Shield },
   { label: "হোমপেজ সেকশন", href: "/admin/homepage", icon: Layers },
