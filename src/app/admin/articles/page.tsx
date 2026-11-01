@@ -4,9 +4,9 @@ import { articles, articleCategories } from "@/db/schema/articles";
 import { categories } from "@/db/schema/categories";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, count, ilike, or } from "drizzle-orm";
-import { PlusCircle, Search, Filter, ExternalLink, Edit } from "lucide-react";
+import { PlusCircle, Search, Filter, ExternalLink, Edit, Clock, RefreshCw } from "lucide-react";
 import { formatBengaliDateTime } from "@/lib/bengali-date";
-import { deleteArticle } from "@/actions/articles";
+import { deleteArticle, checkAndPublishScheduledArticles } from "@/actions/articles";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +49,7 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
           slug: articles.slug,
           status: articles.status,
           publishedAt: articles.publishedAt,
+          scheduledAt: articles.scheduledAt,
           createdAt: articles.createdAt,
           authorName: user.name,
           categoryName: categories.name,
@@ -127,6 +128,12 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
     }
   }
 
+  async function handleProcessScheduled() {
+    "use server";
+    await checkAndPublishScheduledArticles();
+    revalidatePath("/admin/articles");
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Title */}
@@ -139,13 +146,25 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
             সকল খসড়া, পর্যালোচনার অপেক্ষায় থাকা ও প্রকাশিত সংবাদের তালিকা
           </p>
         </div>
-        <Link
-          href="/admin/articles/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors shadow-sm"
-        >
-          <PlusCircle size={16} />
-          নতুন সংবাদ তৈরি করুন
-        </Link>
+        <div className="flex items-center gap-2">
+          <form action={handleProcessScheduled} className="inline">
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 text-xs font-bold transition-colors cursor-pointer"
+              title="বর্তমান সময় পার হওয়া শিডিউলকৃত সংবাদগুলো অবিলম্বে প্রকাশ করুন"
+            >
+              <Clock size={14} />
+              শিডিউল প্রসেস করুন
+            </button>
+          </form>
+          <Link
+            href="/admin/articles/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors shadow-sm"
+          >
+            <PlusCircle size={16} />
+            নতুন সংবাদ তৈরি করুন
+          </Link>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -167,6 +186,7 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
         >
           <option value="all">সকল অবস্থা (All Status)</option>
           <option value="published">প্রকাশিত (Published)</option>
+          <option value="approved">শিডিউলকৃত / অনুমোদিত (Scheduled)</option>
           <option value="draft">খসড়া (Draft)</option>
           <option value="pending_review">পর্যালোচনাধীন (Pending Review)</option>
           <option value="archived">আর্কাইভকৃত (Archived)</option>
@@ -211,20 +231,33 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
                       {art.authorName ?? "—"}
                     </td>
                     <td className="p-3">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                          art.status === "published"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                            : art.status === "draft"
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                            : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                        }`}
-                      >
-                        {art.status}
-                      </span>
+                      {art.status === "published" ? (
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          প্রকাশিত
+                        </span>
+                      ) : art.scheduledAt && new Date(art.scheduledAt).getTime() > Date.now() ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                          <Clock size={10} /> শিডিউলকৃত
+                        </span>
+                      ) : art.status === "draft" ? (
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                          খসড়া
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
+                          {art.status}
+                        </span>
+                      )}
                     </td>
                     <td className="p-3 text-[var(--color-text-muted)]">
-                      {formatBengaliDateTime(art.publishedAt ?? art.createdAt)}
+                      {art.scheduledAt && new Date(art.scheduledAt).getTime() > Date.now() ? (
+                        <div className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
+                          <span>শিডিউল: </span>
+                          <span>{formatBengaliDateTime(art.scheduledAt)}</span>
+                        </div>
+                      ) : (
+                        formatBengaliDateTime(art.publishedAt ?? art.createdAt)
+                      )}
                     </td>
                     <td className="p-3 text-right space-x-2">
                       <Link

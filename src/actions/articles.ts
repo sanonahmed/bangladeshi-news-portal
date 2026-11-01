@@ -5,7 +5,7 @@ import { articles, articleAuthors, articleCategories, articleRevisions } from "@
 import { mediaAssets } from "@/db/schema/media";
 import { user } from "@/db/schema/auth";
 import { categories } from "@/db/schema/categories";
-import { eq, desc, and, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count, isNotNull, lte, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { revalidateArticle } from "@/lib/cache";
@@ -179,7 +179,7 @@ const ArticleCreateSchema = z.object({
   featuredImageAlt: z.string().max(200).optional(),
   categoryId: z.string().optional(),
   status: z.enum(["draft", "pending_review", "approved", "published", "unpublished", "archived", "rejected"]).default("draft"),
-  scheduledAt: z.date().optional(),
+  scheduledAt: z.coerce.date().optional(),
   seoTitle: z.string().max(100).optional(),
   seoDescription: z.string().max(250).optional(),
   isBreaking: z.boolean().default(false),
@@ -188,7 +188,7 @@ const ArticleCreateSchema = z.object({
   language: z.enum(["bn", "en"]).default("bn"),
 });
 
-export async function createArticle(formData: z.infer<typeof ArticleCreateSchema>): Promise<{ success: boolean; error?: string; slug?: string }> {
+export async function createArticle(formData: z.infer<typeof ArticleCreateSchema>): Promise<{ success: boolean; error?: string; slug?: string; isScheduled?: boolean; status?: string }> {
   try {
     let userId: string;
     let userRole = "reader";
@@ -257,6 +257,17 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
       finalFeaturedImageId = asset?.id;
     }
 
+    const isScheduledForFuture = data.scheduledAt && data.scheduledAt.getTime() > now.getTime();
+    let finalStatus = data.status;
+    let finalPublishedAt: Date | undefined = undefined;
+
+    if (isScheduledForFuture) {
+      finalStatus = "approved";
+      finalPublishedAt = undefined;
+    } else if (data.status === "published") {
+      finalPublishedAt = now;
+    }
+
     await db.insert(articles).values({
       id: articleId,
       title: data.title,
@@ -267,9 +278,9 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
       featuredImageId: finalFeaturedImageId,
       featuredImageAlt: data.featuredImageAlt,
       authorId: userId,
-      status: data.status,
+      status: finalStatus,
       scheduledAt: data.scheduledAt,
-      publishedAt: data.status === "published" ? now : undefined,
+      publishedAt: finalPublishedAt,
       seoTitle: data.seoTitle,
       seoDescription: data.seoDescription,
       isBreaking: data.isBreaking,
@@ -291,11 +302,16 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
       });
     }
 
-    if (data.status === "published") {
+    if (finalStatus === "published") {
       revalidateArticle(data.slug);
     }
 
-    return { success: true, slug: data.slug };
+    return { 
+      success: true, 
+      slug: data.slug,
+      isScheduled: Boolean(isScheduledForFuture),
+      status: finalStatus 
+    };
   } catch (error) {
     console.error("createArticle error:", error);
     return { success: false, error: "সংবাদ সংরক্ষণ ব্যর্থ হয়েছে" };
@@ -330,6 +346,38 @@ export async function deleteArticle(articleId: string): Promise<{ success: boole
   } catch (error) {
     console.error("deleteArticle error:", error);
     return { success: false, error: "সংবাদ অপসারণ ব্যর্থ হয়েছে" };
+  }
+}
+
+export async function checkAndPublishScheduledArticles(): Promise<{ success: boolean; publishedCount: number; error?: string }> {
+  try {
+    const now = new Date();
+    const toPublish = await db
+      .select({ id: articles.id, slug: articles.slug })
+      .from(articles)
+      .where(
+        and(
+          or(eq(articles.status, "approved"), eq(articles.status, "draft")),
+          isNotNull(articles.scheduledAt),
+          lte(articles.scheduledAt, now)
+        )
+      );
+
+    let count = 0;
+    for (const item of toPublish) {
+      await db
+        .update(articles)
+        .set({ status: "published", publishedAt: now, updatedAt: now })
+        .where(eq(articles.id, item.id));
+
+      revalidateArticle(item.slug);
+      count++;
+    }
+
+    return { success: true, publishedCount: count };
+  } catch (error) {
+    console.error("checkAndPublishScheduledArticles error:", error);
+    return { success: false, publishedCount: 0, error: "শিডিউল সংবাদ প্রক্রিয়াকরণ ব্যর্থ হয়েছে" };
   }
 }
 

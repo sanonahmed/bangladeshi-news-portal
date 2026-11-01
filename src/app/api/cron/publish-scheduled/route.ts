@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { articles } from "@/db/schema/articles";
-import { eq, and, lte, isNotNull } from "drizzle-orm";
+import { eq, and, lte, isNotNull, or } from "drizzle-orm";
 import { revalidateArticle } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
@@ -15,13 +15,13 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
 
-  // Find all approved+scheduled articles whose scheduledAt <= now
+  // Find all approved or draft scheduled articles whose scheduledAt <= now
   const toPublish = await db
     .select({ id: articles.id, slug: articles.slug })
     .from(articles)
     .where(
       and(
-        eq(articles.status, "approved"),
+        or(eq(articles.status, "approved"), eq(articles.status, "draft")),
         isNotNull(articles.scheduledAt),
         lte(articles.scheduledAt, now)
       )

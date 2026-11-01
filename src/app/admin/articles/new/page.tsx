@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createArticle } from "@/actions/articles";
 import { getCategories, type CategoryItem } from "@/actions/categories";
 import { TiptapEditor } from "@/components/admin/editor/TiptapEditor";
-import { ArrowLeft, Send, AlertCircle, CheckCircle2, Image as ImageIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Send,
+  AlertCircle,
+  CheckCircle2,
+  Image as ImageIcon,
+  Clock,
+  Calendar,
+  Save,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
+
+const AUTOSAVE_STORAGE_KEY = "barta_draft_article_new";
 
 export default function NewArticlePage() {
   const router = useRouter();
@@ -18,7 +31,8 @@ export default function NewArticlePage() {
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([]);
-  const [status, setStatus] = useState<"draft" | "pending_review" | "published">("published");
+  const [status, setStatus] = useState<"draft" | "pending_review" | "approved" | "published" | "scheduled">("published");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const [featuredImageAlt, setFeaturedImageAlt] = useState("");
   const [newsLocation, setNewsLocation] = useState("ঢাকা");
@@ -29,21 +43,159 @@ export default function NewArticlePage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
+  // Autosave states
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savedDraftFound, setSavedDraftFound] = useState<{
+    title: string;
+    savedAt: string;
+    data: any;
+  } | null>(null);
+
+  // Load categories
   useEffect(() => {
     getCategories()
       .then((cats) => {
         setCategoriesList(cats);
-        if (cats.length > 0 && cats[0]?.id) {
+        if (cats.length > 0 && cats[0]?.id && !categoryId) {
           setCategoryId(cats[0].id);
         }
       })
       .catch((err) => console.error("Error loading categories:", err));
   }, []);
 
+  // Check for existing autosaved draft on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.title || parsed.content) {
+          const dateStr = parsed.savedAt
+            ? new Date(parsed.savedAt).toLocaleTimeString("bn-BD", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "কিছুক্ষণ আগে";
+          setSavedDraftFound({
+            title: parsed.title,
+            savedAt: dateStr,
+            data: parsed,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not check local draft:", e);
+    }
+  }, []);
+
+  // Set default schedule time to current time + 2 hours
+  useEffect(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 2);
+    d.setMinutes(0);
+    // Format YYYY-MM-DDTHH:mm for datetime-local input
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    setScheduledAt(localIso);
+  }, []);
+
+  // Autosave timer: every 20 seconds
+  useEffect(() => {
+    if (!title && !content) return;
+
+    const timer = setInterval(() => {
+      saveDraftLocally();
+    }, 20000);
+
+    return () => clearInterval(timer);
+  }, [
+    title,
+    titleEn,
+    slug,
+    excerpt,
+    content,
+    categoryId,
+    featuredImageUrl,
+    featuredImageAlt,
+    newsLocation,
+    isBreaking,
+    isFeatured,
+    seoTitle,
+    seoDescription,
+    scheduledAt,
+    status,
+  ]);
+
+  function saveDraftLocally() {
+    if (!title.trim() && !content.trim()) return;
+    try {
+      const draftPayload = {
+        title,
+        titleEn,
+        slug,
+        excerpt,
+        content,
+        categoryId,
+        featuredImageUrl,
+        featuredImageAlt,
+        newsLocation,
+        isBreaking,
+        isFeatured,
+        seoTitle,
+        seoDescription,
+        scheduledAt,
+        status,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(draftPayload));
+      const nowStr = new Date().toLocaleTimeString("bn-BD", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+      setLastSavedTime(nowStr);
+      setHasUnsavedChanges(false);
+    } catch (e) {
+      console.warn("Autosave failed:", e);
+    }
+  }
+
+  function restoreDraft() {
+    if (!savedDraftFound?.data) return;
+    const d = savedDraftFound.data;
+    if (d.title) setTitle(d.title);
+    if (d.titleEn) setTitleEn(d.titleEn);
+    if (d.slug) setSlug(d.slug);
+    if (d.excerpt) setExcerpt(d.excerpt);
+    if (d.content) setContent(d.content);
+    if (d.categoryId) setCategoryId(d.categoryId);
+    if (d.featuredImageUrl) setFeaturedImageUrl(d.featuredImageUrl);
+    if (d.featuredImageAlt) setFeaturedImageAlt(d.featuredImageAlt);
+    if (d.newsLocation) setNewsLocation(d.newsLocation);
+    if (d.isBreaking !== undefined) setIsBreaking(d.isBreaking);
+    if (d.isFeatured !== undefined) setIsFeatured(d.isFeatured);
+    if (d.seoTitle) setSeoTitle(d.seoTitle);
+    if (d.seoDescription) setSeoDescription(d.seoDescription);
+    if (d.scheduledAt) setScheduledAt(d.scheduledAt);
+    if (d.status) setStatus(d.status);
+
+    setSavedDraftFound(null);
+    setLastSavedTime("রিস্টোর করা হয়েছে");
+  }
+
+  function discardDraft() {
+    try {
+      localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+    } catch {}
+    setSavedDraftFound(null);
+  }
+
   function handleTitleChange(val: string) {
     setTitle(val);
+    setHasUnsavedChanges(true);
     if (!slug) {
       const generated = val
         .toLowerCase()
@@ -57,6 +209,7 @@ export default function NewArticlePage() {
 
   function handleTitleEnChange(val: string) {
     setTitleEn(val);
+    setHasUnsavedChanges(true);
     const generated = val
       .toLowerCase()
       .trim()
@@ -71,6 +224,7 @@ export default function NewArticlePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess(null);
 
     if (!title.trim()) {
       setError("সংবাদের মূল শিরোনাম আবশ্যক");
@@ -79,6 +233,26 @@ export default function NewArticlePage() {
     if (!content.trim()) {
       setError("সংবাদের বিস্তারিত বিষয়বস্তু লিখুন");
       return;
+    }
+
+    let parsedScheduledDate: Date | undefined = undefined;
+    let actualStatus: "draft" | "pending_review" | "approved" | "published" =
+      status === "scheduled" ? "approved" : (status as any);
+
+    if (status === "scheduled") {
+      if (!scheduledAt) {
+        setError("শিডিউল প্রকাশের জন্য তারিখ ও সময় নির্বাচন করুন");
+        return;
+      }
+      parsedScheduledDate = new Date(scheduledAt);
+      if (isNaN(parsedScheduledDate.getTime())) {
+        setError("সঠিক শিডিউল তারিখ ও সময় দিন");
+        return;
+      }
+      if (parsedScheduledDate.getTime() <= Date.now()) {
+        setError("শিডিউল প্রকাশের সময় বর্তমান সময়ের পরবর্তী হতে হবে");
+        return;
+      }
     }
 
     setLoading(true);
@@ -91,7 +265,8 @@ export default function NewArticlePage() {
         excerpt: excerpt.trim() || undefined,
         content,
         categoryId: categoryId || undefined,
-        status,
+        status: actualStatus,
+        scheduledAt: parsedScheduledDate,
         featuredImageUrl: featuredImageUrl.trim() || undefined,
         featuredImageAlt: featuredImageAlt.trim() || undefined,
         newsLocation: newsLocation.trim() || undefined,
@@ -105,11 +280,25 @@ export default function NewArticlePage() {
       if (!res.success) {
         setError(res.error || "সংবাদ সংরক্ষণ ব্যর্থ হয়েছে");
       } else {
-        setSuccess(true);
+        // Clear local autosave
+        try {
+          localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+        } catch {}
+
+        if (res.isScheduled) {
+          setSuccess(
+            `সংবাদটি সফলভাবে শিডিউল করা হয়েছে! এটি নির্ধারিত সময়ে (${parsedScheduledDate?.toLocaleString("bn-BD")}) স্বয়ংক্রিয়ভাবে লাইভ হবে।`
+          );
+        } else if (actualStatus === "draft") {
+          setSuccess("খসড়া সফলভাবে ডাটাবেসে সংরক্ষিত হয়েছে!");
+        } else {
+          setSuccess("সংবাদ সফলভাবে প্রকাশিত হয়েছে! সংবাদ তালিকায় রিডাইরেক্ট করা হচ্ছে...");
+        }
+
         setTimeout(() => {
           router.push("/admin/articles");
           router.refresh();
-        }, 1200);
+        }, 1500);
       }
     } catch (err: any) {
       setError(err?.message || "সার্ভার এরর ঘটেছে");
@@ -133,32 +322,88 @@ export default function NewArticlePage() {
             <h1 className="bengali-headline text-xl font-bold text-[var(--color-text)]">
               নতুন সংবাদ তৈরি করুন
             </h1>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              জাতীয় ও আন্তর্জাতিক প্রতিবেদন রচনা ও সরাসরি প্রকাশনা
+            <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
+              <span>জাতীয় ও আন্তর্জাতিক প্রতিবেদন রচনা ও প্রকাশনা</span>
+              {lastSavedTime && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  অটোসেভ: {lastSavedTime}
+                </span>
+              )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              setStatus("draft");
-            }}
-            className="px-4 py-2 border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-bg-secondary)]"
+            onClick={saveDraftLocally}
+            className="px-3 py-2 border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] flex items-center gap-1.5 cursor-pointer"
+            title="ব্রাউজারে খসড়া সংরক্ষণ করুন"
           >
-            খসড়া হিসেবে রাখুন
+            <Save size={13} />
+            <span>খসড়া সেভ</span>
           </button>
+
           <button
             type="submit"
             disabled={loading}
-            className="px-5 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className={`px-5 py-2 text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer ${
+              status === "scheduled"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : status === "draft"
+                ? "bg-zinc-700 hover:bg-zinc-800"
+                : "bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]"
+            }`}
           >
-            <Send size={14} />
-            {loading ? "সংরক্ষণ হচ্ছে..." : "সংবাদ প্রকাশ করুন"}
+            {status === "scheduled" ? (
+              <>
+                <Clock size={14} />
+                {loading ? "সংরক্ষণ হচ্ছে..." : "শিডিউল প্রকাশ করুন"}
+              </>
+            ) : status === "draft" ? (
+              <>
+                <Save size={14} />
+                {loading ? "সংরক্ষণ হচ্ছে..." : "খসড়া সংরক্ষণ"}
+              </>
+            ) : (
+              <>
+                <Send size={14} />
+                {loading ? "সংরক্ষণ হচ্ছে..." : "সরাসরি প্রকাশ করুন"}
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {/* Recover Draft Banner if previous draft was found */}
+      {savedDraftFound && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={16} className="text-amber-600 flex-shrink-0" />
+            <span>
+              পূর্বের অসম্পূর্ণ খসড়া পাওয়া গেছে (সংরক্ষণ: {savedDraftFound.savedAt})
+              {savedDraftFound.title ? ` — "${savedDraftFound.title.slice(0, 40)}..."` : ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={restoreDraft}
+              className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold transition-colors cursor-pointer"
+            >
+              খসড়া রিস্টোর করুন
+            </button>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="px-2.5 py-1 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded transition-colors cursor-pointer"
+            >
+              মুছে ফেলুন
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-600 flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
@@ -170,7 +415,7 @@ export default function NewArticlePage() {
       {success && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-600 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 size={16} className="flex-shrink-0" />
-          <span>সংবাদ সফলভাবে প্রকাশিত হয়েছে! সংবাদ তালিকায় রিডাইরেক্ট করা হচ্ছে...</span>
+          <span>{success}</span>
         </div>
       )}
 
@@ -211,7 +456,10 @@ export default function NewArticlePage() {
             <textarea
               rows={2}
               value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
+              onChange={(e) => {
+                setExcerpt(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
               placeholder="সংবাদের মূল প্রতিপাদ্য ২/৩ লাইনে লিখুন..."
               className="w-full p-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
             />
@@ -223,7 +471,10 @@ export default function NewArticlePage() {
             </label>
             <TiptapEditor
               content={content}
-              onChange={(html) => setContent(html)}
+              onChange={(html) => {
+                setContent(html);
+                setHasUnsavedChanges(true);
+              }}
               placeholder="এখানে বিস্তারিত সংবাদ লিখুন..."
             />
           </div>
@@ -233,9 +484,53 @@ export default function NewArticlePage() {
         <div className="lg:col-span-4 space-y-4">
           {/* Publishing Controls */}
           <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2">
-              প্রকাশনা সেটিংস
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center justify-between">
+              <span>প্রকাশনা সেটিংস</span>
+              {status === "scheduled" && (
+                <span className="text-[10px] text-blue-600 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded font-bold">
+                  শিডিউল মোড
+                </span>
+              )}
             </h3>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
+                প্রকাশের ধরন (Publication Type)
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as any)}
+                className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
+              >
+                <option value="published">🚀 সরাসরি প্রকাশ (Publish Now)</option>
+                <option value="scheduled">⏱️ শিডিউল প্রকাশ (Schedule for Later)</option>
+                <option value="draft">📝 খসড়া হিসেবে রাখুন (Save Draft)</option>
+                <option value="pending_review">🔍 অনুমোদনের জন্য জমা (Submit for Review)</option>
+              </select>
+            </div>
+
+            {/* Scheduled Date Time Picker */}
+            {status === "scheduled" && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded space-y-2">
+                <label className="block text-[11px] font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                  <Calendar size={13} />
+                  প্রকাশের তারিখ ও সময় (ঢাকা সময়) *
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  value={scheduledAt}
+                  onChange={(e) => {
+                    setScheduledAt(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
+                  className="w-full p-2 bg-[var(--color-bg)] border border-blue-300 dark:border-blue-700 text-xs font-semibold focus:outline-none focus:border-blue-600"
+                />
+                <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-tight">
+                  💡 নির্ধারিত সময় পার হওয়া মাত্র সংবাদটি স্বয়ংক্রিয়ভাবে মূল পোর্টালে লাইভ হয়ে যাবে।
+                </p>
+              </div>
+            )}
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
@@ -255,21 +550,6 @@ export default function NewArticlePage() {
                     </option>
                   ))
                 )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                অবস্থা (Status)
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
-              >
-                <option value="published">সরাসরি প্রকাশ (Publish Now)</option>
-                <option value="draft">খসড়া (Draft)</option>
-                <option value="pending_review">অনুমোদনের জন্য জমা (Review)</option>
               </select>
             </div>
 
