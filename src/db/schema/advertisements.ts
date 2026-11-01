@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -48,6 +49,8 @@ export const advertisements = pgTable("advertisements", {
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   isActive: boolean("is_active").notNull().default(true),
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
   deviceTarget: adDeviceTargetEnum("device_target").notNull().default("all"),
   createdBy: text("created_by")
     .notNull()
