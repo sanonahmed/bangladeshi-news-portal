@@ -161,3 +161,7 @@ export type { Video, NewVideo } from "./videos";
 // Comments
 export { comments, commentsRelations } from "./comments";
 export type { Comment, NewComment } from "./comments";
+
+// Polls
+export { polls, pollVotes, pollsRelations, pollVotesRelations } from "./polls";
+export type { Poll, NewPoll, PollVote, NewPollVote } from "./polls";

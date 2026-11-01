@@ -7,6 +7,7 @@ import { CategorySection } from "@/components/public/homepage/CategorySection";
 import { DivisionNewsSection } from "@/components/public/homepage/DivisionNewsSection";
 import { VideoNewsSection } from "@/components/public/homepage/VideoNewsSection";
 import { OpinionSection } from "@/components/public/homepage/OpinionSection";
+import { LivePollSection } from "@/components/public/homepage/LivePollSection";
 import { PhotoGallerySection } from "@/components/public/homepage/PhotoGallerySection";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
 import type { Metadata } from "next";
@@ -76,6 +77,9 @@ export default async function HomePage() {
 
       {/* Section J: Technology (প্রযুক্তি) */}
       <CategorySection title="তথ্যপ্রযুক্তি" categorySlug="technology" />
+
+      {/* Live Reader Poll & Survey Section */}
+      <LivePollSection />
 
       {/* Section M: Opinion (মতামত) */}
       <OpinionSection />
