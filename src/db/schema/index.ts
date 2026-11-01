@@ -183,3 +183,17 @@ export type {
 // Authors & Reporters
 export { authorProfiles, authorProfilesRelations } from "./authors";
 export type { AuthorProfile, NewAuthorProfile } from "./authors";
+
+// Push Notifications & Breaking Alerts
+export {
+  pushSubscriptions,
+  breakingAlerts,
+  breakingAlertsRelations,
+} from "./notifications";
+export type {
+  PushSubscription,
+  NewPushSubscription,
+  BreakingAlert,
+  NewBreakingAlert,
+} from "./notifications";
+

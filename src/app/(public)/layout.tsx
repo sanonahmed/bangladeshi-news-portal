@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/public/header/SiteHeader";
 import { LiveMatchTickerBar } from "@/components/public/sports/LiveMatchTickerBar";
 import { BreakingNewsTicker } from "@/components/public/breaking-news/BreakingNewsTicker";
+import { FloatingBreakingAlert } from "@/components/public/notifications/FloatingBreakingAlert";
 import { SiteFooter } from "@/components/public/footer/SiteFooter";
 import { getBreakingNews } from "@/actions/breaking-news";
 import { getNavigation } from "@/actions/navigation";
@@ -28,6 +29,7 @@ export default async function PublicLayout({
       <main className="flex-1">
         {children}
       </main>
+      <FloatingBreakingAlert />
       <SiteFooter settings={settings} />
     </div>
   );

@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { formatBengaliDate, formatBengaliDay, formatBengaliTime, formatBanglaCalendarDate, getDhakaDate } from "@/lib/bengali-date";
 import { WeatherPrayerTickerPill } from "./WeatherPrayerTickerPill";
 import { BookmarksNavBadge } from "./BookmarksNavBadge";
+import { NotificationBellMenu } from "@/components/public/notifications/NotificationBellMenu";
 import type { SiteSettings } from "@/types";
 
 interface TopBarProps {
@@ -43,6 +44,7 @@ export function TopBar({ settings }: TopBarProps) {
 
         {/* Right: Links + Social + Dark Mode */}
         <div className="flex items-center gap-3">
+          <NotificationBellMenu />
           <BookmarksNavBadge />
           <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <Link
