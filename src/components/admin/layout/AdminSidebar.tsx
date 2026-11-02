@@ -31,70 +31,73 @@ import {
   ExternalLink,
   Newspaper,
 } from "lucide-react";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
-interface NavGroup {
-  groupTitle: string;
-  items: Array<{
-    label: string;
-    href: string;
-    icon: any;
-    exact?: boolean;
-    badge?: string;
-  }>;
+interface NavItemDef {
+  key: string;
+  href: string;
+  icon: any;
+  exact?: boolean;
+  badge?: string;
 }
 
-const NAV_GROUPS: NavGroup[] = [
+interface NavGroupDef {
+  groupKey: string;
+  items: NavItemDef[];
+}
+
+const NAV_GROUPS: NavGroupDef[] = [
   {
-    groupTitle: "ওভারভিউ",
+    groupKey: "group.overview",
     items: [
-      { label: "ড্যাশবোর্ড", href: "/admin", icon: LayoutDashboard, exact: true },
-      { label: "পাঠক বিশ্লেষণ ও মেট্রিক্স", href: "/admin/analytics", icon: BarChart3 },
+      { key: "menu.dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
+      { key: "menu.analytics", href: "/admin/analytics", icon: BarChart3 },
     ],
   },
   {
-    groupTitle: "নিউজ রুম ও প্রকাশনা",
+    groupKey: "group.newsroom",
     items: [
-      { label: "সংবাদ ব্যবস্থাপনা", href: "/admin/articles", icon: FileText, exact: true },
-      { label: "নতুন সংবাদ রচনা", href: "/admin/articles/new", icon: PlusCircle, exact: true },
-      { label: "পর্যালোচনা ও অনুমোদন", href: "/admin/reviews", icon: CheckSquare },
-      { label: "এআই সহকারী", href: "/admin/ai-assistant", icon: Sparkles },
+      { key: "menu.articles", href: "/admin/articles", icon: FileText, exact: true },
+      { key: "menu.newArticle", href: "/admin/articles/new", icon: PlusCircle, exact: true },
+      { key: "menu.reviews", href: "/admin/reviews", icon: CheckSquare },
+      { key: "menu.aiAssistant", href: "/admin/ai-assistant", icon: Sparkles },
     ],
   },
   {
-    groupTitle: "লাইভ ও সম্প্রচার",
+    groupKey: "group.live",
     items: [
-      { label: "ব্রেকিং নিউজ টিকার", href: "/admin/breaking-news", icon: Zap },
-      { label: "পুশ নোটিফিকেশন সেন্টার", href: "/admin/notifications", icon: Bell },
-      { label: "সোশ্যাল কার্ড প্রিভিউ", href: "/admin/social-preview", icon: Share2 },
+      { key: "menu.breaking", href: "/admin/breaking-news", icon: Zap },
+      { key: "menu.notifications", href: "/admin/notifications", icon: Bell },
+      { key: "menu.socialPreview", href: "/admin/social-preview", icon: Share2 },
     ],
   },
   {
-    groupTitle: "পাঠক ও এনগেজমেন্ট",
+    groupKey: "group.engagement",
     items: [
-      { label: "ফ্যাক্ট-চেক কর্নার", href: "/admin/fact-checks", icon: ShieldCheck },
-      { label: "অনলাইন ভোট ও জরিপ", href: "/admin/polls", icon: Vote },
-      { label: "মন্তব্য মডারেশন", href: "/admin/comments", icon: MessageSquare },
+      { key: "menu.factChecks", href: "/admin/fact-checks", icon: ShieldCheck },
+      { key: "menu.polls", href: "/admin/polls", icon: Vote },
+      { key: "menu.comments", href: "/admin/comments", icon: MessageSquare },
     ],
   },
   {
-    groupTitle: "মিডিয়া হাব",
+    groupKey: "group.media",
     items: [
-      { label: "মিডিয়া লাইব্রেরি", href: "/admin/media", icon: ImageIcon },
-      { label: "ভিডিও সংবাদ", href: "/admin/videos", icon: VideoIcon },
+      { key: "menu.media", href: "/admin/media", icon: ImageIcon },
+      { key: "menu.videos", href: "/admin/videos", icon: VideoIcon },
     ],
   },
   {
-    groupTitle: "প্রশাসন ও কনফিগারেশন",
+    groupKey: "group.system",
     items: [
-      { label: "হোমপেজ বিন্যাস", href: "/admin/homepage", icon: Layers },
-      { label: "বিভাগ ও ক্যাটাগরি", href: "/admin/categories", icon: FolderTree },
-      { label: "ট্যাগসমূহ", href: "/admin/tags", icon: Tag },
-      { label: "নেভিগেশন মেনু", href: "/admin/navigation", icon: Compass },
-      { label: "ব্যবহারকারী ও সাংবাদিক", href: "/admin/users", icon: Users },
-      { label: "রোল ও পারমিশন", href: "/admin/roles", icon: Shield },
-      { label: "বিজ্ঞাপন ব্যবস্থাপনা", href: "/admin/advertisements", icon: DollarSign },
-      { label: "ওয়েবসাইট সেটিংস", href: "/admin/settings", icon: Settings },
-      { label: "অডিট লগ", href: "/admin/audit-logs", icon: ScrollText },
+      { key: "menu.homepage", href: "/admin/homepage", icon: Layers },
+      { key: "menu.categories", href: "/admin/categories", icon: FolderTree },
+      { key: "menu.tags", href: "/admin/tags", icon: Tag },
+      { key: "menu.navigation", href: "/admin/navigation", icon: Compass },
+      { key: "menu.users", href: "/admin/users", icon: Users },
+      { key: "menu.roles", href: "/admin/roles", icon: Shield },
+      { key: "menu.ads", href: "/admin/advertisements", icon: DollarSign },
+      { key: "menu.settings", href: "/admin/settings", icon: Settings },
+      { key: "menu.auditLogs", href: "/admin/audit-logs", icon: ScrollText },
     ],
   },
 ];
@@ -106,6 +109,7 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { t, language } = useAdminLanguage();
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filter navigation items by search query
@@ -114,18 +118,21 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     const q = searchQuery.toLowerCase().trim();
 
     return NAV_GROUPS.map((group) => {
-      const matchedItems = group.items.filter(
-        (item) =>
-          item.label.toLowerCase().includes(q) ||
+      const groupLabel = t(group.groupKey).toLowerCase();
+      const matchedItems = group.items.filter((item) => {
+        const itemLabel = t(item.key).toLowerCase();
+        return (
+          itemLabel.includes(q) ||
           item.href.toLowerCase().includes(q) ||
-          group.groupTitle.toLowerCase().includes(q)
-      );
+          groupLabel.includes(q)
+        );
+      });
       return {
         ...group,
         items: matchedItems,
       };
     }).filter((group) => group.items.length > 0);
-  }, [searchQuery]);
+  }, [searchQuery, t]);
 
   return (
     <aside
@@ -136,18 +143,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       {/* Editorial Masthead */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-zinc-800/80 bg-[#0d0f12]">
         <Link href="/admin" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white font-serif font-black flex items-center justify-center text-sm shadow-xs">
-            বা
+          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white font-serif font-black flex items-center justify-center text-sm shadow-xs select-none">
+            {language === "bn" ? "বা" : "BB"}
           </div>
           <div className="leading-tight">
             <span
-              className="text-sm font-bold tracking-tight text-white block"
-              style={{ fontFamily: "var(--font-noto-bengali, sans-serif)" }}
+              className="text-sm font-bold tracking-tight text-white block truncate max-w-[150px]"
+              style={language === "bn" ? { fontFamily: "var(--font-noto-bengali, sans-serif)" } : undefined}
             >
-              দৈনিক বাংলাদেশ বার্তা
+              {t("brand.title")}
             </span>
             <span className="text-[11px] text-zinc-400 block">
-              সম্পাদকীয় ডেস্ক
+              {t("brand.subtitle")}
             </span>
           </div>
         </Link>
@@ -155,7 +162,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           <button
             onClick={onClose}
             className="lg:hidden text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800"
-            aria-label="মেনু বন্ধ করুন"
+            aria-label="Close menu"
           >
             ✕
           </button>
@@ -173,7 +180,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="মেনু খুঁজুন..."
+            placeholder={t("search.menu")}
             className="w-full pl-8 pr-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 transition-colors"
           />
         </div>
@@ -183,13 +190,13 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4 text-xs scrollbar-thin scrollbar-thumb-zinc-800">
         {filteredGroups.length === 0 ? (
           <div className="p-4 text-center text-xs text-zinc-500">
-            &ldquo;{searchQuery}&rdquo; মেলেনি
+            &ldquo;{searchQuery}&rdquo; {t("search.noMatch")}
           </div>
         ) : (
           filteredGroups.map((group, gIdx) => (
             <div key={gIdx} className={`space-y-1 ${gIdx > 0 ? "pt-2 border-t border-zinc-900" : ""}`}>
               <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
-                <span>{group.groupTitle}</span>
+                <span>{t(group.groupKey)}</span>
               </div>
 
               <div className="space-y-0.5">
@@ -199,6 +206,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     : pathname === item.href ||
                       (item.href !== "/admin" && pathname.startsWith(item.href));
                   const Icon = item.icon;
+                  const label = t(item.key);
 
                   return (
                     <Link
@@ -218,7 +226,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                             isActive ? "text-[var(--color-primary)]" : "text-zinc-400"
                           }`}
                         />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate">{label}</span>
                       </div>
 
                       {item.badge && (
@@ -244,7 +252,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         >
           <span className="flex items-center gap-2">
             <Newspaper size={14} className="text-zinc-400" />
-            <span>পত্রিকার মূল পাতা</span>
+            <span>{t("brand.viewSite")}</span>
           </span>
           <ExternalLink size={12} className="text-zinc-400" />
         </Link>
