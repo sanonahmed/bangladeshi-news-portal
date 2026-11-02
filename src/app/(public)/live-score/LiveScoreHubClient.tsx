@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Trophy,
@@ -10,6 +10,8 @@ import {
   ArrowRight,
   Filter,
   CheckCircle2,
+  RefreshCw,
+  Radio,
 } from "lucide-react";
 import { INITIAL_MATCHES, type LiveMatch, type SportType, type MatchStatus } from "@/lib/sports-data";
 import { toBengaliDigits } from "@/lib/bengali-date";
@@ -22,6 +24,35 @@ export function LiveScoreHubClient({ initialMatches }: LiveScoreHubClientProps) 
   const [matches, setMatches] = useState<LiveMatch[]>(initialMatches);
   const [sportFilter, setSportFilter] = useState<"all" | SportType>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | MatchStatus>("all");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<string>("এইমাত্র");
+
+  const fetchLiveMatches = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch("/api/live-score");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setMatches(data);
+          setLastRefreshed("এইমাত্র");
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchLiveMatches();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredMatches = matches.filter((m) => {
     const matchesSport = sportFilter === "all" || m.sport === sportFilter;
@@ -64,8 +95,22 @@ export function LiveScoreHubClient({ initialMatches }: LiveScoreHubClientProps) 
               লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড
             </h1>
             <p className="text-sm text-zinc-400 mt-2 max-w-2xl leading-relaxed">
-              বাংলাদেশ জাতীয় দল, বিপিএল, আন্তর্জাতিক ক্রিকেট এবং বিশ্ব ফুটবলের লাইভ রান, ওভার, কমেন্ট্রি ও রিয়েল-টাইম বল-বাই-বল ট্র্যাকার।
+              বাংলাদেশ জাতীয় দল, এনসিএল, আন্তর্জাতিক ক্রিকেট এবং বিশ্ব ফুটবলের লাইভ রান, ওভার, কমেন্ট্রি ও রিয়েল-টাইম বল-বাই-বল ট্র্যাকার।
             </p>
+            <div className="flex items-center gap-3 pt-3">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
+                <Radio size={12} className="animate-pulse text-emerald-400" />
+                <span>রিয়েলটাইম ওপেন স্পোর্টস এপিআই সংযুক্ত</span>
+              </span>
+              <button
+                onClick={fetchLiveMatches}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-semibold border border-zinc-700 transition cursor-pointer"
+              >
+                <RefreshCw size={11} className={isRefreshing ? "animate-spin" : ""} />
+                <span>তাজা করুন</span>
+              </button>
+            </div>
           </div>
 
           {/* Quick Aggregate Stats */}

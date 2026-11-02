@@ -438,7 +438,7 @@ export const INITIAL_MATCHES: LiveMatch[] = [
 ];
 
 /**
- * Get all live, upcoming, and recent matches
+ * Get all live, upcoming, and recent matches (synchronous fallback)
  */
 export function getAllMatches(sport?: SportType, status?: MatchStatus): LiveMatch[] {
   let list = [...INITIAL_MATCHES];
@@ -452,8 +452,45 @@ export function getAllMatches(sport?: SportType, status?: MatchStatus): LiveMatc
 }
 
 /**
- * Get single match detail by ID
+ * Get single match detail by ID (synchronous fallback)
  */
 export function getMatchById(id: string): LiveMatch | null {
   return INITIAL_MATCHES.find((m) => m.id === id) || null;
+}
+
+/**
+ * Fetch real-time live matches from Open Sports API with in-memory caching
+ */
+export async function getLiveSportsMatches(sport?: SportType, status?: MatchStatus): Promise<LiveMatch[]> {
+  try {
+    const { fetchLiveSportsFromApi } = await import("./real-sports-api");
+    const liveApiMatches = await fetchLiveSportsFromApi();
+    let list = liveApiMatches.length > 0 ? liveApiMatches : [...INITIAL_MATCHES];
+
+    if (sport) {
+      list = list.filter((m) => m.sport === sport);
+    }
+    if (status) {
+      list = list.filter((m) => m.status === status);
+    }
+    return list;
+  } catch (err) {
+    console.warn("getLiveSportsMatches error, using fallback:", err);
+    return getAllMatches(sport, status);
+  }
+}
+
+/**
+ * Fetch single real-time live match by ID
+ */
+export async function getLiveSportsMatchById(id: string): Promise<LiveMatch | null> {
+  try {
+    const { fetchLiveSportsFromApi } = await import("./real-sports-api");
+    const liveApiMatches = await fetchLiveSportsFromApi();
+    const found = liveApiMatches.find((m) => m.id === id);
+    if (found) return found;
+  } catch (err) {
+    // fallback
+  }
+  return getMatchById(id);
 }

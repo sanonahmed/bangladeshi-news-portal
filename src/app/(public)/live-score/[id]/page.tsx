@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getMatchById } from "@/lib/sports-data";
+import { getLiveSportsMatchById } from "@/lib/sports-data";
 import { LiveMatchDetailClient } from "./LiveMatchDetailClient";
 
 interface LiveMatchPageProps {
@@ -9,7 +9,7 @@ interface LiveMatchPageProps {
 
 export async function generateMetadata({ params }: LiveMatchPageProps): Promise<Metadata> {
   const { id } = await params;
-  const match = getMatchById(id);
+  const match = await getLiveSportsMatchById(id);
 
   if (!match) {
     return { title: "ম্যাচ পাওয়া যায়নি | দৈনিক বাংলাদেশ বার্তা" };
@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LiveMatchPage({ params }: LiveMatchPageProps) {
   const { id } = await params;
-  const match = getMatchById(id);
+  const match = await getLiveSportsMatchById(id);
 
   if (!match) {
     notFound();

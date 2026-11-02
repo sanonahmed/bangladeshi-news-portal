@@ -13,11 +13,38 @@ export function LiveMatchTickerBar() {
 
   useEffect(() => {
     setMounted(true);
+
+    // Fetch real live sports matches from our live API
+    fetch("/api/live-score")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setMatches(data);
+        }
+      })
+      .catch(() => {});
+
+    // Periodic refresh every 30 seconds
+    const fetchInterval = setInterval(() => {
+      fetch("/api/live-score")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setMatches(data);
+          }
+        })
+        .catch(() => {});
+    }, 30000);
+
     // Rotate featured ticker match every 8 seconds
     const interval = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % matches.length);
     }, 8000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(fetchInterval);
+    };
   }, [matches.length]);
 
   if (!mounted || isDismissed || matches.length === 0) return null;
