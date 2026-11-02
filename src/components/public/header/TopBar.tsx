@@ -73,6 +73,14 @@ export function TopBar({ settings }: TopBarProps) {
           </Link>
           <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
           <Link
+            href="/audio-news"
+            className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] hidden sm:inline"
+            title="দৈনিক অডিও নিউজ ও ধারাবাহিক প্লেলিস্ট"
+          >
+            অডিও
+          </Link>
+          <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
+          <Link
             href="/debates"
             className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] hidden sm:inline"
             title="সাপ্তাহিক জনমত জরিপ ও পাঠক বিতর্ক"

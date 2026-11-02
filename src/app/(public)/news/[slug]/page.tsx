@@ -13,6 +13,7 @@ import { CorrectionNotice } from "@/components/public/article/CorrectionNotice";
 import { ArticleReadingTracker } from "@/components/public/article/ArticleReadingTracker";
 import { ArticleCommentsSection } from "@/components/public/article/ArticleCommentsSection";
 import { AuthorBioCard } from "@/components/public/author/AuthorBioCard";
+import { ArticleAudioPlayer } from "@/components/public/article/ArticleAudioPlayer";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
 
 interface ArticlePageProps {
@@ -206,6 +207,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
                 <SocialShare url={articleUrl} title={article.title} />
               </div>
             </div>
+
+            {/* Audio News & TTS Voice Player */}
+            <ArticleAudioPlayer
+              title={article.title}
+              content={article.content ?? ""}
+              authorName={article.authorName}
+              newsLocation={article.newsLocation}
+            />
 
             {/* Featured Image */}
             {article.featuredImageUrl && (
