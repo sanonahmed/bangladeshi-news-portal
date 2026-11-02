@@ -25,6 +25,7 @@ import {
   Globe,
 } from "lucide-react";
 import Image from "next/image";
+import { toBengaliDigits } from "@/lib/bengali-date";
 
 interface AdminAdsClientProps {
   initialAds: Advertisement[];
@@ -204,7 +205,7 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
             <Globe size={15} className="text-blue-500" />
           </div>
           <div className="text-2xl font-extrabold text-[var(--color-text)] mt-1">
-            {adsList.filter((a) => a.isActive).length} / {adsList.length}
+            {toBengaliDigits(adsList.filter((a) => a.isActive).length)} / {toBengaliDigits(adsList.length)}
           </div>
         </div>
 
@@ -214,7 +215,7 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
             <Eye size={15} className="text-emerald-500" />
           </div>
           <div className="text-2xl font-extrabold text-emerald-600 mt-1 font-mono">
-            {totalImpressions.toLocaleString("bn-BD")}
+            {toBengaliDigits(totalImpressions)}
           </div>
         </div>
 
@@ -224,7 +225,7 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
             <MousePointerClick size={15} className="text-[var(--color-primary)]" />
           </div>
           <div className="text-2xl font-extrabold text-[var(--color-primary)] mt-1 font-mono">
-            {totalClicks.toLocaleString("bn-BD")}
+            {toBengaliDigits(totalClicks)}
           </div>
         </div>
 
@@ -234,7 +235,7 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
             <Percent size={15} className="text-purple-500" />
           </div>
           <div className="text-2xl font-extrabold text-purple-600 mt-1 font-mono">
-            {overallCtr}%
+            {toBengaliDigits(overallCtr)}%
           </div>
         </div>
       </div>
@@ -552,15 +553,15 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
                     <div className="grid grid-cols-3 gap-2 bg-[var(--color-bg-secondary)] p-2 rounded text-center text-xs font-mono">
                       <div>
                         <span className="text-[10px] text-[var(--color-text-muted)] block">ইম্প্রেশন</span>
-                        <span className="font-bold text-[var(--color-text)]">{impressions}</span>
+                        <span className="font-bold text-[var(--color-text)]">{toBengaliDigits(impressions)}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-[var(--color-text-muted)] block">ক্লিক</span>
-                        <span className="font-bold text-[var(--color-primary)]">{clicks}</span>
+                        <span className="font-bold text-[var(--color-primary)]">{toBengaliDigits(clicks)}</span>
                       </div>
                       <div>
                         <span className="text-[10px] text-[var(--color-text-muted)] block">সিটিআর (CTR)</span>
-                        <span className="font-bold text-purple-600">{ctr}%</span>
+                        <span className="font-bold text-purple-600">{toBengaliDigits(ctr)}%</span>
                       </div>
                     </div>
 
