@@ -18,7 +18,10 @@ import {
   Save,
   RotateCcw,
   Trash2,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
+import { AiEditorAssistantModal } from "@/components/admin/editor/AiEditorAssistantModal";
 
 const AUTOSAVE_STORAGE_KEY = "barta_draft_article_new";
 
@@ -48,6 +51,7 @@ export default function NewArticlePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   // Autosave states
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
@@ -349,6 +353,16 @@ export default function NewArticlePage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={() => setAiModalOpen(true)}
+            className="px-3 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs font-bold rounded flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
+            title="এআই বাংলা সম্পাদকীয় সহকারী খুলুন"
+          >
+            <Sparkles size={14} className="text-amber-300 animate-pulse" />
+            <span>এআই সহকারী</span>
+          </button>
+
+          <button
+            type="button"
             onClick={saveDraftLocally}
             className="px-3 py-2 border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] flex items-center gap-1.5 cursor-pointer"
             title="ব্রাউজারে খসড়া সংরক্ষণ করুন"
@@ -435,9 +449,20 @@ export default function NewArticlePage() {
         {/* Main Editor: 8 Columns */}
         <div className="lg:col-span-8 space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              সংবাদের মূল শিরোনাম (বাংলা) *
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                সংবাদের মূল শিরোনাম (বাংলা) *
+              </label>
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 text-[11px] font-bold transition-all cursor-pointer"
+                title="এআই দিয়ে স্মার্ট শিরোনাম তৈরি করুন"
+              >
+                <Sparkles size={12} className="text-purple-600 dark:text-purple-400" />
+                <span>এআই দিয়ে শিরোনাম তৈরি</span>
+              </button>
+            </div>
             <input
               type="text"
               required
@@ -462,9 +487,19 @@ export default function NewArticlePage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              সংক্ষিপ্ত সারসংক্ষেপ (Excerpt)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
+                সংক্ষিপ্ত সারসংক্ষেপ (Excerpt)
+              </label>
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+              >
+                <Sparkles size={11} />
+                <span>এআই দিয়ে সারাংশ তৈরি</span>
+              </button>
+            </div>
             <textarea
               rows={2}
               value={excerpt}
@@ -725,6 +760,40 @@ export default function NewArticlePage() {
           </div>
         </div>
       </div>
+
+      {/* AI Bengali Editorial Assistant Copilot Modal */}
+      <AiEditorAssistantModal
+        isOpen={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        currentTitle={title}
+        currentContent={content}
+        onApplyTitle={(newTitle, newTitleEn, newSlug) => {
+          setTitle(newTitle);
+          if (newTitleEn) setTitleEn(newTitleEn);
+          if (newSlug) setSlug(newSlug);
+          setHasUnsavedChanges(true);
+        }}
+        onApplyExcerpt={(newExcerpt) => {
+          setExcerpt(newExcerpt);
+          setHasUnsavedChanges(true);
+        }}
+        onApplyLocation={(districtName) => {
+          setNewsLocation(districtName);
+          for (const div of divisionsList) {
+            const dist = div.districts.find((d) => d.name === districtName);
+            if (dist) {
+              setSelectedDivisionId(div.id);
+              setSelectedDistrictId(dist.id);
+              break;
+            }
+          }
+          setHasUnsavedChanges(true);
+        }}
+        onApplyCleanedContent={(cleaned) => {
+          setContent(cleaned);
+          setHasUnsavedChanges(true);
+        }}
+      />
     </form>
   );
 }

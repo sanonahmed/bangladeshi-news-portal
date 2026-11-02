@@ -330,6 +330,41 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
   }
 }
 
+export async function updateArticle(data: {
+  id: string;
+  title: string;
+  titleEn?: string;
+  excerpt?: string;
+  content?: string;
+  correctionNote?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [existing] = await db.select().from(articles).where(eq(articles.id, data.id)).limit(1);
+    if (!existing) {
+      return { success: false, error: "সংবাদটি খুঁজে পাওয়া যায়নি" };
+    }
+
+    await db
+      .update(articles)
+      .set({
+        title: data.title.trim(),
+        titleEn: data.titleEn?.trim() || existing.titleEn,
+        excerpt: data.excerpt !== undefined ? data.excerpt.trim() : existing.excerpt,
+        content: data.content ? sanitizeContent(data.content) : existing.content,
+        correctionNote: data.correctionNote !== undefined ? data.correctionNote.trim() : existing.correctionNote,
+        correctionAt: data.correctionNote ? new Date() : existing.correctionAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, data.id));
+
+    revalidateArticle(existing.slug);
+    return { success: true };
+  } catch (err: any) {
+    console.error("updateArticle error:", err);
+    return { success: false, error: err?.message || "সার্ভার এরর" };
+  }
+}
+
 export async function deleteArticle(articleId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
