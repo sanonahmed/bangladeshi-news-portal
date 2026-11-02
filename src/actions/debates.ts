@@ -48,73 +48,6 @@ export interface DebateSummaryItem {
   argumentsCount: number;
 }
 
-// Fallback seed data in case DB is warming up
-const FALLBACK_DEBATES: DebateSummaryItem[] = [
-  {
-    id: "evm-1",
-    slug: "evm-national-election-feasibility",
-    question: "আসন্ন জাতীয় নির্বাচনে ইলেকট্রনিক ভোটিং মেশিনের (ইভিএম) ব্যবহার কি অবাধ, সুষ্ঠু ও গ্রহণযোগ্য নির্বাচনের জন্য ইতিবাচক ভূমিকা রাখবে?",
-    description: "ইভিএম প্রযুক্তির আধুনিকায়ন ও দ্রুত ফলাফল বনাম রাজনৈতিক দলগুলোর আস্থা ও কারিগরি স্বচ্ছতা নিয়ে জাতীয় বিতর্ক।",
-    category: "রাজনীতি",
-    options: ["হ্যাঁ (যৌক্তিক)", "না (যৌক্তিক নয়)", "মতামত নেই"],
-    votes: [1420, 2890, 185],
-    totalVotes: 4495,
-    isActive: true,
-    isFeatured: true,
-    createdAt: new Date(),
-    percentages: [32, 64, 4],
-    argumentsCount: 4,
-  },
-  {
-    id: "price-2",
-    slug: "commodity-price-control-subsidies-vs-market-reforms",
-    question: "নিত্যপ্রয়োজনীয় দ্রব্যমূল্য নিয়ন্ত্রণে ওএমএস ও টিসিবির মাধ্যমে ফ্যামিলি কার্ডে ভর্তুকি বিক্রি কি দীর্ঘমেয়াদে মূল্যস্ফীতি রোধে কার্যকর সমাধান?",
-    description: "স্বল্পমেয়াদী সামাজিক সুরক্ষা বনাম সিন্ডিকেট দমন ও বাজার সরবরাহ শৃঙ্খল সংস্কার নিয়ে অর্থনৈতিক বিতর্ক।",
-    category: "অর্থনীতি",
-    options: ["হ্যাঁ (কার্যকর সমাধান)", "না (দীর্ঘমেয়াদে কার্যকর নয়)", "আংশিক কার্যকর"],
-    votes: [870, 3120, 940],
-    totalVotes: 4930,
-    isActive: true,
-    isFeatured: false,
-    createdAt: new Date(Date.now() - 86400000 * 3),
-    percentages: [18, 63, 19],
-    argumentsCount: 2,
-  },
-  {
-    id: "debt-3",
-    slug: "mega-projects-foreign-debt-economic-risk",
-    question: "মেগাপ্রকল্প বাস্তবায়নে নেওয়া বৈদেশিক ঋণ পরিশোধের চাপ কি বাংলাদেশের আগামী অর্থনীতির জন্য বড় ধরনের ঝুঁকি তৈরি করছে?",
-    description: "অবকাঠামোগত উন্নয়ন ও ভবিষ্যৎ জিডিপি প্রবৃদ্ধি বনাম ডেট সার্ভিসিং ও বৈদেশিক মুদ্রার রিজার্ভের সংকট।",
-    category: "অর্থনীতি",
-    options: ["হ্যাঁ (চরম ঝুঁকি তৈরি করছে)", "না (অর্থনীতি সামলে নিতে পারবে)", "সঠিক আর্থিক ব্যবস্থাপনার ওপর নির্ভরশীল"],
-    votes: [2410, 1150, 1890],
-    totalVotes: 5450,
-    isActive: true,
-    isFeatured: false,
-    createdAt: new Date(Date.now() - 86400000 * 7),
-    percentages: [44, 21, 35],
-    argumentsCount: 2,
-  },
-  {
-    id: "quota-4",
-    slug: "bcs-public-service-merit-quota-reform",
-    question: "সরকারি চাকরিতে শতভাগ মেধাভিত্তিক নিয়োগ নিশ্চিত করতে কোটা ব্যবস্থার পুনর্বিন্যাস কি সময়োপযোগী?",
-    description: "প্রশাসনে মেধা ও যোগ্যতার প্রাধান্য বনাম পিছিয়ে পড়া জনগোষ্ঠীর বিশেষ সাংবিধানিক সুযোগ।",
-    category: "জাতীয়",
-    options: ["হ্যাঁ (শতভাগ মেধাভিত্তিক হওয়া উচিত)", "না (সীমিত বিশেষ কোটা থাকা জরুরি)", "মতামত নেই"],
-    votes: [4120, 680, 110],
-    totalVotes: 4910,
-    isActive: false,
-    isFeatured: false,
-    createdAt: new Date(Date.now() - 86400000 * 14),
-    percentages: [84, 14, 2],
-    argumentsCount: 2,
-  },
-];
-
-/**
- * Fetch all editorial debates
- */
 export async function getAllDebates(opts?: {
   category?: string;
   status?: "all" | "active" | "archived";
@@ -152,7 +85,7 @@ export async function getAllDebates(opts?: {
     const rows = await query;
 
     if (rows.length === 0) {
-      return FALLBACK_DEBATES;
+      return [];
     }
 
     // Get argument counts per poll
@@ -194,7 +127,7 @@ export async function getAllDebates(opts?: {
     });
   } catch (error) {
     console.error("getAllDebates error:", error);
-    return FALLBACK_DEBATES;
+    return [];
   }
 }
 
@@ -209,94 +142,7 @@ export async function getDebateBySlug(slugOrId: string): Promise<DebateDetail | 
       .where(sql`${polls.slug} = ${slugOrId} OR ${polls.id} = ${slugOrId}`)
       .limit(1);
 
-    if (rows.length === 0 || !rows[0]) {
-      // Check fallback
-      const fallback = FALLBACK_DEBATES.find((d) => d.slug === slugOrId || d.id === slugOrId);
-      if (!fallback) return null;
-
-      return {
-        poll: {
-          id: fallback.id,
-          slug: fallback.slug,
-          question: fallback.question,
-          description: fallback.description,
-          topicContext: "বাংলাদেশ নির্বাচন কমিশন (ইসি) দীর্ঘদিন ধরে নির্বাচনে প্রযুক্তিবান্ধব ভোটগ্রহণের লক্ষ্যে ইভিএম ব্যবহারের পক্ষে অবস্থান নিয়ে আসছে। নির্বাচন কমিশনের দাবি, ইভিএমের মাধ্যমে জাল ভোট দেওয়া, ব্যালট বাক্স ছিনতাই কিংবা দেরিতে ফল ঘোষণার মতো ত্রুটি দূর করা সম্ভব। তবে অধিকাংশ বিরোধী দল ও সুশীল সমাজের একটি বড় অংশ যুক্তিতর্কে এর স্বচ্ছতা ও অডিট স্লিপের অভাব নিয়ে প্রশ্ন তুলেছেন।",
-          editorialSummary: "পাঠক ও বিশেষজ্ঞদের মতামতের বিশ্লেষণে প্রতীয়মান হয় যে, আধুনিক প্রযুক্তির কার্যকারিতা অনস্বীকার্য হলেও একটি অংশগ্রহণমূলক জাতীয় নির্বাচনের প্রধান ভিত্তি হলো সকল পক্ষের রাজনৈতিক ঐক্যমত ও অখণ্ড বিশ্বাস।",
-          category: fallback.category,
-          options: fallback.options,
-          votes: fallback.votes,
-          totalVotes: fallback.totalVotes,
-          isActive: fallback.isActive,
-          isFeatured: fallback.isFeatured,
-          createdAt: fallback.createdAt,
-          percentages: fallback.percentages,
-        },
-        forArguments: [
-          {
-            id: "arg-for-1",
-            pollId: fallback.id,
-            side: "for",
-            authorName: "ড. মাহতাব উদ্দিন",
-            authorLocation: "ঢাকা বিশ্ববিদ্যালয়",
-            argument: "আধুনিক ডিজিটাল যুগে নির্বাচন প্রক্রিয়ায় প্রযুক্তির ব্যবহার ব্যালট ছিনতাই ও বুথ দখলের সংস্কৃতি বন্ধে কার্যকর অস্ত্র। প্রচলিত ব্যালটের তুলনায় ইভিএমে ভোট গণনা নির্ভুল ও তাৎক্ষণিক ফলাফল সম্ভব।",
-            upvotes: 142,
-            isPinned: true,
-            isEditorChoice: true,
-            isApproved: true,
-            userId: null,
-            createdAt: new Date(),
-          },
-          {
-            id: "arg-for-2",
-            pollId: fallback.id,
-            side: "for",
-            authorName: "তানভীর হাসান শুভ",
-            authorLocation: "মিরপুর, ঢাকা",
-            argument: "ইভিএমে একজন ভোটারের আঙ্গুলের ছাপ না মিললে কোনোভাবেই অন্য কেউ ভোট দিতে পারে না। এর ফলে জাল ভোট দেওয়ার অপতৎপরতা শতভাগ বন্ধ হয়ে যায়।",
-            upvotes: 89,
-            isPinned: false,
-            isEditorChoice: false,
-            isApproved: true,
-            userId: null,
-            createdAt: new Date(),
-          },
-        ],
-        againstArguments: [
-          {
-            id: "arg-against-1",
-            pollId: fallback.id,
-            side: "against",
-            authorName: "ব্যারিস্টার ফারহানা আহমেদ",
-            authorLocation: "সুপ্রিম কোর্ট, ঢাকা",
-            argument: "গণতান্ত্রিক নির্বাচনে সবচেয়ে বড় সম্পদ হলো ভোটারের আস্থা। বিশ্বের অধিকাংশ উন্নত দেশ ইভিএম বাতিল করেছে কারণ এতে স্বাধীনভাবে পুনর্গণনা করার মতো পেপার ট্রেইল (VVPAT) থাকে না।",
-            upvotes: 265,
-            isPinned: true,
-            isEditorChoice: true,
-            isApproved: true,
-            userId: null,
-            createdAt: new Date(),
-          },
-          {
-            id: "arg-against-2",
-            pollId: fallback.id,
-            side: "against",
-            authorName: "কাজী শফিকুল ইসলাম",
-            authorLocation: "চট্টগ্রাম ব্যুরো",
-            argument: "মাঠ পর্যায়ের বাস্তবতায় অনেক ভোটারের ফিঙ্গারপ্রিন্ট মেলেনি। তখন সহকারী প্রিজাইডিং অফিসারের বিশেষ ক্ষমতার অপব্যবহারের ঝুঁকি থাকে। সার্বিক রাজনৈতিক ঐকমত্য ছাড়া এটি চাপিয়ে দেওয়া অনুচিত।",
-            upvotes: 178,
-            isPinned: false,
-            isEditorChoice: false,
-            isApproved: true,
-            userId: null,
-            createdAt: new Date(),
-          },
-        ],
-        neutralArguments: [],
-        totalArguments: 4,
-        forCount: 2,
-        againstCount: 2,
-      };
-    }
+    if (rows.length === 0 || !rows[0]) return null;
 
     const poll = rows[0];
     const options = (poll.options as string[]) || [];

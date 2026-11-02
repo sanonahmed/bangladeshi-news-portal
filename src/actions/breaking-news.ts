@@ -11,30 +11,6 @@ import { auth } from "@/lib/auth";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 
-const DEFAULT_BREAKING_NEWS: BreakingNewsItem[] = [
-  {
-    id: "bn-1",
-    headline: "জাতীয় সংসদের নতুন অধিবেশন আহ্বান করেছেন রাষ্ট্রপতি",
-    url: "/news/parliament-session-called",
-    isExternal: false,
-    priority: 10,
-  },
-  {
-    id: "bn-2",
-    headline: "মেট্রোরেলের নতুন রুট উদ্বোধন করলেন প্রধান উপদেষ্টা",
-    url: "/news/metro-rail-new-route",
-    isExternal: false,
-    priority: 9,
-  },
-  {
-    id: "bn-3",
-    headline: "বাংলাদেশ ক্রিকেট দলের টি-টোয়েন্টি স্কোয়াড ঘোষণা",
-    url: "/news/cricket-t20-squad",
-    isExternal: false,
-    priority: 8,
-  },
-];
-
 export const getBreakingNews = unstable_cache(
   async (): Promise<BreakingNewsItem[]> => {
     try {
@@ -59,7 +35,7 @@ export const getBreakingNews = unstable_cache(
         .limit(10);
 
       if (!items || items.length === 0) {
-        return DEFAULT_BREAKING_NEWS;
+        return [];
       }
 
       return items.map((item) => ({
@@ -71,8 +47,8 @@ export const getBreakingNews = unstable_cache(
         priority: item.priority,
       }));
     } catch (error) {
-      console.warn("Could not query breaking_news table, using defaults:", error);
-      return DEFAULT_BREAKING_NEWS;
+      console.error("Could not query breaking_news table:", error);
+      return [];
     }
   },
   ["breaking-news"],

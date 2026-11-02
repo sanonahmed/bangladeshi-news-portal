@@ -772,10 +772,20 @@ export function AdminNotificationsClient({
                 {/* Lockscreen clock */}
                 <div className="text-center py-2 mb-3">
                   <div className="text-2xl font-light text-zinc-200">
-                    {toBengaliDigits("10:45")}
+                    {toBengaliDigits(
+                      new Date().toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })
+                    )}
                   </div>
                   <div className="text-[10px] text-zinc-400">
-                    {toBengaliDigits("সোমবার, ২ নভেম্বর")}
+                    {new Date().toLocaleDateString("bn-BD", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
                   </div>
                 </div>
 

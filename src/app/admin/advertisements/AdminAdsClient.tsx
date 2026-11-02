@@ -91,35 +91,6 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
     setShowAddForm(false);
   }
 
-  // Preset sample banners
-  function applyPreset(brand: "bkash" | "daraz" | "nagad" | "gp") {
-    if (brand === "bkash") {
-      setName("বিকাশ ক্যাশব্যাক অফার ক্যাম্পেইন");
-      setImageUrl("https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80");
-      setDestinationUrl("https://www.bkash.com");
-      setAltText("বিকাশ অফার");
-      setType("direct_image");
-    } else if (brand === "daraz") {
-      setName("দারাজ অনলাইন শপিং সেল");
-      setImageUrl("https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=800&q=80");
-      setDestinationUrl("https://www.daraz.com.bd");
-      setAltText("দারাজ মেগা সেল");
-      setType("direct_image");
-    } else if (brand === "nagad") {
-      setName("নগদ ডিজিটাল পেমেন্ট সেবা");
-      setImageUrl("https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1000&q=80");
-      setDestinationUrl("https://www.nagad.com.bd");
-      setAltText("নগদ ক্যাশ আউট");
-      setType("direct_image");
-    } else if (brand === "gp") {
-      setName("গ্রামীণফোন ৫জি ডাটা অফার");
-      setImageUrl("https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1000&q=80");
-      setDestinationUrl("https://www.grameenphone.com");
-      setAltText("গ্রামীণফোন ইন্টারনেট");
-      setType("direct_image");
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -356,30 +327,6 @@ export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
                       <label className="block text-xs font-bold text-[var(--color-text-muted)]">
                         ব্যানার ইমেজ লিংক (Image URL) *
                       </label>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-[var(--color-text-muted)]">স্যাম্পল:</span>
-                        <button
-                          type="button"
-                          onClick={() => applyPreset("bkash")}
-                          className="text-[10px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded font-bold cursor-pointer"
-                        >
-                          বিকাশ
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPreset("daraz")}
-                          className="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-bold cursor-pointer"
-                        >
-                          দারাজ
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => applyPreset("gp")}
-                          className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-bold cursor-pointer"
-                        >
-                          জিপি
-                        </button>
-                      </div>
                     </div>
                     <input
                       type="url"

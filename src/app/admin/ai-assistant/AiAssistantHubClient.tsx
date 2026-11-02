@@ -116,14 +116,6 @@ export function AiAssistantHubClient() {
     }
   }
 
-  function loadSamplePressRelease() {
-    setTitle("ব্যাংক সংস্কার ও মূল্যস্ফীতি নিয়ন্ত্রণে সরকারের নতুন রোডম্যাপ");
-    setContent(
-      "দেশের সামগ্রিক অর্থনীতিতে স্থিতিশীলতা ফেরাতে এবং সাধারণ মানুষের ওপর নিত্যপ্রয়োজনীয় পণ্যের চাপ কমাতে ১০ দফা অগ্রাধিকারমূলক কর্মপরিকল্পনা ঘোষণা করেছে অন্তর্বর্তী সরকার। এতে ব্যাংক খাতের কাঠামোগত সংস্কার, কর ব্যবস্থার আধুনিকায়ন এবং বৈদেশিক মুদ্রার রিজার্ভ সুসংহত করার বিষয়গুলো বিশেষ গুরুত্ব পেয়েছে। একইসঙ্গে শীর্ষ ঋণখেলাপিদের বিরুদ্ধে কঠোর আইনি ব্যবস্থা গ্রহণের সিদ্ধান্ত নেওয়া হয়েছে।"
-    );
-    setNotes("জাতীয় প্রথম পাতার উপযোগী আকর্ষণীয় শিরোনাম ও সংক্ষিপ্ত বুলেটিন");
-  }
-
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-16">
       {/* Title & Masthead */}
@@ -143,15 +135,6 @@ export function AiAssistantHubClient() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={loadSamplePressRelease}
-            className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-xs text-[var(--color-text-muted)] flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Lightbulb size={13} className="text-amber-500" />
-            <span>ডেমো ড্রাফট লোড করুন</span>
-          </button>
-
           <Link
             href="/admin/articles/new"
             className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-xs"

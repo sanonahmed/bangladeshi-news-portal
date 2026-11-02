@@ -4,11 +4,10 @@ import { db } from "@/db";
 import { breakingAlerts, pushSubscriptions } from "@/db/schema/notifications";
 import { desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import {
-  FALLBACK_ALERTS,
-  type AlertItem,
-  type AdminSubscriberItem,
-  type AdminNotificationStats,
+import type {
+  AlertItem,
+  AdminSubscriberItem,
+  AdminNotificationStats,
 } from "@/types/notifications";
 
 export type { AlertItem, AdminSubscriberItem, AdminNotificationStats };
@@ -47,7 +46,7 @@ export async function getRecentAlerts(limit: number = 10): Promise<AlertItem[]> 
       .limit(limit);
 
     if (!records || records.length === 0) {
-      return FALLBACK_ALERTS;
+      return [];
     }
 
     return records.map((r) => ({
@@ -63,8 +62,8 @@ export async function getRecentAlerts(limit: number = 10): Promise<AlertItem[]> 
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
     }));
   } catch (error) {
-    console.warn("Could not query breakingAlerts from DB, using fallback alerts:", error);
-    return FALLBACK_ALERTS;
+    console.error("Could not query breakingAlerts from DB:", error);
+    return [];
   }
 }
 

@@ -230,17 +230,15 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
                           <ExternalLink size={12} className="inline ml-1" />
                         </Link>
                       )}
-                      {!art.id.startsWith("demo-") && (
-                        <form action={handleDelete} className="inline ml-2">
-                          <input type="hidden" name="articleId" value={art.id} />
-                          <button
-                            type="submit"
-                            className="text-red-600 hover:text-red-800 hover:underline cursor-pointer font-semibold ml-1"
-                          >
-                            মুছুন
-                          </button>
-                        </form>
-                      )}
+                      <form action={handleDelete} className="inline ml-2">
+                        <input type="hidden" name="articleId" value={art.id} />
+                        <button
+                          type="submit"
+                          className="text-red-600 hover:text-red-800 hover:underline cursor-pointer font-semibold ml-1"
+                        >
+                          মুছুন
+                        </button>
+                      </form>
                     </td>
                   </tr>
                 ))}
