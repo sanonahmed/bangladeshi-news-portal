@@ -300,19 +300,43 @@ export interface RawPrayerTimings {
 const rawPrayerTimingsCache = new Map<string, { timings: RawPrayerTimings; expiresAt: number }>();
 
 /**
+ * Calculate the exact minute of the day in Bangladesh Standard Time (UTC+6, 0 - 1439)
+ * Pure arithmetic UTC + 6 hours ensures 100% accuracy regardless of server or browser locale.
+ */
+export function getDhakaMinutes(date: Date = new Date()): number {
+  try {
+    const utcMs = date.getTime() + date.getTimezoneOffset() * 60000;
+    const bdDate = new Date(utcMs + 6 * 3600000);
+    const h = bdDate.getHours();
+    const m = bdDate.getMinutes();
+    if (!isNaN(h) && !isNaN(m)) {
+      return h * 60 + m;
+    }
+  } catch {
+    // fallback to Intl if available
+  }
+
+  try {
+    const bdFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Dhaka",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false,
+    });
+    const parts = bdFormatter.formatToParts(date);
+    const bdHour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+    const bdMinute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+    return bdHour * 60 + bdMinute;
+  } catch {
+    return date.getHours() * 60 + date.getMinutes();
+  }
+}
+
+/**
  * Compute active prayer, next prayer, and live countdown dynamically
  */
 export function computePrayerState(timings: RawPrayerTimings, referenceDate: Date = new Date()) {
-  const bdFormatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Dhaka",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: false,
-  });
-  const parts = bdFormatter.formatToParts(referenceDate);
-  const bdHour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
-  const bdMinute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
-  const currentMinutes = bdHour * 60 + bdMinute;
+  const currentMinutes = getDhakaMinutes(referenceDate);
 
   const toMinutes = (time24: string) => {
     const [h, m] = time24.split(":").map(Number);

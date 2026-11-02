@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDivisionWeatherPrayer, getAllDivisionsWeatherSummary } from "@/actions/weather-prayer";
 
-export const revalidate = 300; // Cache for 5 minutes
+export const dynamic = "force-dynamic";
+export const revalidate = 0; // Live real-time response, no stale caching
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
