@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface ArticleOption {
   id: string;
@@ -30,13 +31,24 @@ interface AdminSocialPreviewClientProps {
 }
 
 export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientProps) {
+  const { language, formatNumber } = useAdminLanguage();
+  const isEn = language === "en";
+
   const defaultArticle = articles[0];
 
   const [selectedArticleId, setSelectedArticleId] = useState<string>(defaultArticle?.id || "");
-  const [title, setTitle] = useState(defaultArticle?.title || "ঢাকায় আধুনিক গণপরিবহন ব্যবস্থার সম্প্রসারণে নতুন প্রকল্প অনুমোদন");
-  const [category, setCategory] = useState(defaultArticle?.categoryName || "জাতীয় সংবাদ");
-  const [imageUrl, setImageUrl] = useState(defaultArticle?.featuredImageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80");
-  const [author, setAuthor] = useState(defaultArticle?.authorName || "বিশেষ প্রতিবেদক");
+  const [title, setTitle] = useState(
+    defaultArticle?.title ||
+      (isEn
+        ? "New Infrastructure and Rapid Transit Modernization Projects Approved for Dhaka"
+        : "ঢাকায় আধুনিক গণপরিবহন ব্যবস্থার সম্প্রসারণে নতুন প্রকল্প অনুমোদন")
+  );
+  const [category, setCategory] = useState(defaultArticle?.categoryName || (isEn ? "National News" : "জাতীয় সংবাদ"));
+  const [imageUrl, setImageUrl] = useState(
+    defaultArticle?.featuredImageUrl ||
+      "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80"
+  );
+  const [author, setAuthor] = useState(defaultArticle?.authorName || (isEn ? "Staff Correspondent" : "বিশেষ প্রতিবেদক"));
   const [activePlatform, setActivePlatform] = useState<"facebook" | "twitter" | "whatsapp" | "raw">("facebook");
   const [copied, setCopied] = useState(false);
 
@@ -48,9 +60,12 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
     const found = articles.find((a) => a.id === articleId);
     if (found) {
       setTitle(found.title);
-      setCategory(found.categoryName || "জাতীয় সংবাদ");
-      setImageUrl(found.featuredImageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80");
-      setAuthor(found.authorName || "বিশেষ প্রতিবেদক");
+      setCategory(found.categoryName || (isEn ? "National News" : "জাতীয় সংবাদ"));
+      setImageUrl(
+        found.featuredImageUrl ||
+          "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1200&q=80"
+      );
+      setAuthor(found.authorName || (isEn ? "Staff Correspondent" : "বিশেষ প্রতিবেদক"));
     }
   }
 
@@ -68,12 +83,14 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
       {/* Header */}
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <Share2 size={26} className="text-[#C8102E]" />
-            সোশ্যাল কার্ড ও ওপেন গ্রাফ (OG) প্রিভিউ জেনারেটর
+            <span>{isEn ? "Social Card & Open Graph (OG) Preview Generator" : "সোশ্যাল কার্ড ও ওপেন গ্রাফ (OG) প্রিভিউ জেনারেটর"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            ফেসবুক, এক্স (টুইটার), হোয়াটসঅ্যাপ ও লিঙ্কডইনে সংবাদ শেয়ারের সময় আকর্ষণীয় ভিজ্যুয়াল প্রিভিউ পরীক্ষা করুন
+            {isEn
+              ? "Simulate and verify high-impact visual previews when sharing news on Facebook, X, WhatsApp, and LinkedIn"
+              : "ফেসবুক, এক্স (টুইটার), হোয়াটসঅ্যাপ ও লিঙ্কডইনে সংবাদ শেয়ারের সময় আকর্ষণীয় ভিজ্যুয়াল প্রিভিউ পরীক্ষা করুন"}
           </p>
         </div>
 
@@ -84,7 +101,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
             className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-secondary)] text-xs font-bold text-[var(--color-text)] rounded transition-colors cursor-pointer"
           >
             {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-            <span>{copied ? "লিংক কপি সম্পন্ন!" : "কার্ড ইমেজ লিংক কপি"}</span>
+            <span>{copied ? (isEn ? "URL Copied!" : "লিংক কপি সম্পন্ন!") : (isEn ? "Copy Card Image URL" : "কার্ড ইমেজ লিংক কপি")}</span>
           </button>
 
           <a
@@ -94,7 +111,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C8102E] hover:bg-red-700 text-white text-xs font-bold rounded transition-colors"
           >
             <ExternalLink size={14} />
-            <span>পূর্ণাঙ্গ ছবি দেখুন</span>
+            <span>{isEn ? "View Full Image" : "পূর্ণাঙ্গ ছবি দেখুন"}</span>
           </a>
         </div>
       </div>
@@ -103,16 +120,16 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
         {/* Left Form: Customizer (5 columns) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="border border-[var(--color-border)] p-5 bg-[var(--color-bg)] rounded space-y-4 shadow-sm">
-            <h3 className="bengali-headline font-bold text-sm text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
+            <h3 className="font-bold text-sm text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center gap-2">
               <Sparkles size={16} className="text-[#C8102E]" />
-              কার্ডের তথ্য ও উপাদান নির্ধারণ
+              <span>{isEn ? "Card Content & Customizer" : "কার্ডের তথ্য ও উপাদান নির্ধারণ"}</span>
             </h3>
 
             {/* Quick Article Picker */}
             {articles.length > 0 && (
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  প্রকাশিত সংবাদ থেকে নির্বাচন করুন
+                  {isEn ? "Select from published stories" : "প্রকাশিত সংবাদ থেকে নির্বাচন করুন"}
                 </label>
                 <select
                   value={selectedArticleId}
@@ -130,43 +147,43 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
 
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                সংবাদের শিরোনাম (Title) *
+                {isEn ? "Story Headline (Title) *" : "সংবাদের শিরোনাম (Title) *"}
               </label>
               <textarea
                 rows={3}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="সোশ্যাল কার্ডে প্রদর্শিত আকর্ষণীয় শিরোনাম..."
-                className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm font-bold focus:outline-none focus:border-[#C8102E] rounded bengali-headline"
+                placeholder={isEn ? "Compelling headline displayed on social card..." : "সোশ্যাল কার্ডে প্রদর্শিত আকর্ষণীয় শিরোনাম..."}
+                className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm font-bold focus:outline-none focus:border-[#C8102E] rounded"
               />
               <span className="text-[10px] text-[var(--color-text-muted)] mt-1 block">
-                {title.length} অক্ষর (সোশ্যাল মিডিয়ার জন্য ৫০-৮০ অক্ষর আদর্শ)
+                {formatNumber(title.length)} {isEn ? "characters (50-80 recommended for social media)" : "অক্ষর (সোশ্যাল মিডিয়ার জন্য ৫০-৮০ অক্ষর আদর্শ)"}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  বিভাগ / ক্যাটাগরি
+                  {isEn ? "Category" : "বিভাগ / ক্যাটাগরি"}
                 </label>
                 <input
                   type="text"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  placeholder="যেমন: জাতীয় সংবাদ"
+                  placeholder={isEn ? "e.g. National News" : "যেমন: জাতীয় সংবাদ"}
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs rounded focus:outline-none focus:border-[#C8102E]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  প্রতিবেদকের নাম (Author)
+                  {isEn ? "Reporter / Byline" : "প্রতিবেদকের নাম (Author)"}
                 </label>
                 <input
                   type="text"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="যেমন: নিজস্ব প্রতিবেদক"
+                  placeholder={isEn ? "e.g. Staff Reporter" : "যেমন: নিজস্ব প্রতিবেদক"}
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs rounded focus:outline-none focus:border-[#C8102E]"
                 />
               </div>
@@ -174,7 +191,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
 
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                পটভূমি ছবির লিংক (Image URL)
+                {isEn ? "Background Image URL" : "পটভূমি ছবির লিংক (Image URL)"}
               </label>
               <input
                 type="url"
@@ -200,7 +217,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-zinc-200 dark:hover:bg-zinc-800"
               }`}
             >
-              Facebook ফিড প্রিভিউ
+              {isEn ? "Facebook Feed" : "Facebook ফিড প্রিভিউ"}
             </button>
 
             <button
@@ -212,7 +229,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-zinc-200 dark:hover:bg-zinc-800"
               }`}
             >
-              X (Twitter) কার্ড
+              {isEn ? "X (Twitter) Card" : "X (Twitter) কার্ড"}
             </button>
 
             <button
@@ -224,7 +241,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-zinc-200 dark:hover:bg-zinc-800"
               }`}
             >
-              WhatsApp চ্যাট প্রিভিউ
+              {isEn ? "WhatsApp Chat" : "WhatsApp চ্যাট প্রিভিউ"}
             </button>
 
             <button
@@ -236,7 +253,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-zinc-200 dark:hover:bg-zinc-800"
               }`}
             >
-              মূল OG কার্ড (১২০০ × ৬৩০)
+              {isEn ? "Raw OG Card (1200 × 630)" : "মূল OG কার্ড (১২০০ × ৬৩০)"}
             </button>
           </div>
 
@@ -246,23 +263,23 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
               {/* FB Post Header */}
               <div className="p-3.5 flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-full bg-[#C8102E] text-white flex items-center justify-center font-bold text-sm">
-                  বা
+                  {isEn ? "DB" : "বা"}
                 </div>
                 <div>
                   <div className="flex items-center gap-1 font-bold text-sm leading-tight">
-                    <span>দৈনিক বাংলাদেশ বার্তা</span>
+                    <span>{isEn ? "Daily Bangladesh Barta" : "দৈনিক বাংলাদেশ বার্তা"}</span>
                     <span className="w-3.5 h-3.5 bg-blue-500 rounded-full text-white text-[9px] flex items-center justify-center">
                       ✓
                     </span>
                   </div>
                   <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    এখনই • 🌐
+                    {isEn ? "Just now • 🌐" : "এখনই • 🌐"}
                   </span>
                 </div>
               </div>
 
               <div className="px-3.5 pb-2.5 text-xs">
-                সর্বশেষ তাজা খবর ও বিস্তারিত প্রতিবেদন পড়ুন...
+                {isEn ? "Read the full reporting and breaking story on our digital portal..." : "সর্বশেষ তাজা খবর ও বিস্তারিত প্রতিবেদন পড়ুন..."}
               </div>
 
               {/* Dynamic Image Card */}
@@ -284,7 +301,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                   {title}
                 </h4>
                 <p className="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-1 mt-0.5">
-                  {category} • দৈনিক বাংলাদেশ বার্তা অনলাইন সংস্করণ
+                  {category} • {isEn ? "Daily Bangladesh Barta Digital Edition" : "দৈনিক বাংলাদেশ বার্তা অনলাইন সংস্করণ"}
                 </p>
               </div>
             </div>
@@ -295,12 +312,12 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
             <div className="bg-black text-white border border-zinc-800 rounded-2xl overflow-hidden shadow-md max-w-xl mx-auto p-4 space-y-3 font-sans">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-[#C8102E] text-white flex items-center justify-center font-bold text-sm">
-                  বা
+                  {isEn ? "DB" : "বা"}
                 </div>
                 <div>
                   <div className="flex items-center gap-1 font-bold text-sm">
-                    <span>দৈনিক বাংলাদেশ বার্তা</span>
-                    <span className="text-zinc-400 font-normal text-xs">@BangladeshBarta • ১ মি.</span>
+                    <span>{isEn ? "Daily Bangladesh Barta" : "দৈনিক বাংলাদেশ বার্তা"}</span>
+                    <span className="text-zinc-400 font-normal text-xs">{isEn ? "@BangladeshBarta • 1m" : "@BangladeshBarta • ১ মি."}</span>
                   </div>
                 </div>
               </div>
@@ -327,7 +344,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                     {title}
                   </span>
                   <span className="text-[11px] text-zinc-500 line-clamp-1">
-                    {category} • পড়ুন বিস্তারিত প্রতিবেদনে
+                    {category} • {isEn ? "Read full report" : "পড়ুন বিস্তারিত প্রতিবেদনে"}
                   </span>
                 </div>
               </div>
@@ -358,7 +375,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                 </div>
 
                 <div className="flex items-center justify-end gap-1 text-[9px] text-zinc-300 pt-0.5">
-                  <span>৭:৩৮ অপরাহ্ন</span>
+                  <span>{isEn ? "7:38 PM" : "৭:৩৮ অপরাহ্ন"}</span>
                   <span className="text-blue-400">✓✓</span>
                 </div>
               </div>
@@ -377,7 +394,9 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                 />
               </div>
               <p className="text-center text-xs text-[var(--color-text-muted)] font-mono">
-                রেজোলিউশন: ১২০০ × ৬৩০ পিক্সেল (আদর্শ হাই-রেজ সোশ্যাল মেটাডাটা ব্যানার)
+                {isEn
+                  ? "Resolution: 1200 × 630 pixels (Standard high-res social metadata banner)"
+                  : "রেজোলিউশন: ১২০০ × ৬৩০ পিক্সেল (আদর্শ হাই-রেজ সোশ্যাল মেটাডাটা ব্যানার)"}
               </p>
             </div>
           )}

@@ -4,15 +4,20 @@ import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { Layers, CheckCircle2, XCircle } from "lucide-react";
 import { toBengaliDigits } from "@/lib/bengali-date";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "হোমপেজ লেআউট ও সেকশন বিল্ডার | দৈনিক বাংলাদেশ বার্তা অ্যাডমিন",
-  description: "হোমপেজের বিভিন্ন সেকশনের ক্রম, সক্রিয়তা ও বিন্যাস নিয়ন্ত্রণ",
+  title: "Homepage Layout Builder | Admin",
+  description: "Configure homepage layout, section ordering and visibility",
 };
 
 export default async function AdminHomepageBuilderPage() {
+  const cookieStore = await cookies();
+  const isEn = cookieStore.get("admin_lang")?.value !== "bn";
+  const formatNum = (n: number | string) => (isEn ? String(n) : toBengaliDigits(n));
+
   let sections: any[] = [];
   try {
     sections = await db
@@ -40,27 +45,33 @@ export default async function AdminHomepageBuilderPage() {
   return (
     <div className="space-y-6">
       <div className="border-b border-[var(--color-border)] pb-4">
-        <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
           <Layers size={24} className="text-[var(--color-primary)]" />
-          হোমপেজ লেআউট ও সেকশন বিল্ডার
+          <span>{isEn ? "Homepage Layout & Section Builder" : "হোমপেজ লেআউট ও সেকশন বিল্ডার"}</span>
         </h1>
         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-          ডাটাবেজের লাইভ সেকশন রেকর্ড, ক্রম ও সক্রিয়তা নিয়ন্ত্রণ
+          {isEn
+            ? "Configure live sections, display ordering and visibility across the digital portal homepage"
+            : "ডাটাবেজের লাইভ সেকশন রেকর্ড, ক্রম ও সক্রিয়তা নিয়ন্ত্রণ"}
         </p>
       </div>
 
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
         <div className="p-4 border-b border-[var(--color-border)] font-bold text-xs uppercase tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
-          <span>হোমপেজে সক্রিয় সেকশনসমূহ ({toBengaliDigits(sections.length)}টি)</span>
+          <span>
+            {isEn
+              ? `Homepage Sections (${formatNum(sections.length)})`
+              : `হোমপেজে সক্রিয় সেকশনসমূহ (${formatNum(sections.length)}টি)`}
+          </span>
           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            রিয়েল ডাটাবেজ
+            {isEn ? "Live Database" : "রিয়েল ডাটাবেজ"}
           </span>
         </div>
 
         {sections.length === 0 ? (
           <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-            ডাটাবেজে কোনো হোমপেজ সেকশন পাওয়া যায়নি।
+            {isEn ? "No homepage sections found in database." : "ডাটাবেজে কোনো হোমপেজ সেকশন পাওয়া যায়নি।"}
           </div>
         ) : (
           <div className="divide-y divide-[var(--color-border)]">
@@ -71,15 +82,17 @@ export default async function AdminHomepageBuilderPage() {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-mono font-bold text-[var(--color-text-faint)] w-8">
-                    #{toBengaliDigits(idx + 1)}
+                    #{formatNum(idx + 1)}
                   </span>
                   <div>
-                    <h3 className="font-bold text-sm text-[var(--color-text)]">{sec.title}</h3>
+                    <h3 className="font-bold text-sm text-[var(--color-text)]">
+                      {isEn && sec.titleEn ? sec.titleEn : sec.title}
+                    </h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[11px] text-[var(--color-text-muted)] font-mono">
-                        ধরন: {sec.sectionType}
+                        {isEn ? "Type:" : "ধরন:"} {sec.sectionType}
                       </span>
-                      {sec.titleEn && (
+                      {sec.titleEn && !isEn && (
                         <span className="text-[10px] text-[var(--color-text-faint)]">
                           ({sec.titleEn})
                         </span>
@@ -102,12 +115,12 @@ export default async function AdminHomepageBuilderPage() {
                     {sec.isActive ? (
                       <>
                         <CheckCircle2 size={11} />
-                        <span>সক্রিয় (Active)</span>
+                        <span>{isEn ? "Active" : "সক্রিয়"}</span>
                       </>
                     ) : (
                       <>
                         <XCircle size={11} />
-                        <span>নিষ্ক্রিয় (Inactive)</span>
+                        <span>{isEn ? "Inactive" : "নিষ্ক্রিয়"}</span>
                       </>
                     )}
                   </button>

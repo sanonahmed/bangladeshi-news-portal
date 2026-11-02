@@ -23,12 +23,15 @@ import {
   BarChart2,
 } from "lucide-react";
 import Link from "next/link";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminPollsClientProps {
   initialPolls: Poll[];
 }
 
 export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
+  const { language, formatNumber } = useAdminLanguage();
+  const isEn = language === "en";
   const [pollsList, setPollsList] = useState<Poll[]>(initialPolls);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -193,12 +196,14 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
       {/* Header */}
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <Vote size={26} className="text-[var(--color-primary)]" />
-            অনলাইন ভোট ও পাঠক জরিপ ম্যানেজার
+            {isEn ? "Online Polls & Public Opinion" : "অনলাইন ভোট ও পাঠক জরিপ ম্যানেজার"}
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            হোমপেজ ও আর্কাইভে প্রদর্শনের জন্য জনমত জরিপ তৈরি ও ফলাফল পর্যালোচনা করুন
+            {isEn
+              ? "Create reader opinion polls and monitor live voter responses on homepage & archives"
+              : "হোমপেজ ও আর্কাইভে প্রদর্শনের জন্য জনমত জরিপ তৈরি ও ফলাফল পর্যালোচনা করুন"}
           </p>
         </div>
 
@@ -209,7 +214,7 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
             className="inline-flex items-center gap-1.5 px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-secondary)] text-xs font-bold text-[var(--color-text)] transition-colors rounded"
           >
             <BarChart2 size={14} />
-            পাবলিক আর্কাইভ দেখুন
+            {isEn ? "View Public Archive" : "পাবলিক আর্কাইভ দেখুন"}
           </Link>
 
           <button
@@ -218,7 +223,9 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors rounded shadow-xs cursor-pointer"
           >
             <PlusCircle size={15} />
-            {showAddForm ? "ফর্ম বন্ধ করুন" : "নতুন জরিপ তৈরি করুন"}
+            {showAddForm
+              ? (isEn ? "Close Form" : "ফর্ম বন্ধ করুন")
+              : (isEn ? "Create New Poll" : "নতুন জরিপ তৈরি করুন")}
           </button>
         </div>
       </div>
@@ -422,17 +429,17 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
       {/* Polls List */}
       <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden shadow-sm">
         <div className="p-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-          <h3 className="bengali-headline text-sm font-bold text-[var(--color-text)]">
-            সকল অনলাইন জরিপ ({pollsList.length}টি)
+          <h3 className="text-sm font-bold text-[var(--color-text)]">
+            {isEn ? `All Online Polls (${formatNumber(pollsList.length)})` : `সকল অনলাইন জরিপ (${formatNumber(pollsList.length)}টি)`}
           </h3>
           <span className="text-xs text-[var(--color-text-muted)]">
-            স্টার আইকনে ক্লিক করে হোমপেজের প্রধান জরিপ নির্বাচন করুন
+            {isEn ? "Click the star icon to set as homepage featured poll" : "স্টার আইকনে ক্লিক করে হোমপেজের প্রধান জরিপ নির্বাচন করুন"}
           </span>
         </div>
 
         {pollsList.length === 0 ? (
           <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-            বর্তমানে কোনো জরিপ নেই।
+            {isEn ? "No polls currently available." : "বর্তমানে কোনো জরিপ নেই।"}
           </div>
         ) : (
           <div className="divide-y divide-[var(--color-border)]">
@@ -455,7 +462,7 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
                             ? "bg-amber-100 dark:bg-amber-950/60 text-amber-600"
                             : "text-zinc-400 hover:text-amber-500"
                         }`}
-                        title={poll.isFeatured ? "প্রধান জরিপ থেকে সরান" : "হোমপেজের প্রধান জরিপ হিসেবে দেখান"}
+                        title={poll.isFeatured ? (isEn ? "Remove from featured" : "প্রধান জরিপ থেকে সরান") : (isEn ? "Feature on homepage" : "হোমপেজের প্রধান জরিপ হিসেবে দেখান")}
                       >
                         <Star size={16} className={poll.isFeatured ? "fill-amber-500 text-amber-500" : ""} />
                       </button>
@@ -466,7 +473,7 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
 
                       {poll.isFeatured && (
                         <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800 rounded">
-                          ★ হোমপেজে প্রদর্শিত
+                          {isEn ? "★ Featured on Homepage" : "★ হোমপেজে প্রদর্শিত"}
                         </span>
                       )}
 
@@ -477,17 +484,17 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
                             : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-300 dark:border-zinc-700"
                         }`}
                       >
-                        {poll.isActive ? "সক্রিয়" : "বন্ধ"}
+                        {poll.isActive ? (isEn ? "Active" : "সক্রিয়") : (isEn ? "Closed" : "বন্ধ")}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono">
                       <Users size={12} />
-                      <span>মোট ভোট: {totalVotes.toLocaleString("bn-BD")}</span>
+                      <span>{isEn ? `Total Votes: ${formatNumber(totalVotes)}` : `মোট ভোট: ${formatNumber(totalVotes)}`}</span>
                     </div>
                   </div>
 
-                  <h4 className="bengali-headline text-base font-bold text-[var(--color-text)] leading-snug">
+                  <h4 className="text-base font-bold text-[var(--color-text)] leading-snug">
                     {poll.question}
                   </h4>
 
@@ -506,7 +513,7 @@ export function AdminPollsClient({ initialPolls }: AdminPollsClientProps) {
                           <div className="flex items-center justify-between font-semibold">
                             <span className="truncate max-w-[140px] text-[var(--color-text)]">{opt}</span>
                             <span className="font-mono font-bold text-[var(--color-text)]">
-                              {percentage}% ({count})
+                              {formatNumber(percentage)}% ({formatNumber(count)})
                             </span>
                           </div>
                           <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">

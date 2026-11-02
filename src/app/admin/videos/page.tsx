@@ -23,9 +23,27 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+
+const CATEGORY_MAP: Record<string, { en: string; bn: string }> = {
+  "জাতীয়": { en: "National", bn: "জাতীয়" },
+  "National": { en: "National", bn: "জাতীয়" },
+  "রাজনীতি": { en: "Politics", bn: "রাজনীতি" },
+  "Politics": { en: "Politics", bn: "রাজনীতি" },
+  "আন্তর্জাতিক": { en: "International", bn: "আন্তর্জাতিক" },
+  "International": { en: "International", bn: "আন্তর্জাতিক" },
+  "খেলাধুলা": { en: "Sports", bn: "খেলাধুলা" },
+  "Sports": { en: "Sports", bn: "খেলাধুলা" },
+  "বিনোদন": { en: "Entertainment", bn: "বিনোদন" },
+  "Entertainment": { en: "Entertainment", bn: "বিনোদন" },
+  "প্রযুক্তি": { en: "Technology", bn: "প্রযুক্তি" },
+  "Technology": { en: "Technology", bn: "প্রযুক্তি" },
+  "পরিবেশ": { en: "Environment", bn: "পরিবেশ" },
+  "Environment": { en: "Environment", bn: "পরিবেশ" },
+};
 
 export default function AdminVideosPage() {
+  const { isEn, formatNumber } = useAdminLanguage();
   const [videoList, setVideoList] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +55,7 @@ export default function AdminVideosPage() {
   const [title, setTitle] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("৩:৪৫");
+  const [duration, setDuration] = useState("03:45");
   const [category, setCategory] = useState("জাতীয়");
   const [isFeatured, setIsFeatured] = useState(false);
 
@@ -66,11 +84,11 @@ export default function AdminVideosPage() {
     setSuccess("");
 
     if (!title.trim()) {
-      setError("ভিডিও শিরোনাম আবশ্যক");
+      setError(isEn ? "Video headline is required" : "ভিডিও শিরোনাম আবশ্যক");
       return;
     }
     if (!youtubeUrl.trim() || !extractedId) {
-      setError("সঠিক ইউটিউব ভিডিও লিংক দিন");
+      setError(isEn ? "Please provide a valid YouTube video link" : "সঠিক ইউটিউব ভিডিও লিংক দিন");
       return;
     }
 
@@ -80,15 +98,15 @@ export default function AdminVideosPage() {
         title: title.trim(),
         youtubeUrl: youtubeUrl.trim(),
         description: description.trim() || undefined,
-        duration: duration.trim() || "৩:৪৫",
+        duration: duration.trim() || "03:45",
         category,
         isFeatured,
       });
 
       if (!res.success) {
-        setError(res.error || "ভিডিও সংরক্ষণ ব্যর্থ হয়েছে");
+        setError(res.error || (isEn ? "Failed to save video story" : "ভিডিও সংরক্ষণ ব্যর্থ হয়েছে"));
       } else {
-        setSuccess("ভিডিও সফলভাবে সংরক্ষিত হয়েছে!");
+        setSuccess(isEn ? "Video story published successfully!" : "ভিডিও সফলভাবে সংরক্ষিত হয়েছে!");
         setTitle("");
         setYoutubeUrl("");
         setDescription("");
@@ -97,14 +115,14 @@ export default function AdminVideosPage() {
         await loadVideos();
       }
     } catch (err: any) {
-      setError(err?.message || "সার্ভার এরর ঘটেছে");
+      setError(err?.message || (isEn ? "Server error occurred" : "সার্ভার এরর ঘটেছে"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("আপনি কি নিশ্চিতভাবে এই ভিডিওটি মুছে ফেলতে চান?")) return;
+    if (!confirm(isEn ? "Are you sure you want to delete this video story?" : "আপনি কি নিশ্চিতভাবে এই ভিডিওটি মুছে ফেলতে চান?")) return;
     try {
       const res = await deleteVideo(id);
       if (res.success) {
@@ -133,10 +151,12 @@ export default function AdminVideosPage() {
         <div>
           <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
             <VideoIcon size={24} className="text-[var(--color-primary)]" />
-            ভিডিও সংবাদ ও ইউটিউব এম্বেড ম্যানেজার
+            {isEn ? "Video Stories & YouTube Embeds" : "ভিডিও সংবাদ ও ইউটিউব এম্বেড ম্যানেজার"}
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            ইউটিউব লিংক দিয়ে ভিডিও সংবাদ প্রকাশ, হোমপেজ ফিচার এবং মাল্টিমিডিয়া কিউরেশন
+            {isEn
+              ? "Publish video journalism with YouTube URLs, curate multimedia reports, and control homepage featured clips"
+              : "ইউটিউব লিংক দিয়ে ভিডিও সংবাদ প্রকাশ, হোমপেজ ফিচার এবং মাল্টিমিডিয়া কিউরেশন"}
           </p>
         </div>
 
@@ -147,7 +167,7 @@ export default function AdminVideosPage() {
             className="inline-flex items-center gap-1.5 px-3 py-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-xs font-semibold rounded text-[var(--color-text)]"
           >
             <Eye size={14} />
-            পোর্টালে দেখুন
+            {isEn ? "View on Portal" : "পোর্টালে দেখুন"}
           </Link>
           <button
             type="button"
@@ -155,7 +175,13 @@ export default function AdminVideosPage() {
             className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors shadow-sm cursor-pointer rounded"
           >
             <PlusCircle size={16} />
-            {showAddForm ? "ফর্ম বন্ধ করুন" : "নতুন ভিডিও যুক্ত করুন"}
+            {showAddForm
+              ? isEn
+                ? "Close Form"
+                : "ফর্ম বন্ধ করুন"
+              : isEn
+              ? "Add New Video"
+              : "নতুন ভিডিও যুক্ত করুন"}
           </button>
         </div>
       </div>
@@ -183,10 +209,12 @@ export default function AdminVideosPage() {
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <h3 className="bengali-headline text-base font-bold text-[var(--color-text)] flex items-center gap-2">
               <PlusCircle size={18} className="text-[var(--color-primary)]" />
-              নতুন ভিডিও সংবাদ তথ্য
+              {isEn ? "New Video Story Information" : "নতুন ভিডিও সংবাদ তথ্য"}
             </h3>
             <span className="text-xs text-[var(--color-text-muted)]">
-              ইউটিউব লিংক দিলেই স্বয়ংক্রিয়ভাবে ভিডিও আইডি ও থাম্বনেইল সনাক্ত হবে
+              {isEn
+                ? "Video ID and high-res thumbnail are automatically detected from the YouTube link"
+                : "ইউটিউব লিংক দিলেই স্বয়ংক্রিয়ভাবে ভিডিও আইডি ও থাম্বনেইল সনাক্ত হবে"}
             </span>
           </div>
 
@@ -194,41 +222,53 @@ export default function AdminVideosPage() {
             <div className="lg:col-span-7 space-y-3">
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  ইউটিউব ভিডিও লিংক (YouTube URL) *
+                  {isEn ? "YouTube Video URL *" : "ইউটিউব ভিডিও লিংক (YouTube URL) *"}
                 </label>
                 <input
                   type="url"
                   required
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=... বা https://youtu.be/..."
+                  placeholder={
+                    isEn
+                      ? "https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                      : "https://www.youtube.com/watch?v=... বা https://youtu.be/..."
+                  }
                   className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)] rounded"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  সংবাদের শিরোনাম (বাংলা) *
+                  {isEn ? "Story Headline *" : "সংবাদের শিরোনাম (বাংলা) *"}
                 </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="ভিডিওর মূল আকর্ষণীয় সংবাদ শিরোনাম..."
+                  placeholder={
+                    isEn
+                      ? "Enter engaging news headline for this video..."
+                      : "ভিডিওর মূল আকর্ষণীয় সংবাদ শিরোনাম..."
+                  }
                   className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm font-bold focus:outline-none focus:border-[var(--color-primary)] bengali-headline rounded"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  সংক্ষিপ্ত বিবরণী (ঐচ্ছিক)
+                  {isEn ? "Brief Description (Optional)" : "সংক্ষিপ্ত বিবরণী (ঐচ্ছিক)"}
                 </label>
                 <textarea
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="ভিডিও প্রতিবেদন সম্পর্কে ২/১ লাইন লিখুন..."
+                  placeholder={
+                    isEn
+                      ? "Write 1-2 lines summarizing the video report..."
+                      : "ভিডিও প্রতিবেদন সম্পর্কে ২/১ লাইন লিখুন..."
+                  }
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
                 />
               </div>
@@ -236,33 +276,33 @@ export default function AdminVideosPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                    সময়কাল (Duration)
+                    {isEn ? "Duration" : "সময়কাল (Duration)"}
                   </label>
                   <input
                     type="text"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
-                    placeholder="e.g. ০৩:৪৫ বা ০৫:২০"
+                    placeholder={isEn ? "e.g. 03:45 or 05:20" : "e.g. ০৩:৪৫ বা ০৫:২০"}
                     className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                    ভিডিও বিভাগ (Category)
+                    {isEn ? "Video Category" : "ভিডিও বিভাগ (Category)"}
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
                   >
-                    <option value="জাতীয়">জাতীয়</option>
-                    <option value="রাজনীতি">রাজনীতি</option>
-                    <option value="আন্তর্জাতিক">আন্তর্জাতিক</option>
-                    <option value="খেলাধুলা">খেলাধুলা</option>
-                    <option value="বিনোদন">বিনোদন</option>
-                    <option value="প্রযুক্তি">প্রযুক্তি</option>
-                    <option value="পরিবেশ">পরিবেশ</option>
+                    <option value="জাতীয়">{isEn ? "National" : "জাতীয়"}</option>
+                    <option value="রাজনীতি">{isEn ? "Politics" : "রাজনীতি"}</option>
+                    <option value="আন্তর্জাতিক">{isEn ? "International" : "আন্তর্জাতিক"}</option>
+                    <option value="খেলাধুলা">{isEn ? "Sports" : "খেলাধুলা"}</option>
+                    <option value="বিনোদন">{isEn ? "Entertainment" : "বিনোদন"}</option>
+                    <option value="প্রযুক্তি">{isEn ? "Technology" : "প্রযুক্তি"}</option>
+                    <option value="পরিবেশ">{isEn ? "Environment" : "পরিবেশ"}</option>
                   </select>
                 </div>
               </div>
@@ -275,7 +315,11 @@ export default function AdminVideosPage() {
                     onChange={(e) => setIsFeatured(e.target.checked)}
                     className="rounded text-[var(--color-primary)]"
                   />
-                  <span>হোমপেজের প্রধান বড় ভিডিও (Lead Featured Video) হিসেবে দেখান</span>
+                  <span>
+                    {isEn
+                      ? "Set as Homepage Lead Featured Video"
+                      : "হোমপেজের প্রধান বড় ভিডিও (Lead Featured Video) হিসেবে দেখান"}
+                  </span>
                 </label>
               </div>
             </div>
@@ -284,7 +328,7 @@ export default function AdminVideosPage() {
             <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-[var(--color-border)] lg:pl-6 pt-4 lg:pt-0">
               <div>
                 <span className="block text-xs font-bold text-[var(--color-text-muted)] mb-2">
-                  লাইভ প্রিভিউ (Live YouTube Embed)
+                  {isEn ? "Live YouTube Embed Preview" : "লাইভ প্রিভিউ (Live YouTube Embed)"}
                 </span>
 
                 {extractedId ? (
@@ -300,13 +344,17 @@ export default function AdminVideosPage() {
                     </div>
                     <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono flex items-center gap-1">
                       <CheckCircle2 size={12} />
-                      ভিডিও আইডি: {extractedId}
+                      {isEn ? `Video ID: ${extractedId}` : `ভিডিও আইডি: ${extractedId}`}
                     </div>
                   </div>
                 ) : (
                   <div className="relative aspect-video w-full rounded border border-dashed border-[var(--color-border)] flex flex-col items-center justify-center text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] p-4 text-center">
                     <Play size={32} className="text-zinc-400 mb-2" />
-                    <span>ইউটিউব লিংক দিলে এখানে লাইভ প্লেয়ার প্রিভিউ হবে</span>
+                    <span>
+                      {isEn
+                        ? "Enter a valid YouTube URL to see live embed player here"
+                        : "ইউটিউব লিংক দিলে এখানে লাইভ প্লেয়ার প্রিভিউ হবে"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -317,14 +365,20 @@ export default function AdminVideosPage() {
                   onClick={() => setShowAddForm(false)}
                   className="px-4 py-2 border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-bg-secondary)] rounded cursor-pointer"
                 >
-                  বাতিল
+                  {isEn ? "Cancel" : "বাতিল"}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !extractedId}
                   className="px-5 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm rounded cursor-pointer"
                 >
-                  {isSubmitting ? "সংরক্ষণ হচ্ছে..." : "ভিডিও প্রকাশ করুন"}
+                  {isSubmitting
+                    ? isEn
+                      ? "Saving..."
+                      : "সংরক্ষণ হচ্ছে..."
+                    : isEn
+                    ? "Publish Video"
+                    : "ভিডিও প্রকাশ করুন"}
                 </button>
               </div>
             </div>
@@ -336,24 +390,28 @@ export default function AdminVideosPage() {
       <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
         <div className="p-4 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] flex items-center justify-between">
           <span className="text-xs font-bold text-[var(--color-text)]">
-            মোট ভিডিও: {videoList.length} টি
+            {isEn
+              ? `Total Videos: ${formatNumber(videoList.length)}`
+              : `মোট ভিডিও: ${formatNumber(videoList.length)} টি`}
           </span>
           <button
             onClick={loadVideos}
             className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center gap-1 cursor-pointer"
           >
             <RefreshCw size={12} />
-            রিফ্রেশ
+            {isEn ? "Refresh" : "রিফ্রেশ"}
           </button>
         </div>
 
         {loading ? (
           <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-            ভিডিও লোড হচ্ছে...
+            {isEn ? "Loading videos..." : "ভিডিও লোড হচ্ছে..."}
           </div>
         ) : videoList.length === 0 ? (
           <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-            এখনও কোনো ভিডিও সংবাদ যুক্ত করা হয়নি। উপরে "নতুন ভিডিও যুক্ত করুন" বাটনে ক্লিক করুন।
+            {isEn
+              ? "No video stories published yet. Click \"Add New Video\" above to add one."
+              : "এখনও কোনো ভিডিও সংবাদ যুক্ত করা হয়নি। উপরে \"নতুন ভিডিও যুক্ত করুন\" বাটনে ক্লিক করুন।"}
           </div>
         ) : (
           <div className="divide-y divide-[var(--color-border)]">
@@ -384,12 +442,12 @@ export default function AdminVideosPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[10px] font-bold text-[var(--color-text-muted)]">
-                        {v.category}
+                        {(v.category ? CATEGORY_MAP[v.category]?.[isEn ? "en" : "bn"] || v.category : (isEn ? "General" : "সাধারণ"))}
                       </span>
                       {v.isFeatured && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                           <Star size={10} className="fill-amber-500 text-amber-500" />
-                          হোমপেজ ফিচারড
+                          {isEn ? "Homepage Featured" : "হোমপেজ ফিচারড"}
                         </span>
                       )}
                     </div>
@@ -408,7 +466,7 @@ export default function AdminVideosPage() {
                         rel="noreferrer"
                         className="text-red-600 hover:underline flex items-center gap-1"
                       >
-                        ইউটিউব লিংক <ExternalLink size={10} />
+                        {isEn ? "YouTube Link" : "ইউটিউব লিংক"} <ExternalLink size={10} />
                       </a>
                     </div>
                   </div>
@@ -424,17 +482,31 @@ export default function AdminVideosPage() {
                         ? "border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                         : "border-[var(--color-border)] hover:bg-[var(--color-bg)] text-[var(--color-text-muted)]"
                     }`}
-                    title={v.isFeatured ? "হোমপেজ ফিচার বাতিল করুন" : "হোমপেজের প্রধান ভিডিও হিসেবে সেট করুন"}
+                    title={
+                      v.isFeatured
+                        ? isEn
+                          ? "Remove homepage featured status"
+                          : "হোমপেজ ফিচার বাতিল করুন"
+                        : isEn
+                        ? "Set as homepage lead featured video"
+                        : "হোমপেজের প্রধান ভিডিও হিসেবে সেট করুন"
+                    }
                   >
                     <Star size={12} className={v.isFeatured ? "fill-amber-500 text-amber-500" : ""} />
-                    {v.isFeatured ? "ফিচারড" : "ফিচার করুন"}
+                    {v.isFeatured
+                      ? isEn
+                        ? "Featured"
+                        : "ফিচারড"
+                      : isEn
+                      ? "Feature"
+                      : "ফিচার করুন"}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleDelete(v.id)}
                     className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 rounded transition-colors cursor-pointer"
-                    title="ভিডিও মুছুন"
+                    title={isEn ? "Delete video" : "ভিডিও মুছুন"}
                   >
                     <Trash2 size={16} />
                   </button>

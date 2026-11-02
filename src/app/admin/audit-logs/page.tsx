@@ -4,15 +4,32 @@ import { user } from "@/db/schema/auth";
 import { eq, desc } from "drizzle-orm";
 import { ScrollText, ShieldCheck, Clock, User, Globe } from "lucide-react";
 import { formatBengaliDateTime, toBengaliDigits } from "@/lib/bengali-date";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "প্রশাসনিক অডিট লগ | দৈনিক বাংলাদেশ বার্তা অ্যাডমিন",
-  description: "নিউজ রুমের প্রতিটি সংবেদনশীল পরিবর্তন ও পদক্ষেপের নিরাপত্তা রেকর্ড",
+  title: "Audit Logs | Admin",
+  description: "Immutable administrative and security audit trail",
 };
 
 export default async function AdminAuditLogsPage() {
+  const cookieStore = await cookies();
+  const isEn = cookieStore.get("admin_lang")?.value !== "bn";
+  const formatNum = (n: number | string) => (isEn ? String(n) : toBengaliDigits(n));
+  const formatDateTime = (d: Date | null) => {
+    if (!d) return "";
+    return isEn
+      ? d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : formatBengaliDateTime(d);
+  };
+
   let logs: any[] = [];
   try {
     logs = await db
@@ -39,27 +56,29 @@ export default async function AdminAuditLogsPage() {
     <div className="space-y-6">
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <ScrollText size={24} className="text-[var(--color-primary)]" />
-            প্রশাসনিক অডিট লগ (Audit Logs)
+            <span>{isEn ? "Administrative Security Audit Logs" : "প্রশাসনিক অডিট লগ (Audit Logs)"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            নিউজ রুমের প্রতিটি সংবেদনশীল পরিবর্তন, প্রকাশনা ও মুছে ফেলার অপরিবর্তনীয় নিরাপত্তা রেকর্ড
+            {isEn
+              ? "Immutable security audit records tracking sensitive actions, publications and role updates"
+              : "নিউজ রুমের প্রতিটি সংবেদনশীল পরিবর্তন, প্রকাশনা ও মুছে ফেলার অপরিবর্তনীয় নিরাপত্তা রেকর্ড"}
           </p>
         </div>
 
         <span className="text-xs font-semibold px-3 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded flex items-center gap-1.5 self-start sm:self-auto">
           <ShieldCheck size={14} className="text-emerald-600" />
-          <span>মোট রেকর্ড: {toBengaliDigits(logs.length)}টি</span>
+          <span>{isEn ? `Total Records: ${formatNum(logs.length)}` : `মোট রেকর্ড: ${formatNum(logs.length)}টি`}</span>
         </span>
       </div>
 
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
         <div className="p-4 border-b border-[var(--color-border)] font-bold text-xs uppercase tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
-          <span>লাইভ নিরাপত্তা অডিট রেকর্ডসমূহ</span>
+          <span>{isEn ? "Live Security Audit Trail" : "লাইভ নিরাপত্তা অডিট রেকর্ডসমূহ"}</span>
           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            ডাটাবেজ কানেক্টেড
+            {isEn ? "PostgreSQL Connected" : "ডাটাবেজ কানেক্টেড"}
           </span>
         </div>
 
@@ -67,10 +86,12 @@ export default async function AdminAuditLogsPage() {
           <div className="border border-[var(--color-border)] p-12 text-center bg-[var(--color-bg)] space-y-2">
             <ScrollText size={44} className="mx-auto text-[var(--color-text-faint)] mb-2 opacity-50" />
             <h3 className="font-bold text-base text-[var(--color-text)]">
-              ডাটাবেজে এখনও কোনো অডিট লগ রেকর্ড হয়নি
+              {isEn ? "No audit log entries recorded in database yet" : "ডাটাবেজে এখনও কোনো অডিট লগ রেকর্ড হয়নি"}
             </h3>
             <p className="text-xs text-[var(--color-text-muted)] max-w-md mx-auto">
-              নিউজ রুমে কোনো সংবেদনশীল প্রশাসনিক পরিবর্তন (যেমন: পোস্ট মুছে ফেলা, ইউজার পারমিশন পরিবর্তন) সংঘটিত হলে তা <code>audit_logs</code> টেবিলে স্বয়ংক্রিয়ভাবে রেকর্ড হয়ে এখানে প্রদর্শিত হবে।
+              {isEn
+                ? "When sensitive administrative changes (such as article deletions or permission modifications) take place, they will automatically be recorded in the audit_logs table."
+                : "নিউজ রুমে কোনো সংবেদনশীল প্রশাসনিক পরিবর্তন (যেমন: পোস্ট মুছে ফেলা, ইউজার পারমিশন পরিবর্তন) সংঘটিত হলে তা audit_logs টেবিলে স্বয়ংক্রিয়ভাবে রেকর্ড হয়ে এখানে প্রদর্শিত হবে।"}
             </p>
           </div>
         ) : (
@@ -78,11 +99,11 @@ export default async function AdminAuditLogsPage() {
             <table className="w-full text-xs text-left">
               <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-semibold">
                 <tr>
-                  <th className="p-3">পদক্ষেপ (Action)</th>
-                  <th className="p-3">ব্যবহারকারী</th>
-                  <th className="p-3">এনটিটি</th>
-                  <th className="p-3">আইপি ঠিকানা</th>
-                  <th className="p-3 text-right">তারিখ ও সময়</th>
+                  <th className="p-3">{isEn ? "Action" : "পদক্ষেপ (Action)"}</th>
+                  <th className="p-3">{isEn ? "User / Staff" : "ব্যবহারকারী"}</th>
+                  <th className="p-3">{isEn ? "Entity Target" : "এনটিটি"}</th>
+                  <th className="p-3">{isEn ? "IP Address" : "আইপি ঠিকানা"}</th>
+                  <th className="p-3 text-right">{isEn ? "Timestamp" : "তারিখ ও সময়"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
@@ -92,7 +113,7 @@ export default async function AdminAuditLogsPage() {
                       {log.action}
                     </td>
                     <td className="p-3 text-[var(--color-text)]">
-                      {log.userName || log.userEmail || "সিস্টেম"}
+                      {log.userName || log.userEmail || (isEn ? "System" : "সিস্টেম")}
                     </td>
                     <td className="p-3 font-mono text-[var(--color-text-muted)]">
                       {log.entityType}: {log.entityId}
@@ -101,7 +122,7 @@ export default async function AdminAuditLogsPage() {
                       {log.ipAddress || "—"}
                     </td>
                     <td className="p-3 text-right text-[var(--color-text-muted)]">
-                      {formatBengaliDateTime(log.createdAt)}
+                      {formatDateTime(log.createdAt)}
                     </td>
                   </tr>
                 ))}

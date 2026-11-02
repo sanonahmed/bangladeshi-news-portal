@@ -15,6 +15,7 @@ import {
 import { TiptapEditor } from "@/components/admin/editor/TiptapEditor";
 import { AiEditorAssistantModal } from "@/components/admin/editor/AiEditorAssistantModal";
 import { updateArticle } from "@/actions/articles";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminEditArticleClientProps {
   article: {
@@ -32,6 +33,8 @@ interface AdminEditArticleClientProps {
 
 export function AdminEditArticleClient({ article }: AdminEditArticleClientProps) {
   const router = useRouter();
+  const { language } = useAdminLanguage();
+  const isEn = language === "en";
 
   const [title, setTitle] = useState(article.title);
   const [excerpt, setExcerpt] = useState(article.excerpt || "");
@@ -58,15 +61,15 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
       });
 
       if (!res.success) {
-        throw new Error(res.error || "সংবাদ হালনাগাদ করা সম্ভব হয়নি।");
+        throw new Error(res.error || (isEn ? "Failed to update article." : "সংবাদ হালনাগাদ করা সম্ভব হয়নি।"));
       }
 
-      setSuccess("সংবাদটি সফলভাবে হালনাগাদ করা হয়েছে!");
+      setSuccess(isEn ? "Story updated successfully!" : "সংবাদটি সফলভাবে হালনাগাদ করা হয়েছে!");
       setTimeout(() => {
         router.refresh();
       }, 1000);
     } catch (err: any) {
-      setError(err?.message || "হালনাগাদে ত্রুটি দেখা দিয়েছে");
+      setError(err?.message || (isEn ? "An error occurred while updating" : "হালনাগাদে ত্রুটি দেখা দিয়েছে"));
     } finally {
       setLoading(false);
     }
@@ -84,11 +87,11 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="bengali-headline text-xl font-bold text-[var(--color-text)]">
-              সংবাদ সম্পাদনা ও এআই পরিমার্জন
+            <h1 className="text-xl font-bold text-[var(--color-text)] tracking-tight">
+              {isEn ? "Edit Story & AI Refinement" : "সংবাদ সম্পাদনা ও এআই পরিমার্জন"}
             </h1>
             <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
-              <span>স্লাগ:</span>
+              <span>{isEn ? "Slug:" : "স্লাগ:"}</span>
               <code className="font-mono text-purple-600 dark:text-purple-400 font-bold">
                 {article.slug}
               </code>
@@ -101,20 +104,20 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             type="button"
             onClick={() => setAiModalOpen(true)}
             className="px-3.5 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
-            title="এআই সম্পাদকীয় সহকারী"
+            title={isEn ? "Open AI Editorial Assistant" : "এআই সম্পাদকীয় সহকারী"}
           >
             <Sparkles size={14} className="text-amber-300 animate-pulse" />
-            <span>এআই সহকারী</span>
+            <span>{isEn ? "AI Assistant" : "এআই সহকারী"}</span>
           </button>
 
           <Link
             href={`/news/${article.slug}`}
             target="_blank"
             className="px-3 py-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-xs font-bold text-[var(--color-text-muted)] rounded flex items-center gap-1.5"
-            title="লাইভ সংবাদ দেখুন"
+            title={isEn ? "View live article" : "লাইভ সংবাদ দেখুন"}
           >
             <Eye size={13} />
-            <span>লাইভ দেখুন</span>
+            <span>{isEn ? "View Live" : "লাইভ দেখুন"}</span>
           </Link>
         </div>
       </div>
@@ -139,7 +142,7 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-              শিরোনাম (বাংলা) *
+              {isEn ? "Story Headline *" : "শিরোনাম (বাংলা) *"}
             </label>
             <button
               type="button"
@@ -147,7 +150,7 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
               className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-[11px] font-bold border border-purple-200 dark:border-purple-800 transition-all cursor-pointer"
             >
               <Sparkles size={12} className="text-purple-600 dark:text-purple-400" />
-              <span>এআই দিয়ে শিরোনাম পরিবর্তন</span>
+              <span>{isEn ? "Refine with AI" : "এআই দিয়ে শিরোনাম পরিবর্তন"}</span>
             </button>
           </div>
           <input
@@ -155,7 +158,7 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-base font-bold focus:outline-none focus:border-[var(--color-primary)] bengali-headline rounded"
+            className="w-full p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-base font-bold focus:outline-none focus:border-[var(--color-primary)] rounded"
           />
         </div>
 
@@ -163,15 +166,15 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-              সারসংক্ষেপ (Excerpt)
+              {isEn ? "Summary (Excerpt)" : "সারসংক্ষেপ (Excerpt)"}
             </label>
             <button
               type="button"
               onClick={() => setAiModalOpen(true)}
-              className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-1"
+              className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
             >
               <Sparkles size={11} />
-              <span>এআই সারসংক্ষেপ তৈরি</span>
+              <span>{isEn ? "Generate with AI" : "এআই সারসংক্ষেপ তৈরি"}</span>
             </button>
           </div>
           <textarea
@@ -179,36 +182,42 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             onChange={(e) => setExcerpt(e.target.value)}
             rows={3}
             className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
-            placeholder="সংবাদের মূল প্রতিপাদ্য ২/৩ লাইনে লিখুন..."
+            placeholder={isEn ? "Core takeaway in 2-3 concise sentences..." : "সংবাদের মূল প্রতিপাদ্য ২/৩ লাইনে লিখুন..."}
           />
         </div>
 
         {/* Content with Tiptap */}
         <div>
           <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-            বিস্তারিত বিষয়বস্তু (Article Body) *
+            {isEn ? "Story Content (Article Body) *" : "বিস্তারিত বিষয়বস্তু (Article Body) *"}
           </label>
           <TiptapEditor
             content={content}
             onChange={(html) => setContent(html)}
-            placeholder="এখানে বিস্তারিত সংবাদ লিখুন..."
+            placeholder={isEn ? "Write your full news story here..." : "এখানে বিস্তারিত সংবাদ লিখুন..."}
           />
         </div>
 
         {/* Correction Note */}
         <div>
           <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-            সংশোধনী বিজ্ঞপ্তি (Correction Note)
+            {isEn ? "Editorial Correction Note" : "সংশোধনী বিজ্ঞপ্তি (Correction Note)"}
           </label>
           <input
             type="text"
             value={correctionNote}
             onChange={(e) => setCorrectionNote(e.target.value)}
-            placeholder="পূর্ববর্তী তথ্যের কোনো অসঙ্গতি সংশোধন করা হলে তা এখানে লিখুন..."
+            placeholder={
+              isEn
+                ? "If any factual errors in the earlier version were corrected, specify transparently here..."
+                : "পূর্ববর্তী তথ্যের কোনো অসঙ্গতি সংশোধন করা হলে তা এখানে লিখুন..."
+            }
             className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
           />
           <p className="text-[11px] text-[var(--color-text-muted)] mt-1">
-            সংশোধনী যুক্ত করলে সংবাদ পৃষ্ঠায় সময়সহ একটি স্বচ্ছ নোটিশ প্রদর্শিত হবে।
+            {isEn
+              ? "When a correction note is added, a transparent timestamped disclaimer is displayed on the story page."
+              : "সংশোধনী যুক্ত করলে সংবাদ পৃষ্ঠায় সময়সহ একটি স্বচ্ছ নোটিশ প্রদর্শিত হবে।"}
           </p>
         </div>
 
@@ -220,7 +229,7 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             className="px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm rounded cursor-pointer"
           >
             <Save size={14} />
-            <span>{loading ? "সংরক্ষণ হচ্ছে..." : "পরিবর্তন সংরক্ষণ করুন"}</span>
+            <span>{loading ? (isEn ? "Saving..." : "সংরক্ষণ হচ্ছে...") : (isEn ? "Save Changes" : "পরিবর্তন সংরক্ষণ করুন")}</span>
           </button>
         </div>
       </form>

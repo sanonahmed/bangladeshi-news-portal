@@ -4,10 +4,26 @@ import { eq } from "drizzle-orm";
 import { Users, Shield, Plus, ExternalLink, Award, MapPin } from "lucide-react";
 import { formatBengaliDateTime } from "@/lib/bengali-date";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
+  const cookieStore = await cookies();
+  const isEn = cookieStore.get("admin_lang")?.value !== "bn";
+  const formatDateTime = (d: Date | null) => {
+    if (!d) return "";
+    return isEn
+      ? d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : formatBengaliDateTime(d);
+  };
+
   let userList: any[] = [];
   try {
     userList = await db
@@ -34,43 +50,45 @@ export default async function AdminUsersPage() {
     <div className="space-y-6">
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <Users size={24} className="text-[var(--color-primary)]" />
-            ব্যবহারকারী ও সাংবাদিক দল
+            <span>{isEn ? "Staff, Journalists & Newsroom Team" : "ব্যবহারকারী ও সাংবাদিক দল"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            নিউজ রুমের সদস্য, ব্যুরো প্রধান, বিশেষ প্রতিবেদক ও প্রশাসনিক কর্মী
+            {isEn
+              ? "Newsroom editorial staff, bureau chiefs, special correspondents and administrative accounts"
+              : "নিউজ রুমের সদস্য, ব্যুরো প্রধান, বিশেষ প্রতিবেদক ও প্রশাসনিক কর্মী"}
           </p>
         </div>
 
         <Link
           href="/authors"
           target="_blank"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[var(--color-primary)] text-white px-3.5 py-2 hover:bg-[var(--color-primary)]/90 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[var(--color-primary)] text-white px-3.5 py-2 hover:bg-[var(--color-primary)]/90 transition-colors rounded"
         >
-          <span>পাবলিক সাংবাদিক ডিরেক্টরি</span>
+          <span>{isEn ? "Public Journalists Directory" : "পাবলিক সাংবাদিক ডিরেক্টরি"}</span>
           <ExternalLink size={14} />
         </Link>
       </div>
 
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
             <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-semibold">
               <tr>
-                <th className="p-3">নাম</th>
-                <th className="p-3">পদবী ও ব্যুরো</th>
-                <th className="p-3">ইমেইল</th>
-                <th className="p-3">ভূমিকা (Role)</th>
-                <th className="p-3">প্রোফাইল লিংক</th>
-                <th className="p-3">নিবন্ধন তারিখ</th>
+                <th className="p-3">{isEn ? "Name" : "নাম"}</th>
+                <th className="p-3">{isEn ? "Designation & Bureau" : "পদবী ও ব্যুরো"}</th>
+                <th className="p-3">{isEn ? "Email" : "ইমেইল"}</th>
+                <th className="p-3">{isEn ? "Role" : "ভূমিকা (Role)"}</th>
+                <th className="p-3">{isEn ? "Profile Link" : "প্রোফাইল লিংক"}</th>
+                <th className="p-3">{isEn ? "Joined At" : "নিবন্ধন তারিখ"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
               {userList.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-[var(--color-text-muted)]">
-                    কোনো ব্যবহারকারী পাওয়া যায়নি।
+                    {isEn ? "No users or journalists found." : "কোনো ব্যবহারকারী পাওয়া যায়নি।"}
                   </td>
                 </tr>
               ) : (
@@ -81,7 +99,7 @@ export default async function AdminUsersPage() {
                       {u.isBureauChief && (
                         <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-amber-500 text-white px-1.5 py-0.2 rounded mt-0.5">
                           <Award className="w-2.5 h-2.5" />
-                          <span>ব্যুরো প্রধান</span>
+                          <span>{isEn ? "Bureau Chief" : "ব্যুরো প্রধান"}</span>
                         </span>
                       )}
                     </td>
@@ -113,15 +131,15 @@ export default async function AdminUsersPage() {
                           target="_blank"
                           className="text-[var(--color-primary)] hover:underline flex items-center gap-1 font-semibold"
                         >
-                          <span>বায়ো পেজ</span>
+                          <span>{isEn ? "Bio Page" : "বায়ো পেজ"}</span>
                           <ExternalLink size={12} />
                         </Link>
                       ) : (
-                        <span className="text-[var(--color-text-faint)]">প্রোফাইল নেই</span>
+                        <span className="text-[var(--color-text-faint)]">{isEn ? "No profile" : "প্রোফাইল নেই"}</span>
                       )}
                     </td>
                     <td className="p-3 text-[var(--color-text-muted)]">
-                      {formatBengaliDateTime(u.createdAt)}
+                      {formatDateTime(u.createdAt)}
                     </td>
                   </tr>
                 ))

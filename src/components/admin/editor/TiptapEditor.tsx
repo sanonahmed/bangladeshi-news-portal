@@ -12,7 +12,6 @@ import {
   Bold,
   Italic,
   Underline as UnderlineIcon,
-  Heading1,
   Heading2,
   Heading3,
   List,
@@ -27,6 +26,7 @@ import {
   AlignRight,
   Video,
 } from "lucide-react";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface TiptapEditorProps {
   content: string;
@@ -37,8 +37,11 @@ interface TiptapEditorProps {
 export function TiptapEditor({
   content,
   onChange,
-  placeholder = "এখানে বিস্তারিত সংবাদ লিখুন...",
+  placeholder,
 }: TiptapEditorProps) {
+  const { isEn } = useAdminLanguage();
+  const defaultPlaceholder = isEn ? "Write detailed article content here..." : "এখানে বিস্তারিত সংবাদ লিখুন...";
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -58,7 +61,7 @@ export function TiptapEditor({
         allowBase64: true,
       }),
       Placeholder.configure({
-        placeholder,
+        placeholder: placeholder || defaultPlaceholder,
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -83,7 +86,7 @@ export function TiptapEditor({
 
   const setLink = () => {
     const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("লিঙ্কের URL লিখুন:", previousUrl);
+    const url = window.prompt(isEn ? "Enter link URL:" : "লিঙ্কের URL লিখুন:", previousUrl);
     if (url === null) return;
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -93,14 +96,14 @@ export function TiptapEditor({
   };
 
   const addImage = () => {
-    const url = window.prompt("ছবির সরাসরি URL লিখুন:");
+    const url = window.prompt(isEn ? "Enter image URL:" : "ছবির সরাসরি URL লিখুন:");
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
   };
 
   const addYoutube = () => {
-    const url = window.prompt("ইউটিউব ভিডিওর লিঙ্ক লিখুন:");
+    const url = window.prompt(isEn ? "Enter YouTube video URL:" : "ইউটিউব ভিডিওর লিঙ্ক লিখুন:");
     if (url) {
       editor.commands.setYoutubeVideo({ src: url });
     }
@@ -117,7 +120,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("heading", { level: 2 }) ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="শিরোনাম ২"
+          title={isEn ? "Heading 2" : "শিরোনাম ২"}
         >
           <Heading2 size={16} />
         </button>
@@ -127,7 +130,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("heading", { level: 3 }) ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="শিরোনাম ৩"
+          title={isEn ? "Heading 3" : "শিরোনাম ৩"}
         >
           <Heading3 size={16} />
         </button>
@@ -141,7 +144,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("bold") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="বোল্ড"
+          title={isEn ? "Bold" : "বোল্ড"}
         >
           <Bold size={16} />
         </button>
@@ -151,7 +154,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("italic") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="ইটালিক"
+          title={isEn ? "Italic" : "ইটালিক"}
         >
           <Italic size={16} />
         </button>
@@ -161,7 +164,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("underline") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="আন্ডারলাইন"
+          title={isEn ? "Underline" : "আন্ডারলাইন"}
         >
           <UnderlineIcon size={16} />
         </button>
@@ -175,7 +178,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive({ textAlign: "left" }) ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="বামে সাজান"
+          title={isEn ? "Align Left" : "বামে সাজান"}
         >
           <AlignLeft size={16} />
         </button>
@@ -185,7 +188,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive({ textAlign: "center" }) ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="মাঝে সাজান"
+          title={isEn ? "Align Center" : "মাঝে সাজান"}
         >
           <AlignCenter size={16} />
         </button>
@@ -195,7 +198,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive({ textAlign: "right" }) ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="ডানে সাজান"
+          title={isEn ? "Align Right" : "ডানে সাজান"}
         >
           <AlignRight size={16} />
         </button>
@@ -209,7 +212,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("bulletList") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="বুলেট তালিকা"
+          title={isEn ? "Bullet List" : "বুলেট তালিকা"}
         >
           <List size={16} />
         </button>
@@ -219,7 +222,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("orderedList") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="সংখ্যাতালিকা"
+          title={isEn ? "Numbered List" : "সংখ্যাতালিকা"}
         >
           <ListOrdered size={16} />
         </button>
@@ -229,7 +232,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("blockquote") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="উদ্ধৃতি (Blockquote)"
+          title={isEn ? "Blockquote" : "উদ্ধৃতি (Blockquote)"}
         >
           <Quote size={16} />
         </button>
@@ -243,7 +246,7 @@ export function TiptapEditor({
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
             editor.isActive("link") ? "bg-[var(--color-primary)] text-white" : ""
           }`}
-          title="লিঙ্ক যোগ করুন"
+          title={isEn ? "Add Link" : "লিঙ্ক যোগ করুন"}
         >
           <LinkIcon size={16} />
         </button>
@@ -251,7 +254,7 @@ export function TiptapEditor({
           type="button"
           onClick={addImage}
           className="p-1.5 rounded hover:bg-[var(--color-border)]"
-          title="ছবি যোগ করুন"
+          title={isEn ? "Insert Image" : "ছবি যোগ করুন"}
         >
           <ImageIcon size={16} />
         </button>
@@ -259,7 +262,7 @@ export function TiptapEditor({
           type="button"
           onClick={addYoutube}
           className="p-1.5 rounded hover:bg-[var(--color-border)]"
-          title="ভিডিও এম্বেড"
+          title={isEn ? "Embed YouTube Video" : "ভিডিও এম্বেড"}
         >
           <Video size={16} />
         </button>
@@ -272,7 +275,7 @@ export function TiptapEditor({
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
           className="p-1.5 rounded hover:bg-[var(--color-border)] disabled:opacity-40"
-          title="পূর্বাবস্থায় ফেরান"
+          title={isEn ? "Undo" : "পূর্বাবস্থায় ফেরান"}
         >
           <Undo size={16} />
         </button>
@@ -281,7 +284,7 @@ export function TiptapEditor({
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
           className="p-1.5 rounded hover:bg-[var(--color-border)] disabled:opacity-40"
-          title="পুনরায় করুন"
+          title={isEn ? "Redo" : "পুনরায় করুন"}
         >
           <Redo size={16} />
         </button>

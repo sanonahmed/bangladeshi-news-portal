@@ -25,11 +25,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+
 interface AdminBreakingClientProps {
   initialItems: BreakingNews[];
 }
 
 export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) {
+  const { language, formatNumber } = useAdminLanguage();
+  const isEn = language === "en";
   const [items, setItems] = useState<BreakingNews[]>(initialItems);
   const [headline, setHeadline] = useState("");
   const [url, setUrl] = useState("/");
@@ -141,12 +145,14 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
       {/* Page Header */}
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <Zap size={26} className="text-[#C8102E] fill-[#C8102E]" />
-            ব্রেকিং নিউজ ও স্ক্রলিং নোটিশ টিকটিকি বার
+            {isEn ? "Breaking News & Alert Desk" : "ব্রেকিং নিউজ ও স্ক্রলিং নোটিশ বার"}
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            ওয়েবসাইটের শীর্ষে লাল টিকারে তাৎক্ষণিক জরুরি আপডেট ও নোটিশ নিয়ন্ত্রণ করুন
+            {isEn
+              ? "Instantly control urgent breaking headlines and live banner alerts flashing across the homepage"
+              : "ওয়েবসাইটের শীর্ষে লাল টিকারে তাৎক্ষণিক জরুরি আপডেট ও নোটিশ নিয়ন্ত্রণ করুন"}
           </p>
         </div>
 
@@ -157,7 +163,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
             className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-secondary)] text-xs font-bold text-[var(--color-text)] transition-colors rounded"
           >
             <Eye size={14} />
-            পাবলিক আর্কাইভ দেখুন
+            {isEn ? "View Public Archive" : "পাবলিক আর্কাইভ দেখুন"}
           </Link>
         </div>
       </div>
@@ -167,20 +173,24 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
         <div className="px-3 py-1.5 bg-zinc-900 text-white text-[11px] font-mono flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-            লাইভ টিকার প্রিভিউ (পাঠকরা যেমন দেখতে পাবেন)
+            {isEn ? "Live Ticker Preview (What readers see live)" : "লাইভ টিকার প্রিভিউ (পাঠকরা যেমন দেখতে পাবেন)"}
           </span>
-          <span className="text-zinc-400">মোট সক্রিয়: {activeItems.length} টি</span>
+          <span className="text-zinc-400">
+            {isEn ? `Total Active: ${formatNumber(activeItems.length)}` : `মোট সক্রিয়: ${formatNumber(activeItems.length)}টি`}
+          </span>
         </div>
 
         <div className="bg-[#C8102E] text-white flex items-center h-10 px-3 overflow-hidden select-none">
           <div className="flex-shrink-0 bg-black/30 px-2.5 py-1 font-bold text-xs flex items-center gap-1.5 rounded mr-3">
             <Zap size={13} className="fill-yellow-300 text-yellow-300" />
-            <span>ব্রেকিং নিউজ</span>
+            <span>{isEn ? "BREAKING NEWS" : "ব্রেকিং নিউজ"}</span>
           </div>
 
           <div className="flex-1 overflow-hidden relative">
             {activeItems.length === 0 ? (
-              <span className="text-xs text-white/80 italic">বর্তমানে কোনো ব্রেকিং নিউজ সক্রিয় নেই</span>
+              <span className="text-xs text-white/80 italic">
+                {isEn ? "No breaking news currently active" : "বর্তমানে কোনো ব্রেকিং নিউজ সক্রিয় নেই"}
+              </span>
             ) : (
               <div
                 className="flex items-center gap-6 whitespace-nowrap"
@@ -224,39 +234,39 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
             className="border border-[var(--color-border)] p-5 bg-[var(--color-bg)] rounded space-y-4 shadow-sm"
           >
             <div className="border-b border-[var(--color-border)] pb-2 flex items-center justify-between">
-              <h2 className="bengali-headline text-base font-bold text-[var(--color-text)] flex items-center gap-1.5">
+              <h2 className="text-base font-bold text-[var(--color-text)] flex items-center gap-1.5">
                 <Plus size={18} className="text-[#C8102E]" />
-                নতুন ব্রেকিং বা জরুরি নোটিশ প্রকাশ
+                {isEn ? "Publish New Breaking Alert" : "নতুন ব্রেকিং বা জরুরি নোটিশ প্রকাশ"}
               </h2>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                ব্রেকিং শিরোনাম (বাংলা) *
+                {isEn ? "Breaking Headline *" : "ব্রেকিং শিরোনাম (বাংলা) *"}
               </label>
               <textarea
                 required
                 rows={3}
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                placeholder="যেমন: বঙ্গোপসাগরে ৩ নম্বর সতর্ক সংকেত জারি, উপকূলীয় এলাকায় বৃষ্টি..."
-                className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm font-semibold focus:outline-none focus:border-[#C8102E] rounded bengali-headline"
+                placeholder={isEn ? "e.g. Cyclone warning signal 3 issued across coastal ports..." : "যেমন: বঙ্গোপসাগরে ৩ নম্বর সতর্ক সংকেত জারি, উপকূলীয় এলাকায় বৃষ্টি..."}
+                className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm font-semibold focus:outline-none focus:border-[#C8102E] rounded"
               />
               <div className="flex justify-between text-[11px] text-[var(--color-text-muted)] mt-1">
-                <span>স্পষ্ট ও সংক্ষিপ্ত শিরোনাম রাখুন</span>
-                <span>{headline.length} / ৩০০ অক্ষর</span>
+                <span>{isEn ? "Keep it crisp and urgent" : "স্পষ্ট ও সংক্ষিপ্ত শিরোনাম রাখুন"}</span>
+                <span>{headline.length} / 300</span>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                সংবাদের লিঙ্ক (URL বা স্ল্যাগ)
+                {isEn ? "Story Link (URL or Slug)" : "সংবাদের লিঙ্ক (URL বা স্ল্যাগ)"}
               </label>
               <input
                 type="text"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="/news/cyclone-warning বা পূর্ণ লিংক"
+                placeholder="/news/cyclone-warning"
                 className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[#C8102E] rounded"
               />
             </div>
@@ -264,35 +274,35 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  অগ্রাধিকার (Priority)
+                  {isEn ? "Priority" : "অগ্রাধিকার (Priority)"}
                 </label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(Number(e.target.value))}
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[#C8102E] rounded font-bold"
                 >
-                  <option value={10}>১০ - রেড এলার্ট / শীর্ষ ব্রেকিং</option>
-                  <option value={8}>৮ - অতি গুরুত্বপূর্ণ বুলেটিন</option>
-                  <option value={5}>৫ - সাধারণ ব্রেকিং নিউজ</option>
-                  <option value={3}>৩ - সাধারণ নোটিশ / বার্তা</option>
+                  <option value={10}>{isEn ? "10 - Red Alert / Top Breaking" : "১০ - রেড এলার্ট / শীর্ষ ব্রেকিং"}</option>
+                  <option value={8}>{isEn ? "8 - High Priority Bulletin" : "৮ - অতি গুরুত্বপূর্ণ বুলেটিন"}</option>
+                  <option value={5}>{isEn ? "5 - Standard Breaking" : "৫ - সাধারণ ব্রেকিং নিউজ"}</option>
+                  <option value={3}>{isEn ? "3 - General Notice / Update" : "৩ - সাধারণ নোটিশ / বার্তা"}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  মেয়াদ (Auto-expire)
+                  {isEn ? "Auto-expire Duration" : "মেয়াদ (Auto-expire)"}
                 </label>
                 <select
                   value={expiresHours}
                   onChange={(e) => setExpiresHours(e.target.value === "0" ? "0" : Number(e.target.value))}
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[#C8102E] rounded"
                 >
-                  <option value={1}>১ ঘণ্টা পর স্বয়ংক্রিয় বন্ধ</option>
-                  <option value={3}>৩ ঘণ্টা পর বন্ধ</option>
-                  <option value={6}>৬ ঘণ্টা পর বন্ধ</option>
-                  <option value={12}>১২ ঘণ্টা পর বন্ধ</option>
-                  <option value={24}>২৪ ঘণ্টা (১ দিন)</option>
-                  <option value="0">স্থায়ী (যতক্ষণ না সরানো হয়)</option>
+                  <option value={1}>{isEn ? "Expire in 1 hour" : "১ ঘণ্টা পর স্বয়ংক্রিয় বন্ধ"}</option>
+                  <option value={3}>{isEn ? "Expire in 3 hours" : "৩ ঘণ্টা পর বন্ধ"}</option>
+                  <option value={6}>{isEn ? "Expire in 6 hours" : "৬ ঘণ্টা পর বন্ধ"}</option>
+                  <option value={12}>{isEn ? "Expire in 12 hours" : "১২ ঘণ্টা পর বন্ধ"}</option>
+                  <option value={24}>{isEn ? "Expire in 24 hours (1 day)" : "২৪ ঘণ্টা (১ দিন)"}</option>
+                  <option value="0">{isEn ? "Permanent (until disabled)" : "স্থায়ী (যতক্ষণ না সরানো হয়)"}</option>
                 </select>
               </div>
             </div>
@@ -305,7 +315,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                   onChange={(e) => setIsExternal(e.target.checked)}
                   className="rounded text-[#C8102E]"
                 />
-                <span>এক্সটার্নাল লিংক (নতুন ট্যাবে ওপেন হবে)</span>
+                <span>{isEn ? "External link (open in new tab)" : "এক্সটার্নাল লিংক (নতুন ট্যাবে ওপেন হবে)"}</span>
               </label>
             </div>
 
@@ -317,12 +327,12 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
               {isSubmitting ? (
                 <>
                   <RefreshCw size={14} className="animate-spin" />
-                  প্রকাশ হচ্ছে...
+                  {isEn ? "Publishing..." : "প্রকাশ হচ্ছে..."}
                 </>
               ) : (
                 <>
                   <Zap size={14} className="fill-white" />
-                  টিকার-এ সরাসরি প্রকাশ করুন
+                  {isEn ? "Publish Live to Ticker" : "টিকার-এ সরাসরি প্রকাশ করুন"}
                 </>
               )}
             </button>
@@ -334,8 +344,8 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
           <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden shadow-sm">
             <div className="p-3 border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[var(--color-bg-secondary)]">
               <div className="flex items-center gap-2">
-                <h3 className="bengali-headline text-sm font-bold text-[var(--color-text)]">
-                  সকল ব্রেকিং নিউজ তালিকা ({items.length}টি)
+                <h3 className="text-sm font-bold text-[var(--color-text)]">
+                  {isEn ? `All Breaking Headlines (${formatNumber(items.length)})` : `সকল ব্রেকিং নিউজ তালিকা (${formatNumber(items.length)}টি)`}
                 </h3>
               </div>
 
@@ -343,7 +353,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                 <Search size={14} className="absolute left-2.5 top-2.5 text-[var(--color-text-muted)]" />
                 <input
                   type="text"
-                  placeholder="খুঁজুন..."
+                  placeholder={isEn ? "Search headlines..." : "খুঁজুন..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 pr-2 py-1 text-xs bg-[var(--color-bg)] border border-[var(--color-border)] rounded focus:outline-none focus:border-[#C8102E]"
@@ -380,7 +390,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                                   : "bg-blue-600 text-white"
                               }`}
                             >
-                              অগ্রাধিকার: {item.priority}
+                              {isEn ? `Priority: ${formatNumber(item.priority)}` : `অগ্রাধিকার: ${formatNumber(item.priority)}`}
                             </span>
 
                             <span
@@ -390,18 +400,19 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-300 dark:border-zinc-700"
                               }`}
                             >
-                              {item.isActive ? "● লাইভ সক্রিয়" : "○ বন্ধ"}
+                              {item.isActive ? (isEn ? "● Active Live" : "● লাইভ সক্রিয়") : (isEn ? "○ Inactive" : "○ বন্ধ")}
                             </span>
 
                             {item.expiresAt && (
                               <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1 font-mono">
                                 <Clock size={11} />
-                                মেয়াদ: {new Date(item.expiresAt).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" })}
+                                {isEn ? "Expires: " : "মেয়াদ: "}
+                                {new Date(item.expiresAt).toLocaleTimeString(isEn ? "en-US" : "bn-BD", { hour: "2-digit", minute: "2-digit" })}
                               </span>
                             )}
                           </div>
 
-                          <h4 className="bengali-headline text-sm font-bold text-[var(--color-text)] leading-snug">
+                          <h4 className="text-sm font-bold text-[var(--color-text)] leading-snug">
                             {item.headline}
                           </h4>
 
@@ -409,7 +420,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                             <span className="truncate max-w-xs font-mono">{item.url}</span>
                             {item.isExternal && (
                               <span className="flex items-center gap-0.5 text-[#C8102E]">
-                                <ExternalLink size={10} /> এক্সটার্নাল
+                                <ExternalLink size={10} /> {isEn ? "External" : "এক্সটার্নাল"}
                               </span>
                             )}
                           </div>
@@ -424,17 +435,17 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                               onClick={() => handlePriorityChange(item.id, item.priority + 1)}
                               disabled={item.priority >= 10}
                               className="p-1 hover:text-[#C8102E] disabled:opacity-30 cursor-pointer"
-                              title="অগ্রাধিকার বাড়ান"
+                              title={isEn ? "Increase priority" : "অগ্রাধিকার বাড়ান"}
                             >
                               <ChevronUp size={12} />
                             </button>
-                            <span className="text-[10px] font-mono font-bold px-1">{item.priority}</span>
+                            <span className="text-[10px] font-mono font-bold px-1">{formatNumber(item.priority)}</span>
                             <button
                               type="button"
                               onClick={() => handlePriorityChange(item.id, item.priority - 1)}
                               disabled={item.priority <= 1}
                               className="p-1 hover:text-[#C8102E] disabled:opacity-30 cursor-pointer"
-                              title="অগ্রাধিকার কমান"
+                              title={isEn ? "Decrease priority" : "অগ্রাধিকার কমান"}
                             >
                               <ChevronDown size={12} />
                             </button>
@@ -451,7 +462,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                                 : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200"
                             }`}
                           >
-                            {item.isActive ? "পজ করুন" : "সক্রিয় করুন"}
+                            {item.isActive ? (isEn ? "Pause" : "পজ করুন") : (isEn ? "Activate" : "সক্রিয় করুন")}
                           </button>
 
                           {/* Delete */}
@@ -460,7 +471,7 @@ export function AdminBreakingClient({ initialItems }: AdminBreakingClientProps) 
                             onClick={() => handleDelete(item.id)}
                             disabled={isLoading}
                             className="p-1.5 text-zinc-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-                            title="মুছে ফেলুন"
+                            title={isEn ? "Delete" : "মুছে ফেলুন"}
                           >
                             <Trash2 size={15} />
                           </button>

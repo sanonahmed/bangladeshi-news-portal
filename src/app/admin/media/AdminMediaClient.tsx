@@ -13,13 +13,16 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { recordMediaAsset, deleteAdminMedia, type MediaItem } from "@/actions/media";
-import { toBengaliDigits } from "@/lib/bengali-date";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminMediaClientProps {
   initialMedia: MediaItem[];
 }
 
 export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
+  const { language, formatNumber } = useAdminLanguage();
+  const isEn = language === "en";
+
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(initialMedia);
   const [searchQuery, setSearchQuery] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -55,7 +58,7 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
 
       if (!presignRes.ok) {
         const data = await presignRes.json();
-        throw new Error(data.error || "আপলোড অনুমতি পাওয়া যায়নি");
+        throw new Error(data.error || (isEn ? "Failed to obtain upload authorization" : "আপলোড অনুমতি পাওয়া যায়নি"));
       }
 
       const { uploadUrl, publicUrl, r2Key } = await presignRes.json();
@@ -67,7 +70,7 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
         body: file,
       });
 
-      if (!uploadRes.ok) throw new Error("R2-তে ফাইল আপলোড ব্যর্থ হয়েছে");
+      if (!uploadRes.ok) throw new Error(isEn ? "File upload to storage bucket failed" : "R2-তে ফাইল আপলোড ব্যর্থ হয়েছে");
 
       // 3. Record in PostgreSQL database
       const recordRes = await recordMediaAsset({
@@ -81,7 +84,11 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
 
       if (recordRes.success && recordRes.media) {
         setMediaItems((prev) => [recordRes.media!, ...prev]);
-        setSuccess(`'${file.name}' সফলভাবে আপলোড ও ডাটাবেজে সংরক্ষিত হয়েছে!`);
+        setSuccess(
+          isEn
+            ? `'${file.name}' successfully uploaded and registered in database!`
+            : `'${file.name}' সফলভাবে আপলোড ও ডাটাবেজে সংরক্ষিত হয়েছে!`
+        );
       } else {
         // Fallback UI item if DB record had warning
         setMediaItems((prev) => [
@@ -89,10 +96,10 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
             id: `m-${Date.now()}`,
             url: publicUrl,
             filename: file.name,
-            credit: "আপলোডকৃত মিডিয়া",
+            credit: isEn ? "Uploaded media" : "আপলোডকৃত মিডিয়া",
             fileSize: file.size,
             mimeType: file.type,
-            date: "আজ",
+            date: isEn ? "Today" : "আজ",
           },
           ...prev,
         ]);
@@ -100,8 +107,8 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
     } catch (err: any) {
       setError(
         err.message?.includes("Forbidden") || err.message?.includes("Unauthorized")
-          ? "মিডিয়া আপলোডের জন্য সাংবাদিক বা সম্পাদক হিসেবে লগইন থাকা আবশ্যক।"
-          : `আপলোড নোট: ${err.message}`
+          ? (isEn ? "Staff login with reporter or editor permissions is required to upload media." : "মিডিয়া আপলোডের জন্য সাংবাদিক বা সম্পাদক হিসেবে লগইন থাকা আবশ্যক।")
+          : (isEn ? `Upload note: ${err.message}` : `আপলোড নোট: ${err.message}`)
       );
     } finally {
       setUploading(false);
@@ -109,7 +116,10 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`আপনি কি নিশ্চিত যে এই ছবিটি মুছে ফেলতে চান?\n(${name})`)) {
+    const confirmMsg = isEn
+      ? `Are you sure you want to permanently delete this media file?\n(${name})`
+      : `আপনি কি নিশ্চিত যে এই ছবিটি মুছে ফেলতে চান?\n(${name})`;
+    if (!confirm(confirmMsg)) {
       return;
     }
 
@@ -118,10 +128,10 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
       if (res.success) {
         setMediaItems((prev) => prev.filter((m) => m.id !== id));
       } else {
-        alert(res.error || "মিডিয়া মুছে ফেলতে সমস্যা হয়েছে");
+        alert(res.error || (isEn ? "Failed to delete media asset" : "মিডিয়া মুছে ফেলতে সমস্যা হয়েছে"));
       }
     } catch (err) {
-      alert("সার্ভার এরর ঘটেছে");
+      alert(isEn ? "Server error occurred" : "সার্ভার এরর ঘটেছে");
     }
   }
 
@@ -136,19 +146,21 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
       {/* Top Banner */}
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <ImageIcon size={24} className="text-[var(--color-primary)]" />
-            মিডিয়া লাইব্রেরি ও ফটো আর্কাইভ
+            <span>{isEn ? "Media Library & Photography Archive" : "মিডিয়া লাইব্রেরি ও ফটো আর্কাইভ"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            ডাটাবেজে সংরক্ষিত ও সংবাদে ব্যবহৃত সকল আলোকচিত্র এবং মিডিয়া সম্পদ ({toBengaliDigits(mediaItems.length)}টি ছবি)
+            {isEn
+              ? `Editorial photography and media assets stored in database (${formatNumber(mediaItems.length)} items)`
+              : `ডাটাবেজে সংরক্ষিত ও সংবাদে ব্যবহৃত সকল আলোকচিত্র এবং মিডিয়া সম্পদ (${formatNumber(mediaItems.length)}টি ছবি)`}
           </p>
         </div>
 
         {/* Upload Trigger */}
         <label className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm self-start sm:self-auto rounded">
           <UploadCloud size={16} />
-          {uploading ? "আপলোড হচ্ছে..." : "নতুন ছবি আপলোড করুন"}
+          <span>{uploading ? (isEn ? "Uploading..." : "আপলোড হচ্ছে...") : (isEn ? "Upload New Image" : "নতুন ছবি আপলোড করুন")}</span>
           <input
             type="file"
             accept="image/*"
@@ -179,20 +191,22 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="ছবির নাম বা আলোকচিত্রীর নাম দিয়ে খুঁজুন..."
-          className="w-full pl-9 pr-4 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+          placeholder={isEn ? "Search images by filename or photographer credit..." : "ছবির নাম বা আলোকচিত্রীর নাম দিয়ে খুঁজুন..."}
+          className="w-full pl-9 pr-4 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] rounded"
         />
       </div>
 
       {/* Media Grid */}
       {filteredMedia.length === 0 ? (
-        <div className="p-12 text-center text-xs text-[var(--color-text-muted)] border border-[var(--color-border)] bg-[var(--color-bg)]">
+        <div className="p-12 text-center text-xs text-[var(--color-text-muted)] border border-[var(--color-border)] bg-[var(--color-bg)] rounded">
           <ImageIcon size={40} className="mx-auto opacity-30 mb-2.5 text-sky-600" />
-          <p className="font-semibold text-sm text-[var(--color-text)]">কোনো মিডিয়া পাওয়া যায়নি</p>
+          <p className="font-semibold text-sm text-[var(--color-text)]">
+            {isEn ? "No media assets found" : "কোনো মিডিয়া পাওয়া যায়নি"}
+          </p>
           <p className="mt-1 text-[11px]">
             {searchQuery
-              ? "অনুসন্ধানের সাথে মিল রেখে কোনো ছবি মেলেনি।"
-              : "নতুন ছবি আপলোড করতে ওপরের 'নতুন ছবি আপলোড করুন' বাটন ব্যবহার করুন।"}
+              ? (isEn ? "No images matched your search query." : "অনুসন্ধানের সাথে মিল রেখে কোনো ছবি মেলেনি।")
+              : (isEn ? 'Click "Upload New Image" above to upload photos to the storage bucket.' : "নতুন ছবি আপলোড করতে ওপরের 'নতুন ছবি আপলোড করুন' বাটন ব্যবহার করুন।")}
           </p>
         </div>
       ) : (
@@ -228,16 +242,19 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
 
               <div className="space-y-1.5 pt-2">
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(item.url)}
-                  className="w-full py-1.5 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-[11px] font-semibold text-[var(--color-text)] flex items-center justify-center gap-1 transition-colors rounded"
+                  className="w-full py-1.5 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-[11px] font-semibold text-[var(--color-text)] flex items-center justify-center gap-1 transition-colors rounded cursor-pointer"
                 >
                   {copiedUrl === item.url ? (
                     <>
-                      <Check size={12} className="text-green-600" /> লিঙ্ক কপি হয়েছে
+                      <Check size={12} className="text-green-600" />
+                      <span>{isEn ? "Link Copied!" : "লিঙ্ক কপি হয়েছে"}</span>
                     </>
                   ) : (
                     <>
-                      <Copy size={12} /> লিঙ্ক কপি করুন
+                      <Copy size={12} />
+                      <span>{isEn ? "Copy Link" : "লিঙ্ক কপি করুন"}</span>
                     </>
                   )}
                 </button>
@@ -249,17 +266,18 @@ export function AdminMediaClient({ initialMedia }: AdminMediaClientProps) {
                     rel="noreferrer"
                     className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center gap-0.5 text-[10px]"
                   >
-                    <span>মূল ছবি</span>
+                    <span>{isEn ? "Original File" : "মূল ছবি"}</span>
                     <ExternalLink size={10} />
                   </a>
 
                   <button
+                    type="button"
                     onClick={() => handleDelete(item.id, item.filename)}
-                    className="text-red-500 hover:text-red-700 flex items-center gap-0.5 text-[10px]"
-                    title="ছবিটি মুছে ফেলুন"
+                    className="text-red-500 hover:text-red-700 flex items-center gap-0.5 text-[10px] cursor-pointer"
+                    title={isEn ? "Delete photo" : "ছবিটি মুছে ফেলুন"}
                   >
                     <Trash2 size={11} />
-                    <span>মুছুন</span>
+                    <span>{isEn ? "Delete" : "মুছুন"}</span>
                   </button>
                 </div>
               </div>

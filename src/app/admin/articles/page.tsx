@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { db } from "@/db";
 import { articles, articleCategories } from "@/db/schema/articles";
 import { categories } from "@/db/schema/categories";
 import { user } from "@/db/schema/auth";
 import { eq, desc, and, count, ilike, or } from "drizzle-orm";
-import { PlusCircle, Search, Filter, ExternalLink, Edit, Clock, RefreshCw } from "lucide-react";
-import { formatBengaliDateTime } from "@/lib/bengali-date";
 import { deleteArticle, checkAndPublishScheduledArticles } from "@/actions/articles";
 import { revalidatePath } from "next/cache";
+import { AdminArticlesClient } from "./AdminArticlesClient";
 
 export const dynamic = "force-dynamic";
 
@@ -89,190 +87,15 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
-        <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)]">
-            সংবাদ ও প্রতিবেদন ব্যবস্থাপনা
-          </h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            সকল খসড়া, পর্যালোচনার অপেক্ষায় থাকা ও প্রকাশিত সংবাদের তালিকা
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <form action={handleProcessScheduled} className="inline">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 text-xs font-bold transition-colors cursor-pointer"
-              title="বর্তমান সময় পার হওয়া শিডিউলকৃত সংবাদগুলো অবিলম্বে প্রকাশ করুন"
-            >
-              <Clock size={14} />
-              শিডিউল প্রসেস করুন
-            </button>
-          </form>
-          <Link
-            href="/admin/articles/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors shadow-sm"
-          >
-            <PlusCircle size={16} />
-            নতুন সংবাদ তৈরি করুন
-          </Link>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <form method="GET" action="/admin/articles" className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            name="q"
-            defaultValue={q ?? ""}
-            placeholder="শিরোনাম বা স্লাগ লিখে খুঁজুন..."
-            className="w-full pl-9 pr-3 py-2 bg-[var(--color-bg)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
-          />
-          <Search size={14} className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" />
-        </div>
-        <select
-          name="status"
-          defaultValue={status ?? "all"}
-          className="p-2 bg-[var(--color-bg)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
-        >
-          <option value="all">সকল অবস্থা (All Status)</option>
-          <option value="published">প্রকাশিত (Published)</option>
-          <option value="approved">শিডিউলকৃত / অনুমোদিত (Scheduled)</option>
-          <option value="draft">খসড়া (Draft)</option>
-          <option value="pending_review">পর্যালোচনাধীন (Pending Review)</option>
-          <option value="archived">আর্কাইভকৃত (Archived)</option>
-        </select>
-        <button
-          type="submit"
-          className="px-4 py-2 bg-zinc-800 text-white text-xs font-semibold hover:bg-zinc-700 transition-colors"
-        >
-          ফিল্টার করুন
-        </button>
-      </form>
-
-      {/* Articles Table */}
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg)]">
-        {articleList.length === 0 ? (
-          <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-            কোনো সংবাদ পাওয়া যায়নি।
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-semibold">
-                <tr>
-                  <th className="p-3">শিরোনাম</th>
-                  <th className="p-3">বিভাগ</th>
-                  <th className="p-3">লেখক</th>
-                  <th className="p-3">অবস্থা</th>
-                  <th className="p-3">তারিখ</th>
-                  <th className="p-3 text-right">পদক্ষেপ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {articleList.map((art) => (
-                  <tr key={art.id} className="hover:bg-[var(--color-bg-secondary)]">
-                    <td className="p-3 font-semibold text-[var(--color-text)] max-w-xs truncate">
-                      {art.title}
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      {art.categoryName ?? "—"}
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      {art.authorName ?? "—"}
-                    </td>
-                    <td className="p-3">
-                      {art.status === "published" ? (
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                          প্রকাশিত
-                        </span>
-                      ) : art.scheduledAt && new Date(art.scheduledAt).getTime() > Date.now() ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                          <Clock size={10} /> শিডিউলকৃত
-                        </span>
-                      ) : art.status === "draft" ? (
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                          খসড়া
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
-                          {art.status}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      {art.scheduledAt && new Date(art.scheduledAt).getTime() > Date.now() ? (
-                        <div className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
-                          <span>শিডিউল: </span>
-                          <span>{formatBengaliDateTime(art.scheduledAt)}</span>
-                        </div>
-                      ) : (
-                        formatBengaliDateTime(art.publishedAt ?? art.createdAt)
-                      )}
-                    </td>
-                    <td className="p-3 text-right space-x-2">
-                      <Link
-                        href={`/admin/articles/${art.id}/edit`}
-                        className="text-[var(--color-primary)] hover:underline font-semibold"
-                      >
-                        সম্পাদনা
-                      </Link>
-                      {art.status === "published" && (
-                        <Link
-                          href={`/news/${art.slug}`}
-                          target="_blank"
-                          className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                          title="সংবাদটি দেখুন"
-                        >
-                          <ExternalLink size={12} className="inline ml-1" />
-                        </Link>
-                      )}
-                      <form action={handleDelete} className="inline ml-2">
-                        <input type="hidden" name="articleId" value={art.id} />
-                        <button
-                          type="submit"
-                          className="text-red-600 hover:text-red-800 hover:underline cursor-pointer font-semibold ml-1"
-                        >
-                          মুছুন
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] pt-2">
-          <span>মোট {totalCount} টি সংবাদ</span>
-          <div className="flex gap-2">
-            {currentPage > 1 && (
-              <Link
-                href={`/admin/articles?page=${currentPage - 1}${q ? `&q=${q}` : ""}${status ? `&status=${status}` : ""}`}
-                className="px-3 py-1 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)]"
-              >
-                &larr; পূর্ববর্তী
-              </Link>
-            )}
-            <span className="px-2 py-1">পাতা {currentPage} / {totalPages}</span>
-            {currentPage < totalPages && (
-              <Link
-                href={`/admin/articles?page=${currentPage + 1}${q ? `&q=${q}` : ""}${status ? `&status=${status}` : ""}`}
-                className="px-3 py-1 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)]"
-              >
-                পরবর্তী &rarr;
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+    <AdminArticlesClient
+      articleList={articleList}
+      totalCount={totalCount}
+      totalPages={totalPages}
+      currentPage={currentPage}
+      q={q}
+      status={status}
+      handleDelete={handleDelete}
+      handleProcessScheduled={handleProcessScheduled}
+    />
   );
 }

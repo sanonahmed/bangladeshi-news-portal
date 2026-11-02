@@ -1,12 +1,14 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { toBengaliDigits, formatBengaliDate, formatBengaliDateTime, formatBengaliDay } from "@/lib/bengali-date";
 
 export type AdminLanguage = "bn" | "en";
 
 interface AdminLanguageContextType {
   language: AdminLanguage;
+  isEn: boolean;
   setLanguage: (lang: AdminLanguage) => void;
   toggleLanguage: () => void;
   t: (key: string, fallback?: string) => string;
@@ -126,7 +128,8 @@ const DICTIONARY: Record<string, { bn: string; en: string }> = {
 const AdminLanguageContext = createContext<AdminLanguageContextType | undefined>(undefined);
 
 export function AdminLanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AdminLanguage>("bn");
+  const router = useRouter();
+  const [language, setLanguageState] = useState<AdminLanguage>("en");
 
   useEffect(() => {
     // 1. Try reading from localStorage
@@ -140,6 +143,8 @@ export function AdminLanguageProvider({ children }: { children: ReactNode }) {
     const match = document.cookie.match(/(?:^|;\s*)admin_lang=([a-z]+)/);
     if (match && (match[1] === "bn" || match[1] === "en")) {
       setLanguageState(match[1] as AdminLanguage);
+    } else {
+      setLanguageState("en");
     }
   }, []);
 
@@ -148,6 +153,7 @@ export function AdminLanguageProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem("admin_lang", lang);
       document.cookie = `admin_lang=${lang}; path=/; max-age=31536000; SameSite=Lax`;
+      router.refresh();
     } catch (e) {
       console.warn("Could not save admin language preference:", e);
     }
@@ -220,6 +226,7 @@ export function AdminLanguageProvider({ children }: { children: ReactNode }) {
     <AdminLanguageContext.Provider
       value={{
         language,
+        isEn: language === "en",
         setLanguage,
         toggleLanguage,
         t,

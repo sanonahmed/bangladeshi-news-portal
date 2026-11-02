@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { Tag as TagIcon, Plus, Trash2, Search, Hash, AlertCircle, CheckCircle2, FileText } from "lucide-react";
 import { createAdminTag, deleteAdminTag, type TagWithArticleCount } from "@/actions/tags";
-import { toBengaliDigits } from "@/lib/bengali-date";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminTagsClientProps {
   initialTags: TagWithArticleCount[];
 }
 
 export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
+  const { language, formatNumber } = useAdminLanguage();
+  const isEn = language === "en";
+
   const [tagsList, setTagsList] = useState<TagWithArticleCount[]>(initialTags);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
@@ -37,7 +40,7 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
     setSuccess(null);
 
     if (!name.trim()) {
-      setError("ট্যাগের নাম আবশ্যক");
+      setError(isEn ? "Tag name is required" : "ট্যাগের নাম আবশ্যক");
       return;
     }
 
@@ -50,9 +53,13 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
       });
 
       if (!res.success || !res.tag) {
-        setError(res.error || "ট্যাগ তৈরি ব্যর্থ হয়েছে");
+        setError(res.error || (isEn ? "Failed to create tag" : "ট্যাগ তৈরি ব্যর্থ হয়েছে"));
       } else {
-        setSuccess(`'#${res.tag.name}' ট্যাগ সফলভাবে তৈরি হয়েছে`);
+        setSuccess(
+          isEn
+            ? `Tag '#${res.tag.name}' created successfully`
+            : `'#${res.tag.name}' ট্যাগ সফলভাবে তৈরি হয়েছে`
+        );
         setTagsList((prev) => [
           {
             id: res.tag!.id,
@@ -70,14 +77,17 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
         setShowAddForm(false);
       }
     } catch (err: any) {
-      setError(err?.message || "সার্ভার এরর ঘটেছে");
+      setError(err?.message || (isEn ? "Server error occurred" : "সার্ভার এরর ঘটেছে"));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDelete(tagId: string, tagName: string) {
-    if (!confirm(`আপনি কি নিশ্চিত যে '#${tagName}' ট্যাগটি মুছে ফেলতে চান?`)) {
+    const confirmMsg = isEn
+      ? `Are you sure you want to permanently delete '#${tagName}'?`
+      : `আপনি কি নিশ্চিত যে '#${tagName}' ট্যাগটি মুছে ফেলতে চান?`;
+    if (!confirm(confirmMsg)) {
       return;
     }
 
@@ -86,10 +96,10 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
       if (res.success) {
         setTagsList((prev) => prev.filter((t) => t.id !== tagId));
       } else {
-        alert(res.error || "ট্যাগ মুছে ফেলতে সমস্যা হয়েছে");
+        alert(res.error || (isEn ? "Failed to delete tag" : "ট্যাগ মুছে ফেলতে সমস্যা হয়েছে"));
       }
     } catch (err) {
-      alert("সার্ভার এরর ঘটেছে");
+      alert(isEn ? "Server error occurred" : "সার্ভার এরর ঘটেছে");
     }
   }
 
@@ -98,46 +108,53 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
       {/* Top Banner */}
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <TagIcon size={24} className="text-[var(--color-primary)]" />
-            সংবাদ ট্যাগ ব্যবস্থাপনা
+            <span>{isEn ? "Article Tags & Keywords Management" : "সংবাদ ট্যাগ ব্যবস্থাপনা"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            সম্পর্কিত সংবাদগুলোকে সহজে খুঁজে পেতে ও একত্র করতে ডাটাবেজের লাইভ ট্যাগ কন্ট্রোল
+            {isEn
+              ? "Manage live database keywords and topic tags to interlink related news stories"
+              : "সম্পর্কিত সংবাদগুলোকে সহজে খুঁজে পেতে ও একত্র করতে ডাটাবেজের লাইভ ট্যাগ কন্ট্রোল"}
           </p>
         </div>
 
         <button
+          type="button"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-3.5 py-2 rounded transition-colors shadow-sm self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-3.5 py-2 rounded transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
         >
           <Plus size={15} />
-          <span>{showAddForm ? "ফর্ম বন্ধ করুন" : "নতুন ট্যাগ যুক্ত করুন"}</span>
+          <span>{showAddForm ? (isEn ? "Close Form" : "ফর্ম বন্ধ করুন") : (isEn ? "Add New Tag" : "নতুন ট্যাগ যুক্ত করুন")}</span>
         </button>
       </div>
 
       {/* Quick Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] flex items-center gap-3">
+        <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] flex items-center gap-3 rounded">
           <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/40 text-[var(--color-primary)] flex items-center justify-center font-bold text-lg">
             <Hash size={20} />
           </div>
           <div>
-            <div className="text-[11px] text-[var(--color-text-muted)] font-medium">মোট সক্রিয় ট্যাগ</div>
+            <div className="text-[11px] text-[var(--color-text-muted)] font-medium">
+              {isEn ? "Total Active Tags" : "মোট সক্রিয় ট্যাগ"}
+            </div>
             <div className="text-xl font-bold text-[var(--color-text)]">
-              {toBengaliDigits(tagsList.length)}টি
+              {formatNumber(tagsList.length)}
             </div>
           </div>
         </div>
 
-        <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] flex items-center gap-3">
+        <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] flex items-center gap-3 rounded">
           <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-bold text-lg">
             <FileText size={20} />
           </div>
           <div>
-            <div className="text-[11px] text-[var(--color-text-muted)] font-medium">ট্যাগযুক্ত সংবাদের সংযোগ</div>
+            <div className="text-[11px] text-[var(--color-text-muted)] font-medium">
+              {isEn ? "Tagged Story Connections" : "ট্যাগযুক্ত সংবাদের সংযোগ"}
+            </div>
             <div className="text-xl font-bold text-[var(--color-text)]">
-              {toBengaliDigits(totalTaggedArticles)}টি
+              {formatNumber(totalTaggedArticles)}
             </div>
           </div>
         </div>
@@ -157,7 +174,7 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
         </div>
       )}
 
-      {/* Add Tag Modal Form */}
+      {/* Add Tag Form */}
       {showAddForm && (
         <form
           onSubmit={handleCreateTag}
@@ -166,49 +183,51 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
             <h3 className="font-bold text-sm text-[var(--color-text)] flex items-center gap-1.5">
               <Plus size={16} className="text-[var(--color-primary)]" />
-              নতুন ট্যাগ তৈরি করুন
+              <span>{isEn ? "Create New Tag" : "নতুন ট্যাগ তৈরি করুন"}</span>
             </h3>
-            <span className="text-[11px] text-[var(--color-text-muted)]">ডাটাবেজে যুক্ত হবে</span>
+            <span className="text-[11px] text-[var(--color-text-muted)]">
+              {isEn ? "Saves directly to database" : "ডাটাবেজে যুক্ত হবে"}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                ট্যাগের নাম (বাংলায়) *
+                {isEn ? "Tag Name (Bangla) *" : "ট্যাগের নাম (বাংলায়) *"}
               </label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="যেমন: বিশ্বকাপ ২০২৬"
-                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                placeholder={isEn ? "e.g. বিশ্বকাপ ২০২৬" : "যেমন: বিশ্বকাপ ২০২৬"}
+                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] rounded"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                ইংরেজি নাম (ঐচ্ছিক)
+                {isEn ? "English Name (Optional)" : "ইংরেজি নাম (ঐচ্ছিক)"}
               </label>
               <input
                 type="text"
                 value={nameEn}
                 onChange={(e) => setNameEn(e.target.value)}
-                placeholder="যেমন: World Cup 2026"
-                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                placeholder="e.g. World Cup 2026"
+                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] rounded"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                ইউআরএল স্লাগ (ঐচ্ছিক)
+                {isEn ? "URL Slug (Optional)" : "ইউআরএল স্লাগ (ঐচ্ছিক)"}
               </label>
               <input
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="যেমন: world-cup-2026"
-                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-mono text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+                placeholder="e.g. world-cup-2026"
+                className="w-full px-3 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs font-mono text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] rounded"
               />
             </div>
           </div>
@@ -217,22 +236,22 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-3 py-1.5 border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]"
+              className="px-3 py-1.5 border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] rounded cursor-pointer"
             >
-              বাতিল
+              {isEn ? "Cancel" : "বাতিল"}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors disabled:opacity-50"
+              className="px-4 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors disabled:opacity-50 rounded cursor-pointer"
             >
-              {isSubmitting ? "সংরক্ষণ হচ্ছে..." : "ট্যাগ সংরক্ষণ করুন"}
+              {isSubmitting ? (isEn ? "Saving..." : "সংরক্ষণ হচ্ছে...") : (isEn ? "Save Tag" : "ট্যাগ সংরক্ষণ করুন")}
             </button>
           </div>
         </form>
       )}
 
-      {/* Tags Search & Filter */}
+      {/* Tags Search */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" />
@@ -240,28 +259,34 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ট্যাগ নাম বা স্লাগ দিয়ে খুঁজুন..."
-            className="w-full pl-9 pr-4 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]"
+            placeholder={isEn ? "Search tags by name or slug..." : "ট্যাগ নাম বা স্লাগ দিয়ে খুঁজুন..."}
+            className="w-full pl-9 pr-4 py-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-xs text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)] rounded"
           />
         </div>
       </div>
 
       {/* Live Tags Table */}
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
         <div className="p-4 border-b border-[var(--color-border)] font-bold text-xs uppercase tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
-          <span>ডাটাবেজের লাইভ ট্যাগ তালিকা ({toBengaliDigits(filteredTags.length)}টি)</span>
+          <span>
+            {isEn ? `Live Tags in Database (${formatNumber(filteredTags.length)})` : `ডাটাবেজের লাইভ ট্যাগ তালিকা (${formatNumber(filteredTags.length)}টি)`}
+          </span>
           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            রিয়েল ডাটাবেজ
+            {isEn ? "PostgreSQL Live" : "রিয়েল ডাটাবেজ"}
           </span>
         </div>
 
         {filteredTags.length === 0 ? (
           <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
             <TagIcon size={36} className="mx-auto opacity-30 mb-2 text-red-500" />
-            <p className="font-semibold text-sm text-[var(--color-text)]">কোনো ট্যাগ পাওয়া যায়নি</p>
+            <p className="font-semibold text-sm text-[var(--color-text)]">
+              {isEn ? "No tags found" : "কোনো ট্যাগ পাওয়া যায়নি"}
+            </p>
             <p className="mt-1 text-[11px]">
-              {searchQuery ? "অনুসন্ধানের সাথে মিল রেখে কোনো ট্যাগ মেলেনি।" : "উপরের বাটন চেপে ডাটাবেজে নতুন ট্যাগ যুক্ত করুন।"}
+              {searchQuery
+                ? (isEn ? "No tags matched your search query." : "অনুসন্ধানের সাথে মিল রেখে কোনো ট্যাগ মেলেনি।")
+                : (isEn ? 'Click "Add New Tag" above to create tags.' : "উপরের বাটন চেপে ডাটাবেজে নতুন ট্যাগ যুক্ত করুন।")}
             </p>
           </div>
         ) : (
@@ -269,11 +294,11 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
             <table className="w-full text-xs text-left">
               <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-semibold">
                 <tr>
-                  <th className="p-3">ট্যাগের নাম</th>
-                  <th className="p-3">ইংরেজি নাম</th>
-                  <th className="p-3">স্লাগ (URL)</th>
-                  <th className="p-3 text-center">সংবাদের সংখ্যা</th>
-                  <th className="p-3 text-right">পদক্ষেপ</th>
+                  <th className="p-3">{isEn ? "Tag Name" : "ট্যাগের নাম"}</th>
+                  <th className="p-3">{isEn ? "English Name" : "ইংরেজি নাম"}</th>
+                  <th className="p-3">{isEn ? "URL Slug" : "স্লাগ (URL)"}</th>
+                  <th className="p-3 text-center">{isEn ? "Tagged Stories" : "সংবাদের সংখ্যা"}</th>
+                  <th className="p-3 text-right">{isEn ? "Actions" : "পদক্ষেপ"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
@@ -291,14 +316,15 @@ export function AdminTagsClient({ initialTags }: AdminTagsClientProps) {
                     </td>
                     <td className="p-3 text-center">
                       <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[var(--color-border)] text-[var(--color-text)]">
-                        {toBengaliDigits(tag.count)}টি সংবাদ
+                        {isEn ? `${formatNumber(tag.count)} stories` : `${formatNumber(tag.count)}টি সংবাদ`}
                       </span>
                     </td>
                     <td className="p-3 text-right">
                       <button
+                        type="button"
                         onClick={() => handleDelete(tag.id, tag.name)}
-                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
-                        title="ট্যাগটি মুছে ফেলুন"
+                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors cursor-pointer"
+                        title={isEn ? "Delete tag" : "ট্যাগটি মুছে ফেলুন"}
                       >
                         <Trash2 size={14} />
                       </button>

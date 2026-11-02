@@ -24,12 +24,15 @@ import {
   RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminCommentsClientProps {
   initialComments: ArticleCommentWithArticle[];
 }
 
 export function AdminCommentsClient({ initialComments }: AdminCommentsClientProps) {
+  const { language, formatNumber, formatDateString } = useAdminLanguage();
+  const isEn = language === "en";
   const [commentsList, setCommentsList] = useState<ArticleCommentWithArticle[]>(initialComments);
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "rejected" | "spam">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,27 +76,30 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
         setCommentsList((prev) =>
           prev.map((c) => (c.id === commentId ? { ...c, status: newStatus } : c))
         );
-        const statusBengali =
+        const statusText =
           newStatus === "approved"
-            ? "অনুমোদিত"
+            ? (isEn ? "approved" : "অনুমোদিত")
             : newStatus === "rejected"
-            ? "বাতিল"
+            ? (isEn ? "rejected" : "বাতিল")
             : newStatus === "spam"
-            ? "স্প্যাম"
-            : "অপেক্ষমাণ";
-        setSuccess(`মন্তব্যটি ${statusBengali} করা হয়েছে`);
+            ? (isEn ? "marked as spam" : "স্প্যাম চিহ্নিত")
+            : (isEn ? "marked pending" : "অপেক্ষমাণ");
+        setSuccess(isEn ? `Comment has been ${statusText}` : `মন্তব্যটি ${statusText} করা হয়েছে`);
       } else {
-        setError(res.error || "স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে");
+        setError(res.error || (isEn ? "Failed to update status" : "স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে"));
       }
     } catch (err: any) {
-      setError(err?.message || "সার্ভার এরর");
+      setError(err?.message || (isEn ? "Server error" : "সার্ভার এরর"));
     } finally {
       setActionLoadingId(null);
     }
   }
 
   async function handleDelete(commentId: string) {
-    if (!confirm("আপনি কি নিশ্চিতভাবে এই মন্তব্যটি স্থায়ীভাবে মুছে ফেলতে চান?")) return;
+    const confirmMsg = isEn
+      ? "Are you sure you want to permanently delete this comment?"
+      : "আপনি কি নিশ্চিতভাবে এই মন্তব্যটি স্থায়ীভাবে মুছে ফেলতে চান?";
+    if (!confirm(confirmMsg)) return;
 
     setActionLoadingId(commentId);
     setError("");
@@ -103,12 +109,12 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
       if (res.success) {
         setCommentsList((prev) => prev.filter((c) => c.id !== commentId));
         setSelectedIds((prev) => prev.filter((id) => id !== commentId));
-        setSuccess("মন্তব্যটি সফলভাবে মুছে ফেলা হয়েছে");
+        setSuccess(isEn ? "Comment successfully deleted" : "মন্তব্যটি সফলভাবে মুছে ফেলা হয়েছে");
       } else {
-        setError(res.error || "মুছে ফেলা ব্যর্থ হয়েছে");
+        setError(res.error || (isEn ? "Failed to delete comment" : "মুছে ফেলা ব্যর্থ হয়েছে"));
       }
     } catch (err: any) {
-      setError(err?.message || "সার্ভার এরর");
+      setError(err?.message || (isEn ? "Server error" : "সার্ভার এরর"));
     } finally {
       setActionLoadingId(null);
     }
@@ -116,7 +122,15 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
 
   async function handleBulkAction(action: "approved" | "rejected" | "spam" | "delete") {
     if (selectedIds.length === 0) return;
-    if (action === "delete" && !confirm(`নির্বাচিত ${selectedIds.length}টি মন্তব্য মুছে ফেলতে চান?`)) return;
+    if (
+      action === "delete" &&
+      !confirm(
+        isEn
+          ? `Permanently delete ${selectedIds.length} selected comment(s)?`
+          : `নির্বাচিত ${selectedIds.length}টি মন্তব্য মুছে ফেলতে চান?`
+      )
+    )
+      return;
 
     setIsBulkLoading(true);
     setError("");
@@ -131,13 +145,17 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
             prev.map((c) => (selectedIds.includes(c.id) ? { ...c, status: action } : c))
           );
         }
-        setSuccess(`${selectedIds.length}টি মন্তব্যের ক্ষেত্রে সফলভাবে প্রক্রিয়া সম্পন্ন হয়েছে`);
+        setSuccess(
+          isEn
+            ? `Successfully processed ${selectedIds.length} comments`
+            : `${selectedIds.length}টি মন্তব্যের ক্ষেত্রে সফলভাবে প্রক্রিয়া সম্পন্ন হয়েছে`
+        );
         setSelectedIds([]);
       } else {
-        setError(res.error || "বাল্ক অপারেশন ব্যর্থ হয়েছে");
+        setError(res.error || (isEn ? "Bulk operation failed" : "বাল্ক অপারেশন ব্যর্থ হয়েছে"));
       }
     } catch (err: any) {
-      setError(err?.message || "সার্ভার এরর");
+      setError(err?.message || (isEn ? "Server error" : "সার্ভার এরর"));
     } finally {
       setIsBulkLoading(false);
     }
@@ -162,76 +180,94 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
       {/* Header */}
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <MessageSquare size={24} className="text-[var(--color-primary)]" />
-            <span>পাঠক প্রতিক্রিয়া ও মন্তব্য মডারেশন</span>
+            <span>{isEn ? "Reader Comments & Feedback Moderation" : "পাঠক প্রতিক্রিয়া ও মন্তব্য মডারেশন"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            পাঠকদের প্রেরিত মন্তব্য পর্যালোচনা, অনুমোদন, স্প্যাম ফিল্টারিং ও পরিচালনা করুন
+            {isEn
+              ? "Review, approve, spam-filter, and moderate reader comments across published articles"
+              : "পাঠকদের প্রেরিত মন্তব্য পর্যালোচনা, অনুমোদন, স্প্যাম ফিল্টারিং ও পরিচালনা করুন"}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text)]">
-            মোট মন্তব্য: {totalCount} টি
+            {isEn ? `Total Comments: ${formatNumber(totalCount)}` : `মোট মন্তব্য: ${formatNumber(totalCount)}টি`}
           </span>
         </div>
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div
           onClick={() => setActiveTab("all")}
-          className={`p-4 border rounded cursor-pointer transition-all ${
+          className={`p-3.5 border rounded cursor-pointer transition-all ${
             activeTab === "all"
               ? "border-[var(--color-primary)] bg-red-50/50 dark:bg-red-950/20 shadow-xs"
               : "border-[var(--color-border)] bg-[var(--color-bg)] hover:border-zinc-400"
           }`}
         >
-          <span className="text-xs font-bold text-[var(--color-text-muted)]">সর্বমোট মন্তব্য</span>
-          <div className="text-2xl font-extrabold text-[var(--color-text)] mt-1">{totalCount}</div>
+          <span className="text-xs font-bold text-[var(--color-text-muted)]">
+            {isEn ? "All Comments" : "সর্বমোট মন্তব্য"}
+          </span>
+          <div className="text-2xl font-extrabold text-[var(--color-text)] mt-1">{formatNumber(totalCount)}</div>
         </div>
 
         <div
           onClick={() => setActiveTab("pending")}
-          className={`p-4 border rounded cursor-pointer transition-all ${
+          className={`p-3.5 border rounded cursor-pointer transition-all ${
             activeTab === "pending"
               ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 shadow-xs"
               : "border-[var(--color-border)] bg-[var(--color-bg)] hover:border-zinc-400"
           }`}
         >
           <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
-            <Clock size={13} /> অপেক্ষমাণ
+            <Clock size={13} /> {isEn ? "Pending" : "অপেক্ষমাণ"}
           </span>
-          <div className="text-2xl font-extrabold text-amber-600 mt-1">{pendingCount}</div>
+          <div className="text-2xl font-extrabold text-amber-600 mt-1">{formatNumber(pendingCount)}</div>
         </div>
 
         <div
           onClick={() => setActiveTab("approved")}
-          className={`p-4 border rounded cursor-pointer transition-all ${
+          className={`p-3.5 border rounded cursor-pointer transition-all ${
             activeTab === "approved"
               ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs"
               : "border-[var(--color-border)] bg-[var(--color-bg)] hover:border-zinc-400"
           }`}
         >
           <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 size={13} /> অনুমোদিত
+            <CheckCircle2 size={13} /> {isEn ? "Approved" : "অনুমোদিত"}
           </span>
-          <div className="text-2xl font-extrabold text-emerald-600 mt-1">{approvedCount}</div>
+          <div className="text-2xl font-extrabold text-emerald-600 mt-1">{formatNumber(approvedCount)}</div>
+        </div>
+
+        <div
+          onClick={() => setActiveTab("rejected")}
+          className={`p-3.5 border rounded cursor-pointer transition-all ${
+            activeTab === "rejected"
+              ? "border-red-500 bg-red-50/50 dark:bg-red-950/20 shadow-xs"
+              : "border-[var(--color-border)] bg-[var(--color-bg)] hover:border-zinc-400"
+          }`}
+        >
+          <span className="text-xs font-bold text-red-700 dark:text-red-400 flex items-center gap-1">
+            <XCircle size={13} /> {isEn ? "Rejected" : "বাতিলকৃত"}
+          </span>
+          <div className="text-2xl font-extrabold text-red-600 mt-1">{formatNumber(rejectedCount)}</div>
         </div>
 
         <div
           onClick={() => setActiveTab("spam")}
-          className={`p-4 border rounded cursor-pointer transition-all ${
+          className={`p-3.5 border rounded cursor-pointer transition-all ${
             activeTab === "spam"
               ? "border-purple-500 bg-purple-50/50 dark:bg-purple-950/20 shadow-xs"
               : "border-[var(--color-border)] bg-[var(--color-bg)] hover:border-zinc-400"
           }`}
         >
           <span className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1">
-            <AlertOctagon size={13} /> স্প্যাম / বাতিল
+            <AlertOctagon size={13} /> {isEn ? "Spam" : "স্প্যাম"}
           </span>
-          <div className="text-2xl font-extrabold text-purple-600 mt-1">{spamCount + rejectedCount}</div>
+          <div className="text-2xl font-extrabold text-purple-600 mt-1">{formatNumber(spamCount)}</div>
         </div>
       </div>
 
@@ -256,11 +292,11 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
           {/* Tabs */}
           <div className="flex flex-wrap items-center gap-1.5">
             {[
-              { id: "all", label: "সব মন্তব্য", count: totalCount },
-              { id: "pending", label: "অপেক্ষমাণ", count: pendingCount },
-              { id: "approved", label: "অনুমোদিত", count: approvedCount },
-              { id: "rejected", label: "বাতিলকৃত", count: rejectedCount },
-              { id: "spam", label: "স্প্যাম", count: spamCount },
+              { id: "all", label: isEn ? "All" : "সব মন্তব্য", count: totalCount },
+              { id: "pending", label: isEn ? "Pending" : "অপেক্ষমাণ", count: pendingCount },
+              { id: "approved", label: isEn ? "Approved" : "অনুমোদিত", count: approvedCount },
+              { id: "rejected", label: isEn ? "Rejected" : "বাতিলকৃত", count: rejectedCount },
+              { id: "spam", label: isEn ? "Spam" : "স্প্যাম", count: spamCount },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -274,7 +310,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
               >
                 <span>{tab.label}</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20">
-                  {tab.count}
+                  {formatNumber(tab.count)}
                 </span>
               </button>
             ))}
@@ -287,7 +323,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="মন্তব্য বা পাঠক খুঁজুন..."
+              placeholder={isEn ? "Search comments or reader name..." : "মন্তব্য বা পাঠক খুঁজুন..."}
               className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded focus:outline-none focus:border-[var(--color-primary)]"
             />
           </div>
@@ -297,7 +333,9 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
         {selectedIds.length > 0 && (
           <div className="pt-2 border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2 bg-red-50/50 dark:bg-red-950/20 p-2 rounded">
             <span className="text-xs font-bold text-[var(--color-primary)]">
-              {selectedIds.length} টি মন্তব্য নির্বাচিত
+              {isEn
+                ? `${formatNumber(selectedIds.length)} comment(s) selected`
+                : `${formatNumber(selectedIds.length)}টি মন্তব্য নির্বাচিত`}
             </span>
 
             <div className="flex flex-wrap items-center gap-1.5">
@@ -308,7 +346,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                 className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 size={13} />
-                <span>অনুমোদন করুন</span>
+                <span>{isEn ? "Approve" : "অনুমোদন করুন"}</span>
               </button>
 
               <button
@@ -318,7 +356,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                 className="px-2.5 py-1 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <XCircle size={13} />
-                <span>বাতিল করুন</span>
+                <span>{isEn ? "Reject" : "বাতিল করুন"}</span>
               </button>
 
               <button
@@ -328,7 +366,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                 className="px-2.5 py-1 text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <AlertOctagon size={13} />
-                <span>স্প্যাম</span>
+                <span>{isEn ? "Mark Spam" : "স্প্যাম"}</span>
               </button>
 
               <button
@@ -338,7 +376,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                 className="px-2.5 py-1 text-xs font-bold bg-red-600 hover:bg-red-500 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <Trash2 size={13} />
-                <span>মুছে ফেলুন</span>
+                <span>{isEn ? "Delete" : "মুছে ফেলুন"}</span>
               </button>
             </div>
           </div>
@@ -349,9 +387,13 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
       {filteredComments.length === 0 ? (
         <div className="border border-dashed border-[var(--color-border)] p-12 text-center rounded bg-[var(--color-bg)]">
           <MessageSquare size={40} className="mx-auto text-[var(--color-text-muted)] mb-2" />
-          <h4 className="font-bold text-sm text-[var(--color-text)]">কোনো মন্তব্য পাওয়া যায়নি</h4>
+          <h4 className="font-bold text-sm text-[var(--color-text)]">
+            {isEn ? "No comments found" : "কোনো মন্তব্য পাওয়া যায়নি"}
+          </h4>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            এই ফিল্টারের অধীনে বর্তমানে কোনো মন্তব্য নেই।
+            {isEn
+              ? "There are currently no reader comments under this filter."
+              : "এই ফিল্টারের অধীনে বর্তমানে কোনো মন্তব্য নেই।"}
           </p>
         </div>
       ) : (
@@ -368,7 +410,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
               ) : (
                 <Square size={16} />
               )}
-              <span>সবগুলো নির্বাচন করুন</span>
+              <span>{isEn ? "Select all comments" : "সবগুলো নির্বাচন করুন"}</span>
             </button>
           </div>
 
@@ -417,12 +459,19 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
 
                         <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 font-mono">
                           <Clock size={11} />
-                          {new Date(comment.createdAt).toLocaleDateString("bn-BD", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {isEn
+                            ? new Date(comment.createdAt).toLocaleDateString("en-US", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : new Date(comment.createdAt).toLocaleDateString("bn-BD", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                         </span>
 
                         {/* Status Badge */}
@@ -438,19 +487,19 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                           }`}
                         >
                           {comment.status === "approved"
-                            ? "✓ অনুমোদিত"
+                            ? (isEn ? "✓ Approved" : "✓ অনুমোদিত")
                             : comment.status === "pending"
-                            ? "⏳ পর্যালোচনার অপেক্ষায়"
+                            ? (isEn ? "⏳ Pending Review" : "⏳ পর্যালোচনার অপেক্ষায়")
                             : comment.status === "spam"
-                            ? "⚠ স্প্যাম"
-                            : "✕ বাতিলকৃত"}
+                            ? (isEn ? "⚠ Spam" : "⚠ স্প্যাম")
+                            : (isEn ? "✕ Rejected" : "✕ বাতিলকৃত")}
                         </span>
                       </div>
 
                       {/* Article reference */}
                       {comment.articleTitle && (
                         <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-                          <span>সংবাদ:</span>
+                          <span>{isEn ? "Story:" : "সংবাদ:"}</span>
                           <Link
                             href={comment.articleSlug ? `/news/${comment.articleSlug}` : "#"}
                             target="_blank"
@@ -472,7 +521,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
                       <div className="flex items-center gap-3 text-[var(--color-text-muted)] font-mono">
                         <span className="flex items-center gap-1">
-                          <ThumbsUp size={12} /> {comment.likesCount} লাইক
+                          <ThumbsUp size={12} /> {formatNumber(comment.likesCount)} {isEn ? "likes" : "লাইক"}
                         </span>
                       </div>
 
@@ -486,7 +535,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                             className="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                           >
                             <CheckCircle2 size={12} />
-                            <span>অনুমোদন</span>
+                            <span>{isEn ? "Approve" : "অনুমোদন"}</span>
                           </button>
                         )}
 
@@ -498,7 +547,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                             className="px-2.5 py-1 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                           >
                             <XCircle size={12} />
-                            <span>বাতিল</span>
+                            <span>{isEn ? "Reject" : "বাতিল"}</span>
                           </button>
                         )}
 
@@ -510,7 +559,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                             className="px-2.5 py-1 text-xs font-bold bg-purple-700 hover:bg-purple-600 text-white rounded transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                           >
                             <AlertOctagon size={12} />
-                            <span>স্প্যাম</span>
+                            <span>{isEn ? "Spam" : "স্প্যাম"}</span>
                           </button>
                         )}
 
@@ -519,7 +568,7 @@ export function AdminCommentsClient({ initialComments }: AdminCommentsClientProp
                           disabled={isLoading}
                           onClick={() => handleDelete(comment.id)}
                           className="p-1.5 text-zinc-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer disabled:opacity-50"
-                          title="স্থায়ীভাবে মুছে ফেলুন"
+                          title={isEn ? "Permanently delete" : "স্থায়ীভাবে মুছে ফেলুন"}
                         >
                           <Trash2 size={14} />
                         </button>

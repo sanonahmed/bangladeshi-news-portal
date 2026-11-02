@@ -22,11 +22,14 @@ import {
   Wand2,
 } from "lucide-react";
 import { AiEditorAssistantModal } from "@/components/admin/editor/AiEditorAssistantModal";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 const AUTOSAVE_STORAGE_KEY = "barta_draft_article_new";
 
 export default function NewArticlePage() {
   const router = useRouter();
+  const { language, formatNumber, formatDateString } = useAdminLanguage();
+  const isEn = language === "en";
 
   const [title, setTitle] = useState("");
   const [titleEn, setTitleEn] = useState("");
@@ -39,7 +42,7 @@ export default function NewArticlePage() {
   const [scheduledAt, setScheduledAt] = useState("");
   const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const [featuredImageAlt, setFeaturedImageAlt] = useState("");
-  const [newsLocation, setNewsLocation] = useState("ঢাকা");
+  const [newsLocation, setNewsLocation] = useState("Dhaka");
   const [divisionsList, setDivisionsList] = useState<DivisionWithDistricts[]>([]);
   const [selectedDivisionId, setSelectedDivisionId] = useState("");
   const [selectedDistrictId, setSelectedDistrictId] = useState("");
@@ -88,11 +91,11 @@ export default function NewArticlePage() {
         const parsed = JSON.parse(stored);
         if (parsed.title || parsed.content) {
           const dateStr = parsed.savedAt
-            ? new Date(parsed.savedAt).toLocaleTimeString("bn-BD", {
+            ? new Date(parsed.savedAt).toLocaleTimeString(isEn ? "en-US" : "bn-BD", {
                 hour: "2-digit",
                 minute: "2-digit",
               })
-            : "কিছুক্ষণ আগে";
+            : (isEn ? "Moments ago" : "কিছুক্ষণ আগে");
           setSavedDraftFound({
             title: parsed.title,
             savedAt: dateStr,
@@ -103,14 +106,13 @@ export default function NewArticlePage() {
     } catch (e) {
       console.warn("Could not check local draft:", e);
     }
-  }, []);
+  }, [isEn]);
 
   // Set default schedule time to current time + 2 hours
   useEffect(() => {
     const d = new Date();
     d.setHours(d.getHours() + 2);
     d.setMinutes(0);
-    // Format YYYY-MM-DDTHH:mm for datetime-local input
     const pad = (n: number) => String(n).padStart(2, "0");
     const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     setScheduledAt(localIso);
@@ -165,7 +167,7 @@ export default function NewArticlePage() {
         savedAt: Date.now(),
       };
       localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(draftPayload));
-      const nowStr = new Date().toLocaleTimeString("bn-BD", {
+      const nowStr = new Date().toLocaleTimeString(isEn ? "en-US" : "bn-BD", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
@@ -197,7 +199,7 @@ export default function NewArticlePage() {
     if (d.status) setStatus(d.status);
 
     setSavedDraftFound(null);
-    setLastSavedTime("রিস্টোর করা হয়েছে");
+    setLastSavedTime(isEn ? "Draft restored" : "রিস্টোর করা হয়েছে");
   }
 
   function discardDraft() {
@@ -241,11 +243,11 @@ export default function NewArticlePage() {
     setSuccess(null);
 
     if (!title.trim()) {
-      setError("সংবাদের মূল শিরোনাম আবশ্যক");
+      setError(isEn ? "Article headline is required" : "সংবাদের মূল শিরোনাম আবশ্যক");
       return;
     }
     if (!content.trim()) {
-      setError("সংবাদের বিস্তারিত বিষয়বস্তু লিখুন");
+      setError(isEn ? "Article body content is required" : "সংবাদের বিস্তারিত বিষয়বস্তু লিখুন");
       return;
     }
 
@@ -255,16 +257,16 @@ export default function NewArticlePage() {
 
     if (status === "scheduled") {
       if (!scheduledAt) {
-        setError("শিডিউল প্রকাশের জন্য তারিখ ও সময় নির্বাচন করুন");
+        setError(isEn ? "Please pick schedule date & time" : "শিডিউল প্রকাশের জন্য তারিখ ও সময় নির্বাচন করুন");
         return;
       }
       parsedScheduledDate = new Date(scheduledAt);
       if (isNaN(parsedScheduledDate.getTime())) {
-        setError("সঠিক শিডিউল তারিখ ও সময় দিন");
+        setError(isEn ? "Invalid schedule date & time" : "সঠিক শিডিউল তারিখ ও সময় দিন");
         return;
       }
       if (parsedScheduledDate.getTime() <= Date.now()) {
-        setError("শিডিউল প্রকাশের সময় বর্তমান সময়ের পরবর্তী হতে হবে");
+        setError(isEn ? "Schedule time must be in the future" : "শিডিউল প্রকাশের সময় বর্তমান সময়ের পরবর্তী হতে হবে");
         return;
       }
     }
@@ -294,21 +296,22 @@ export default function NewArticlePage() {
       });
 
       if (!res.success) {
-        setError(res.error || "সংবাদ সংরক্ষণ ব্যর্থ হয়েছে");
+        setError(res.error || (isEn ? "Failed to save article" : "সংবাদ সংরক্ষণ ব্যর্থ হয়েছে"));
       } else {
-        // Clear local autosave
         try {
           localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
         } catch {}
 
         if (res.isScheduled) {
           setSuccess(
-            `সংবাদটি সফলভাবে শিডিউল করা হয়েছে! এটি নির্ধারিত সময়ে (${parsedScheduledDate?.toLocaleString("bn-BD")}) স্বয়ংক্রিয়ভাবে লাইভ হবে।`
+            isEn
+              ? `Story successfully scheduled for publication at ${parsedScheduledDate?.toLocaleString("en-US")}!`
+              : `সংবাদটি সফলভাবে শিডিউল করা হয়েছে! এটি নির্ধারিত সময়ে (${parsedScheduledDate?.toLocaleString("bn-BD")}) স্বয়ংক্রিয়ভাবে লাইভ হবে।`
           );
         } else if (actualStatus === "draft") {
-          setSuccess("খসড়া সফলভাবে ডাটাবেসে সংরক্ষিত হয়েছে!");
+          setSuccess(isEn ? "Draft saved successfully!" : "খসড়া সফলভাবে ডাটাবেসে সংরক্ষিত হয়েছে!");
         } else {
-          setSuccess("সংবাদ সফলভাবে প্রকাশিত হয়েছে! সংবাদ তালিকায় রিডাইরেক্ট করা হচ্ছে...");
+          setSuccess(isEn ? "Story published successfully! Redirecting..." : "সংবাদ সফলভাবে প্রকাশিত হয়েছে! সংবাদ তালিকায় রিডাইরেক্ট করা হচ্ছে...");
         }
 
         setTimeout(() => {
@@ -317,7 +320,7 @@ export default function NewArticlePage() {
         }, 1500);
       }
     } catch (err: any) {
-      setError(err?.message || "সার্ভার এরর ঘটেছে");
+      setError(err?.message || (isEn ? "Server error occurred" : "সার্ভার এরর ঘটেছে"));
     } finally {
       setLoading(false);
     }
@@ -335,15 +338,15 @@ export default function NewArticlePage() {
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="bengali-headline text-xl font-bold text-[var(--color-text)]">
-              নতুন সংবাদ তৈরি করুন
+            <h1 className="text-xl font-bold text-[var(--color-text)] tracking-tight">
+              {isEn ? "Create New Story" : "নতুন সংবাদ তৈরি করুন"}
             </h1>
             <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
-              <span>জাতীয় ও আন্তর্জাতিক প্রতিবেদন রচনা ও প্রকাশনা</span>
+              <span>{isEn ? "Draft and publish national & global news reporting" : "জাতীয় ও আন্তর্জাতিক প্রতিবেদন রচনা ও প্রকাশনা"}</span>
               {lastSavedTime && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  অটোসেভ: {lastSavedTime}
+                  {isEn ? `Autosaved: ${lastSavedTime}` : `অটোসেভ: ${lastSavedTime}`}
                 </span>
               )}
             </p>
@@ -355,20 +358,20 @@ export default function NewArticlePage() {
             type="button"
             onClick={() => setAiModalOpen(true)}
             className="px-3 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs font-bold rounded flex items-center gap-1.5 cursor-pointer shadow-xs transition-all active:scale-95"
-            title="এআই বাংলা সম্পাদকীয় সহকারী খুলুন"
+            title={isEn ? "Open AI Editorial Assistant" : "এআই বাংলা সম্পাদকীয় সহকারী খুলুন"}
           >
             <Sparkles size={14} className="text-amber-300 animate-pulse" />
-            <span>এআই সহকারী</span>
+            <span>{isEn ? "AI Assistant" : "এআই সহকারী"}</span>
           </button>
 
           <button
             type="button"
             onClick={saveDraftLocally}
             className="px-3 py-2 border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] flex items-center gap-1.5 cursor-pointer"
-            title="ব্রাউজারে খসড়া সংরক্ষণ করুন"
+            title={isEn ? "Save draft to browser" : "ব্রাউজারে খসড়া সংরক্ষণ করুন"}
           >
             <Save size={13} />
-            <span>খসড়া সেভ</span>
+            <span>{isEn ? "Save Draft" : "খসড়া সেভ"}</span>
           </button>
 
           <button
@@ -385,17 +388,17 @@ export default function NewArticlePage() {
             {status === "scheduled" ? (
               <>
                 <Clock size={14} />
-                {loading ? "সংরক্ষণ হচ্ছে..." : "শিডিউল প্রকাশ করুন"}
+                {loading ? (isEn ? "Saving..." : "সংরক্ষণ হচ্ছে...") : (isEn ? "Schedule Publish" : "শিডিউল প্রকাশ করুন")}
               </>
             ) : status === "draft" ? (
               <>
                 <Save size={14} />
-                {loading ? "সংরক্ষণ হচ্ছে..." : "খসড়া সংরক্ষণ"}
+                {loading ? (isEn ? "Saving..." : "সংরক্ষণ হচ্ছে...") : (isEn ? "Save Draft" : "খসড়া সংরক্ষণ")}
               </>
             ) : (
               <>
                 <Send size={14} />
-                {loading ? "সংরক্ষণ হচ্ছে..." : "সরাসরি প্রকাশ করুন"}
+                {loading ? (isEn ? "Publishing..." : "সংরক্ষণ হচ্ছে...") : (isEn ? "Publish Now" : "সরাসরি প্রকাশ করুন")}
               </>
             )}
           </button>
@@ -408,7 +411,9 @@ export default function NewArticlePage() {
           <div className="flex items-center gap-2">
             <RotateCcw size={16} className="text-amber-600 flex-shrink-0" />
             <span>
-              পূর্বের অসম্পূর্ণ খসড়া পাওয়া গেছে (সংরক্ষণ: {savedDraftFound.savedAt})
+              {isEn
+                ? `Previous autosaved draft found (Saved: ${savedDraftFound.savedAt})`
+                : `পূর্বের অসম্পূর্ণ খসড়া পাওয়া গেছে (সংরক্ষণ: ${savedDraftFound.savedAt})`}
               {savedDraftFound.title ? ` — "${savedDraftFound.title.slice(0, 40)}..."` : ""}
             </span>
           </div>
@@ -418,14 +423,14 @@ export default function NewArticlePage() {
               onClick={restoreDraft}
               className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-bold transition-colors cursor-pointer"
             >
-              খসড়া রিস্টোর করুন
+              {isEn ? "Restore Draft" : "খসড়া রিস্টোর করুন"}
             </button>
             <button
               type="button"
               onClick={discardDraft}
               className="px-2.5 py-1 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded transition-colors cursor-pointer"
             >
-              মুছে ফেলুন
+              {isEn ? "Discard" : "মুছে ফেলুন"}
             </button>
           </div>
         </div>
@@ -451,16 +456,16 @@ export default function NewArticlePage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                সংবাদের মূল শিরোনাম (বাংলা) *
+                {isEn ? "Article Headline *" : "সংবাদের মূল শিরোনাম (বাংলা) *"}
               </label>
               <button
                 type="button"
                 onClick={() => setAiModalOpen(true)}
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 border border-purple-200 dark:border-purple-800 text-[11px] font-bold transition-all cursor-pointer"
-                title="এআই দিয়ে স্মার্ট শিরোনাম তৈরি করুন"
+                title={isEn ? "Generate smart headline with AI" : "এআই দিয়ে স্মার্ট শিরোনাম তৈরি করুন"}
               >
                 <Sparkles size={12} className="text-purple-600 dark:text-purple-400" />
-                <span>এআই দিয়ে শিরোনাম তৈরি</span>
+                <span>{isEn ? "AI Headline Ideas" : "এআই দিয়ে শিরোনাম তৈরি"}</span>
               </button>
             </div>
             <input
@@ -468,20 +473,20 @@ export default function NewArticlePage() {
               required
               value={title}
               onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="আকর্ষণীয় ও বস্তুনিষ্ঠ শিরোনাম লিখুন..."
-              className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] text-base font-bold focus:outline-none focus:border-[var(--color-primary)] bengali-headline"
+              placeholder={isEn ? "Enter compelling and objective headline..." : "আকর্ষণীয় ও বস্তুনিষ্ঠ শিরোনাম লিখুন..."}
+              className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] text-base font-bold focus:outline-none focus:border-[var(--color-primary)]"
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              ইংরেজি শিরোনাম (English Title / Slug Generator)
+              {isEn ? "English Title (for URL Slug)" : "ইংরেজি শিরোনাম (English Title / Slug Generator)"}
             </label>
             <input
               type="text"
               value={titleEn}
               onChange={(e) => handleTitleEnChange(e.target.value)}
-              placeholder="e.g. Bangladesh wins series opener at Mirpur..."
+              placeholder={isEn ? "e.g. Bangladesh wins series opener at Mirpur..." : "e.g. Bangladesh wins series opener at Mirpur..."}
               className="w-full p-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
             />
           </div>
@@ -489,7 +494,7 @@ export default function NewArticlePage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                সংক্ষিপ্ত সারসংক্ষেপ (Excerpt)
+                {isEn ? "Short Summary (Excerpt)" : "সংক্ষিপ্ত সারসংক্ষেপ (Excerpt)"}
               </label>
               <button
                 type="button"
@@ -497,7 +502,7 @@ export default function NewArticlePage() {
                 className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
               >
                 <Sparkles size={11} />
-                <span>এআই দিয়ে সারাংশ তৈরি</span>
+                <span>{isEn ? "Generate with AI" : "এআই দিয়ে সারাংশ তৈরি"}</span>
               </button>
             </div>
             <textarea
@@ -507,14 +512,14 @@ export default function NewArticlePage() {
                 setExcerpt(e.target.value);
                 setHasUnsavedChanges(true);
               }}
-              placeholder="সংবাদের মূল প্রতিপাদ্য ২/৩ লাইনে লিখুন..."
+              placeholder={isEn ? "Core takeaway in 2-3 concise sentences..." : "সংবাদের মূল প্রতিপাদ্য ২/৩ লাইনে লিখুন..."}
               className="w-full p-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              বিস্তারিত সংবাদ বিষয়বস্তু (Rich Article Body) *
+              {isEn ? "Article Body Content *" : "বিস্তারিত সংবাদ বিষয়বস্তু (Rich Article Body) *"}
             </label>
             <TiptapEditor
               content={content}
@@ -522,7 +527,7 @@ export default function NewArticlePage() {
                 setContent(html);
                 setHasUnsavedChanges(true);
               }}
-              placeholder="এখানে বিস্তারিত সংবাদ লিখুন..."
+              placeholder={isEn ? "Write your full news story here..." : "এখানে বিস্তারিত সংবাদ লিখুন..."}
             />
           </div>
         </div>
@@ -532,27 +537,27 @@ export default function NewArticlePage() {
           {/* Publishing Controls */}
           <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center justify-between">
-              <span>প্রকাশনা সেটিংস</span>
+              <span>{isEn ? "Publishing Settings" : "প্রকাশনা সেটিংস"}</span>
               {status === "scheduled" && (
                 <span className="text-[10px] text-blue-600 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded font-bold">
-                  শিডিউল মোড
+                  {isEn ? "Schedule Mode" : "শিডিউল মোড"}
                 </span>
               )}
             </h3>
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                প্রকাশের ধরন (Publication Type)
+                {isEn ? "Publication Status" : "প্রকাশের ধরন (Publication Type)"}
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
               >
-                <option value="published">🚀 সরাসরি প্রকাশ (Publish Now)</option>
-                <option value="scheduled">⏱️ শিডিউল প্রকাশ (Schedule for Later)</option>
-                <option value="draft">📝 খসড়া হিসেবে রাখুন (Save Draft)</option>
-                <option value="pending_review">🔍 অনুমোদনের জন্য জমা (Submit for Review)</option>
+                <option value="published">{isEn ? "🚀 Publish Now" : "🚀 সরাসরি প্রকাশ (Publish Now)"}</option>
+                <option value="scheduled">{isEn ? "⏱️ Schedule for Later" : "⏱️ শিডিউল প্রকাশ (Schedule for Later)"}</option>
+                <option value="draft">{isEn ? "📝 Save as Draft" : "📝 খসড়া হিসেবে রাখুন (Save Draft)"}</option>
+                <option value="pending_review">{isEn ? "🔍 Submit for Review" : "🔍 অনুমোদনের জন্য জমা (Submit for Review)"}</option>
               </select>
             </div>
 
@@ -561,7 +566,7 @@ export default function NewArticlePage() {
               <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded space-y-2">
                 <label className="block text-[11px] font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
                   <Calendar size={13} />
-                  প্রকাশের তারিখ ও সময় (ঢাকা সময়) *
+                  <span>{isEn ? "Scheduled Date & Time (Dhaka Time) *" : "প্রকাশের তারিখ ও সময় (ঢাকা সময়) *"}</span>
                 </label>
                 <input
                   type="datetime-local"
@@ -574,14 +579,16 @@ export default function NewArticlePage() {
                   className="w-full p-2 bg-[var(--color-bg)] border border-blue-300 dark:border-blue-700 text-xs font-semibold focus:outline-none focus:border-blue-600"
                 />
                 <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-tight">
-                  💡 নির্ধারিত সময় পার হওয়া মাত্র সংবাদটি স্বয়ংক্রিয়ভাবে মূল পোর্টালে লাইভ হয়ে যাবে।
+                  {isEn
+                    ? "💡 Once this scheduled time arrives, the article will automatically go live on the public website."
+                    : "💡 নির্ধারিত সময় পার হওয়া মাত্র সংবাদটি স্বয়ংক্রিয়ভাবে মূল পোর্টালে লাইভ হয়ে যাবে।"}
                 </p>
               </div>
             )}
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                সংবাদ বিভাগ (Category) *
+                {isEn ? "Category *" : "সংবাদ বিভাগ (Category) *"}
               </label>
               <select
                 value={categoryId}
@@ -589,7 +596,7 @@ export default function NewArticlePage() {
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
               >
                 {categoriesList.length === 0 ? (
-                  <option value="">লোড হচ্ছে...</option>
+                  <option value="">{isEn ? "Loading..." : "লোড হচ্ছে..."}</option>
                 ) : (
                   categoriesList.map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -602,13 +609,13 @@ export default function NewArticlePage() {
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                সংবাদের অবস্থান (টেক্সট)
+                {isEn ? "Location / Byline" : "সংবাদের অবস্থান (টেক্সট)"}
               </label>
               <input
                 type="text"
                 value={newsLocation}
                 onChange={(e) => setNewsLocation(e.target.value)}
-                placeholder="ঢাকা / চট্টগ্রাম / সিলেট / রাজশাহী..."
+                placeholder={isEn ? "Dhaka / Chattogram / Sylhet / Rajshahi..." : "ঢাকা / চট্টগ্রাম / সিলেট / রাজশাহী..."}
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>
@@ -616,7 +623,7 @@ export default function NewArticlePage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                  বিভাগ (Division)
+                  {isEn ? "Division" : "বিভাগ (Division)"}
                 </label>
                 <select
                   value={selectedDivisionId}
@@ -626,7 +633,7 @@ export default function NewArticlePage() {
                   }}
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
                 >
-                  <option value="">-- বিভাগ নেই --</option>
+                  <option value="">{isEn ? "-- None --" : "-- বিভাগ নেই --"}</option>
                   {divisionsList.map((div) => (
                     <option key={div.id} value={div.id}>
                       {div.name}
@@ -637,7 +644,7 @@ export default function NewArticlePage() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                  জেলা (District)
+                  {isEn ? "District" : "জেলা (District)"}
                 </label>
                 <select
                   value={selectedDistrictId}
@@ -645,7 +652,7 @@ export default function NewArticlePage() {
                   disabled={!selectedDivisionId}
                   className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] disabled:opacity-50"
                 >
-                  <option value="">-- জেলা নেই --</option>
+                  <option value="">{isEn ? "-- None --" : "-- জেলা নেই --"}</option>
                   {divisionsList
                     .find((d) => d.id === selectedDivisionId)
                     ?.districts.map((dist) => (
@@ -665,7 +672,7 @@ export default function NewArticlePage() {
                   onChange={(e) => setIsBreaking(e.target.checked)}
                   className="rounded text-[var(--color-primary)]"
                 />
-                <span>ব্রেকিং নিউজ টিকার-এ দেখান</span>
+                <span>{isEn ? "Show in Breaking News Ticker" : "ব্রেকিং নিউজ টিকার-এ দেখান"}</span>
               </label>
 
               <label className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text)] cursor-pointer">
@@ -675,7 +682,7 @@ export default function NewArticlePage() {
                   onChange={(e) => setIsFeatured(e.target.checked)}
                   className="rounded text-[var(--color-primary)]"
                 />
-                <span>হোমপেজের শীর্ষ খবর (Lead Story)</span>
+                <span>{isEn ? "Homepage Lead Story (Featured)" : "হোমপেজের শীর্ষ খবর (Lead Story)"}</span>
               </label>
             </div>
           </div>
@@ -684,11 +691,11 @@ export default function NewArticlePage() {
           <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center gap-1.5">
               <ImageIcon size={14} className="text-[var(--color-primary)]" />
-              মূল ছবি (Featured Image)
+              <span>{isEn ? "Featured Image" : "মূল ছবি (Featured Image)"}</span>
             </h3>
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                ছবির URL (Unsplash / CDN / R2 লিংক)
+                {isEn ? "Image URL (Unsplash / CDN link)" : "ছবির URL (Unsplash / CDN / R2 লিংক)"}
               </label>
               <input
                 type="url"
@@ -702,7 +709,7 @@ export default function NewArticlePage() {
               <div className="relative aspect-[16/9] w-full rounded border border-[var(--color-border)] overflow-hidden bg-[var(--color-bg-secondary)]">
                 <img
                   src={featuredImageUrl}
-                  alt={featuredImageAlt || "সংবাদ ছবি প্রিভিউ"}
+                  alt={featuredImageAlt || (isEn ? "News image preview" : "সংবাদ ছবি প্রিভিউ")}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
@@ -712,13 +719,13 @@ export default function NewArticlePage() {
             )}
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                ছবির ক্যাপশন ও ক্রেডিট
+                {isEn ? "Caption & Image Credit" : "ছবির ক্যাপশন ও ক্রেডিট"}
               </label>
               <input
                 type="text"
                 value={featuredImageAlt}
                 onChange={(e) => setFeaturedImageAlt(e.target.value)}
-                placeholder="ছবি: নিজস্ব আলোকচিত্রী / সংগৃহীত"
+                placeholder={isEn ? "Photo: Staff Photographer / File" : "ছবি: নিজস্ব আলোকচিত্রী / সংগৃহীত"}
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>
@@ -727,11 +734,11 @@ export default function NewArticlePage() {
           {/* URL Slug & SEO */}
           <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)] space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text)] border-b border-[var(--color-border)] pb-2">
-              এসইও ও ইউআরএল (SEO)
+              {isEn ? "SEO & URL Slug" : "এসইও ও ইউআরএল (SEO)"}
             </h3>
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                ইউআরএল স্লাগ (URL Slug) *
+                {isEn ? "URL Slug *" : "ইউআরএল স্লাগ (URL Slug) *"}
               </label>
               <input
                 type="text"
@@ -742,18 +749,18 @@ export default function NewArticlePage() {
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)]"
               />
               <p className="text-[10px] text-[var(--color-text-faint)] mt-1">
-                লিংক হবে: /news/{slug || "slug"}
+                {isEn ? "Public URL: " : "লিংক হবে: "}/news/{slug || "slug"}
               </p>
             </div>
             <div>
               <label className="block text-[11px] font-semibold text-[var(--color-text-muted)] mb-1">
-                এসইও শিরোনাম (SEO Title)
+                {isEn ? "SEO Meta Title" : "এসইও শিরোনাম (SEO Title)"}
               </label>
               <input
                 type="text"
                 value={seoTitle}
                 onChange={(e) => setSeoTitle(e.target.value)}
-                placeholder="গুগল সার্চে প্রদর্শিত শিরোনাম"
+                placeholder={isEn ? "Headline shown in Google search" : "গুগল সার্চে প্রদর্শিত শিরোনাম"}
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>

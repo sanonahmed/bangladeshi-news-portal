@@ -36,7 +36,7 @@ import {
   type FactCheckInput,
 } from "@/actions/fact-checks";
 import type { FactCheckItem, FactCheckSubmissionItem, VerdictType } from "@/types/fact-check";
-import { toBengaliDigits, formatBengaliDate } from "@/lib/bengali-date";
+import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminFactChecksClientProps {
   initialFactChecks: FactCheckItem[];
@@ -47,6 +47,9 @@ export function AdminFactChecksClient({
   initialFactChecks,
   initialSubmissions,
 }: AdminFactChecksClientProps) {
+  const { language, formatNumber, formatDateString } = useAdminLanguage();
+  const isEn = language === "en";
+
   const [factChecksList, setFactChecksList] = useState<FactCheckItem[]>(initialFactChecks);
   const [submissionsList, setSubmissionsList] = useState<FactCheckSubmissionItem[]>(initialSubmissions);
 
@@ -72,7 +75,7 @@ export function AdminFactChecksClient({
   const [formFactConclusion, setFormFactConclusion] = useState("");
   const [formOriginalMediaUrl, setFormOriginalMediaUrl] = useState("");
   const [formDebunkedMediaUrl, setFormDebunkedMediaUrl] = useState("");
-  const [formCategory, setFormCategory] = useState("সাধারণ");
+  const [formCategory, setFormCategory] = useState("General");
   const [formTags, setFormTags] = useState("");
   const [formIsFeatured, setFormIsFeatured] = useState(false);
 
@@ -99,10 +102,16 @@ export function AdminFactChecksClient({
 
   function openCreateModal(prefill?: { claim?: string; claimant?: string; description?: string }) {
     setEditingItem(null);
-    setFormTitle(prefill?.claim ? `${prefill.claim} সংক্রান্ত তথ্যটি ভুয়া` : "");
+    setFormTitle(
+      prefill?.claim
+        ? (isEn ? `Claim that "${prefill.claim}" is False` : `${prefill.claim} সংক্রান্ত তথ্যটি ভুয়া`)
+        : ""
+    );
     setFormSlug("");
     setFormClaim(prefill?.claim || "");
-    setFormClaimant(prefill?.claimant || "সামাজিক মাধ্যমে ছড়ানো পোস্ট ও ভাইরাল ভিডিও");
+    setFormClaimant(
+      prefill?.claimant || (isEn ? "Viral social media posts & videos" : "সামাজিক মাধ্যমে ছড়ানো পোস্ট ও ভাইরাল ভিডিও")
+    );
     setFormVerdict("false");
     setFormVerdictSummary("");
     setFormContext(prefill?.description || "");
@@ -110,8 +119,8 @@ export function AdminFactChecksClient({
     setFormFactConclusion("");
     setFormOriginalMediaUrl("");
     setFormDebunkedMediaUrl("");
-    setFormCategory("সাধারণ");
-    setFormTags("গুজব, ফ্যাক্ট-চেক, সত্যসন্ধান");
+    setFormCategory(isEn ? "General" : "সাধারণ");
+    setFormTags(isEn ? "Rumor, Fact-Check, Verification" : "গুজব, ফ্যাক্ট-চেক, সত্যসন্ধান");
     setFormIsFeatured(false);
     setFormError(null);
     setIsModalOpen(true);
@@ -130,7 +139,7 @@ export function AdminFactChecksClient({
     setFormFactConclusion(item.factConclusion || "");
     setFormOriginalMediaUrl(item.originalMediaUrl || "");
     setFormDebunkedMediaUrl(item.debunkedMediaUrl || "");
-    setFormCategory(item.category || "সাধারণ");
+    setFormCategory(item.category || (isEn ? "General" : "সাধারণ"));
     setFormTags((item.tags || []).join(", "));
     setFormIsFeatured(item.isFeatured);
     setFormError(null);
@@ -143,7 +152,11 @@ export function AdminFactChecksClient({
     setFormError(null);
 
     if (!formTitle.trim() || !formClaim.trim() || !formVerdictSummary.trim()) {
-      setFormError("শিরোনাম, দাবি এবং রায়ের সারসংক্ষেপ অবশ্যই পূরণ করুন।");
+      setFormError(
+        isEn
+          ? "Please fill in title, claim, and verdict summary."
+          : "শিরোনাম, দাবি এবং রায়ের সারসংক্ষেপ অবশ্যই পূরণ করুন।"
+      );
       setFormLoading(false);
       return;
     }
@@ -152,7 +165,7 @@ export function AdminFactChecksClient({
       title: formTitle.trim(),
       slug: formSlug.trim() || undefined,
       claim: formClaim.trim(),
-      claimant: formClaimant.trim() || "সামাজিক যোগাযোগ মাধ্যম",
+      claimant: formClaimant.trim() || (isEn ? "Social Media" : "সামাজিক যোগাযোগ মাধ্যম"),
       verdict: formVerdict,
       verdictSummary: formVerdictSummary.trim(),
       context: formContext.trim() || undefined,
@@ -160,7 +173,7 @@ export function AdminFactChecksClient({
       factConclusion: formFactConclusion.trim() || undefined,
       originalMediaUrl: formOriginalMediaUrl.trim() || undefined,
       debunkedMediaUrl: formDebunkedMediaUrl.trim() || undefined,
-      category: formCategory.trim() || "সাধারণ",
+      category: formCategory.trim() || (isEn ? "General" : "সাধারণ"),
       tags: formTags
         .split(",")
         .map((t) => t.trim())
@@ -191,7 +204,7 @@ export function AdminFactChecksClient({
               : item
           )
         );
-        setSuccessMsg("ফ্যাক্ট-চেক রেকর্ড সফলভাবে হালনাগাদ করা হয়েছে!");
+        setSuccessMsg(isEn ? "Fact-check record updated successfully!" : "ফ্যাক্ট-চেক রেকর্ড সফলভাবে হালনাগাদ করা হয়েছে!");
       } else {
         const res = await createFactCheck(payload);
         if (!res.success) throw new Error(res.error);
@@ -204,7 +217,7 @@ export function AdminFactChecksClient({
           claimant: payload.claimant,
           verdict: payload.verdict,
           verdictSummary: payload.verdictSummary,
-          category: payload.category || "সাধারণ",
+          category: payload.category || (isEn ? "General" : "সাধারণ"),
           tags: payload.tags || [],
           context: payload.context || null,
           investigationDetails: payload.investigationDetails || null,
@@ -218,13 +231,13 @@ export function AdminFactChecksClient({
         };
 
         setFactChecksList([newItem, ...factChecksList]);
-        setSuccessMsg("নতুন ফ্যাক্ট-চেক সফলভাবে প্রকাশিত হয়েছে!");
+        setSuccessMsg(isEn ? "New fact-check published successfully!" : "নতুন ফ্যাক্ট-চেক সফলভাবে প্রকাশিত হয়েছে!");
       }
 
       setIsModalOpen(false);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setFormError(err?.message || "সংরক্ষণ ব্যর্থ হয়েছে");
+      setFormError(err?.message || (isEn ? "Failed to save" : "সংরক্ষণ ব্যর্থ হয়েছে"));
     } finally {
       setFormLoading(false);
     }
@@ -236,7 +249,7 @@ export function AdminFactChecksClient({
       if (res.success) {
         setFactChecksList((prev) => prev.filter((item) => item.id !== id));
         setDeleteConfirmId(null);
-        setSuccessMsg("ফ্যাক্ট-চেকটি মুছে ফেলা হয়েছে!");
+        setSuccessMsg(isEn ? "Fact-check deleted successfully!" : "ফ্যাক্ট-চেকটি মুছে ফেলা হয়েছে!");
         setTimeout(() => setSuccessMsg(null), 3000);
       }
     } catch (err) {
@@ -281,7 +294,7 @@ export function AdminFactChecksClient({
   function handleConvertSubmission(s: FactCheckSubmissionItem) {
     openCreateModal({
       claim: s.titleOrClaim,
-      claimant: s.sourceUrl || "অনলাইন সূত্র",
+      claimant: s.sourceUrl || (isEn ? "Online source" : "অনলাইন সূত্র"),
       description: s.description || undefined,
     });
     handleUpdateSubmissionStatus(s.id, "reviewing");
@@ -293,29 +306,41 @@ export function AdminFactChecksClient({
 
     setTimeout(() => {
       let verdict: VerdictType = "false";
-      let label = "সম্ভাব্য সম্পূর্ণ ভুয়া (False)";
+      let label = isEn ? "Likely False Rumor" : "সম্ভাব্য সম্পূর্ণ ভুয়া (False)";
 
-      if (/পুরনো|আগের|২০২২|২০২১|২০২০/.test(screenerInput)) {
+      if (/পুরনো|আগের|২০২২|২০২১|২০২০|old|previous|2022|2021|archive/i.test(screenerInput)) {
         verdict = "misleading";
-        label = "সম্ভাব্য বিভ্রান্তিকর (Misleading Context)";
-      } else if (/ভিডিও|অডিও|ক্লিপ|ডিপফেক|এআই/.test(screenerInput)) {
+        label = isEn ? "Misleading Context" : "সম্ভাব্য বিভ্রান্তিকর (Misleading Context)";
+      } else if (/ভিডিও|অডিও|ক্লিপ|ডিপফেক|এআই|video|deepfake|ai|clip/i.test(screenerInput)) {
         verdict = "altered_media";
-        label = "সম্ভাব্য বিকৃত বা ডিপফেক মিডিয়া (Altered Media)";
+        label = isEn ? "Altered / Deepfake Media" : "সম্ভাব্য বিকৃত বা ডিপফেক মিডিয়া (Altered Media)";
       }
 
       setScreenerResult({
         suggestedVerdict: verdict,
         verdictLabel: label,
-        indicators: [
-          "সরকারি প্রজ্ঞাপন বা গ্যাজেটের কোনো সুনির্দিষ্ট স্মারক নম্বর পাওয়া যায়নি।",
-          "সামাজিক যোগাযোগ মাধ্যমে ভিউ ও শেয়ার বৃদ্ধির কৌশল পরিলক্ষিত হয়।",
-          "সংশ্লিষ্ট মন্ত্রণালয়ের অফিশিয়াল পোর্টালে এই তথ্যের কোনো ঘোষণা নেই।",
-        ],
-        officialSources: [
-          "বাংলাদেশ সেতু কর্তৃপক্ষ / সড়ক পরিবহন মন্ত্রণালয়",
-          "তথ্য অধিদফতর (PID) ও বিএসএস ফ্যাক্ট-চেক ডেস্ক",
-          "বাংলাদেশ পুলিশ সাইবার ক্রাইম মনিটরিং সেল",
-        ],
+        indicators: isEn
+          ? [
+              "No official government gazette reference or verified circular number found.",
+              "Sensationalist caption style typically used for clickbait / engagement.",
+              "No mention of this announcement across verified ministry newsfeeds.",
+            ]
+          : [
+              "সরকারি প্রজ্ঞাপন বা গ্যাজেটের কোনো সুনির্দিষ্ট স্মারক নম্বর পাওয়া যায়নি।",
+              "সামাজিক যোগাযোগ মাধ্যমে ভিউ ও শেয়ার বৃদ্ধির কৌশল পরিলক্ষিত হয়।",
+              "সংশ্লিষ্ট মন্ত্রণালয়ের অফিশিয়াল পোর্টালে এই তথ্যের কোনো ঘোষণা নেই।",
+            ],
+        officialSources: isEn
+          ? [
+              "Press Information Department (PID) Fact-Check Desk",
+              "Relevant Ministry & Official Press Releases",
+              "Bangladesh Police Cyber Crime Monitoring Cell",
+            ]
+          : [
+              "বাংলাদেশ সেতু কর্তৃপক্ষ / সড়ক পরিবহন মন্ত্রণালয়",
+              "তথ্য অধিদফতর (PID) ও বিএসএস ফ্যাক্ট-চেক ডেস্ক",
+              "বাংলাদেশ পুলিশ সাইবার ক্রাইম মনিটরিং সেল",
+            ],
       });
       setScreenerLoading(false);
     }, 700);
@@ -345,11 +370,13 @@ export function AdminFactChecksClient({
             <ShieldCheck size={24} className="text-emerald-200" />
           </div>
           <div>
-            <h1 className="bengali-headline text-2xl font-black text-[var(--color-text)]">
-              ফ্যাক্ট-চেক ও ভুয়া খবর প্রতিরোধ কর্নার
+            <h1 className="text-2xl font-bold text-[var(--color-text)] tracking-tight">
+              {isEn ? "Fact-Check & Disinformation Desk" : "ফ্যাক্ট-চেক ও ভুয়া খবর প্রতিরোধ কর্নার"}
             </h1>
             <p className="text-xs text-[var(--color-text-muted)]">
-              সামাজিক যোগাযোগ মাধ্যমে ভাইরাল গুজব যাচাই, সত্য উন্মোচন ও পাঠক দাবি ইনবক্স
+              {isEn
+                ? "Verify viral rumors, publish IFCN-standard debunking reports, and manage reader verification claims"
+                : "সামাজিক যোগাযোগ মাধ্যমে ভাইরাল গুজব যাচাই, সত্য উন্মোচন ও পাঠক দাবি ইনবক্স"}
             </p>
           </div>
         </div>
@@ -361,7 +388,7 @@ export function AdminFactChecksClient({
             className="px-3.5 py-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-xs font-bold text-[var(--color-text-muted)] rounded-lg flex items-center gap-1.5 transition-colors"
           >
             <ExternalLink size={13} />
-            <span>পাবলিক হাব দেখুন</span>
+            <span>{isEn ? "View Public Hub" : "পাবলিক হাব দেখুন"}</span>
           </Link>
 
           <button
@@ -370,7 +397,7 @@ export function AdminFactChecksClient({
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
             <Plus size={15} />
-            <span>নতুন ফ্যাক্ট-চেক তৈরি</span>
+            <span>{isEn ? "New Fact-Check" : "নতুন ফ্যাক্ট-চেক তৈরি"}</span>
           </button>
         </div>
       </div>
@@ -386,46 +413,54 @@ export function AdminFactChecksClient({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
         <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] space-y-1 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-            <span>মোট যাচাইকৃত</span>
+            <span>{isEn ? "Total Published" : "মোট যাচাইকৃত"}</span>
             <FileCheck2 size={16} className="text-purple-600" />
           </div>
           <div className="text-2xl font-black text-[var(--color-text)]">
-            {toBengaliDigits(totalFactChecks)}
+            {formatNumber(totalFactChecks)}
           </div>
-          <div className="text-[11px] text-emerald-600 font-semibold">প্রকাশিত রিপোর্ট</div>
+          <div className="text-[11px] text-emerald-600 font-semibold">
+            {isEn ? "Published reports" : "প্রকাশিত রিপোর্ট"}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl border border-red-200 dark:border-red-900/40 bg-red-50/40 dark:bg-red-950/20 space-y-1 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-red-800 dark:text-red-300">
-            <span>মিথ্যা / ভুয়া গুজব</span>
+            <span>{isEn ? "False / Fabricated" : "মিথ্যা / ভুয়া গুজব"}</span>
             <ShieldAlert size={16} className="text-red-600" />
           </div>
           <div className="text-2xl font-black text-red-700 dark:text-red-400">
-            {toBengaliDigits(falseCount)}
+            {formatNumber(falseCount)}
           </div>
-          <div className="text-[11px] text-red-600 font-medium">ভিত্তিহীন ও বানোয়াট</div>
+          <div className="text-[11px] text-red-600 font-medium">
+            {isEn ? "Debunked falsehoods" : "ভিত্তিহীন ও বানোয়াট"}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 space-y-1 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
-            <span>বিভ্রান্তিকর ও বিকৃত</span>
+            <span>{isEn ? "Misleading & Altered" : "বিভ্রান্তিকর ও বিকৃত"}</span>
             <AlertCircle size={16} className="text-amber-600" />
           </div>
           <div className="text-2xl font-black text-amber-700 dark:text-amber-400">
-            {toBengaliDigits(misleadingCount + alteredCount)}
+            {formatNumber(misleadingCount + alteredCount)}
           </div>
-          <div className="text-[11px] text-amber-700 font-medium">ডিপফেক বা প্রেক্ষাপট বিকৃতি</div>
+          <div className="text-[11px] text-amber-700 font-medium">
+            {isEn ? "Context altered / Deepfake" : "ডিপফেক বা প্রেক্ষাপট বিকৃতি"}
+          </div>
         </div>
 
         <div className="p-4 rounded-xl border border-sky-200 dark:border-sky-900/40 bg-sky-50/40 dark:bg-sky-950/20 space-y-1 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-sky-800 dark:text-sky-300">
-            <span>পাঠকদের যাচাই দাবি</span>
+            <span>{isEn ? "Reader Claims Inbox" : "পাঠকদের যাচাই দাবি"}</span>
             <Inbox size={16} className="text-sky-600" />
           </div>
           <div className="text-2xl font-black text-sky-700 dark:text-sky-400">
-            {toBengaliDigits(pendingSubmissionsCount)}
+            {formatNumber(pendingSubmissionsCount)}
           </div>
-          <div className="text-[11px] text-sky-600 font-medium">অপেক্ষমাণ আবেদন</div>
+          <div className="text-[11px] text-sky-600 font-medium">
+            {isEn ? "Pending reader submissions" : "অপেক্ষমাণ আবেদন"}
+          </div>
         </div>
       </div>
 
@@ -435,27 +470,33 @@ export function AdminFactChecksClient({
           <button
             type="button"
             onClick={() => setActiveTab("factchecks")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === "factchecks"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]"
             }`}
           >
             <ShieldCheck size={14} />
-            <span>প্রকাশিত ফ্যাক্ট-চেক ({toBengaliDigits(factChecksList.length)})</span>
+            <span>
+              {isEn ? `Fact-Checks (${formatNumber(factChecksList.length)})` : `প্রকাশিত ফ্যাক্ট-চেক (${formatNumber(factChecksList.length)})`}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("submissions")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 relative ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 relative cursor-pointer ${
               activeTab === "submissions"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]"
             }`}
           >
             <Inbox size={14} />
-            <span>পাঠকদের যাচাই আবেদন ({toBengaliDigits(submissionsList.length)})</span>
+            <span>
+              {isEn
+                ? `Reader Inbox (${formatNumber(submissionsList.length)})`
+                : `পাঠকদের যাচাই আবেদন (${formatNumber(submissionsList.length)})`}
+            </span>
             {pendingSubmissionsCount > 0 && (
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             )}
@@ -464,14 +505,14 @@ export function AdminFactChecksClient({
           <button
             type="button"
             onClick={() => setActiveTab("screener")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === "screener"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)]"
             }`}
           >
             <Sparkles size={14} className="text-amber-500" />
-            <span>এআই গুজব স্ক্রিনার</span>
+            <span>{isEn ? "AI Rumor Screener" : "এআই গুজব স্ক্রিনার"}</span>
           </button>
         </div>
       </div>
@@ -487,7 +528,7 @@ export function AdminFactChecksClient({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="শিরোনাম, দাবি বা উৎস অনুসন্ধান..."
+                placeholder={isEn ? "Search by title, claim, or source..." : "শিরোনাম, দাবি বা উৎস অনুসন্ধান..."}
                 className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:outline-none focus:border-emerald-600 text-xs"
               />
             </div>
@@ -499,12 +540,12 @@ export function AdminFactChecksClient({
                 onChange={(e) => setVerdictFilter(e.target.value)}
                 className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none"
               >
-                <option value="all">সব রায় (All Verdicts)</option>
-                <option value="false">❌ মিথ্যা / ভুয়া (False)</option>
-                <option value="misleading">⚠️ বিভ্রান্তিকর (Misleading)</option>
-                <option value="altered_media">🎭 বিকৃত মিডিয়া (Altered Media)</option>
-                <option value="partially_true">⚖️ আংশিক সত্য (Partially True)</option>
-                <option value="true">✅ সত্য (True)</option>
+                <option value="all">{isEn ? "All Verdicts" : "সব রায় (All Verdicts)"}</option>
+                <option value="false">{isEn ? "❌ False" : "❌ মিথ্যা / ভুয়া (False)"}</option>
+                <option value="misleading">{isEn ? "⚠️ Misleading" : "⚠️ বিভ্রান্তিকর (Misleading)"}</option>
+                <option value="altered_media">{isEn ? "🎭 Altered Media" : "🎭 বিকৃত মিডিয়া (Altered Media)"}</option>
+                <option value="partially_true">{isEn ? "⚖️ Partially True" : "⚖️ আংশিক সত্য (Partially True)"}</option>
+                <option value="true">{isEn ? "✅ True" : "✅ সত্য (True)"}</option>
               </select>
             </div>
           </div>
@@ -514,7 +555,7 @@ export function AdminFactChecksClient({
             {filteredFactChecks.length === 0 ? (
               <div className="p-12 text-center text-xs text-[var(--color-text-muted)] space-y-2">
                 <ShieldCheck size={32} className="mx-auto opacity-40 text-emerald-600" />
-                <p>কোনো ফ্যাক্ট-চেক রিপোর্ট পাওয়া যায়নি</p>
+                <p>{isEn ? "No fact-check reports found." : "কোনো ফ্যাক্ট-চেক রিপোর্ট পাওয়া যায়নি"}</p>
               </div>
             ) : (
               filteredFactChecks.map((item) => (
@@ -531,15 +572,15 @@ export function AdminFactChecksClient({
                       {item.isFeatured && (
                         <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Star size={10} className="fill-amber-500 text-amber-500" />
-                          <span>শীর্ষ ফিচার্ড</span>
+                          <span>{isEn ? "Featured" : "শীর্ষ ফিচার্ড"}</span>
                         </span>
                       )}
                       <span className="text-[11px] text-[var(--color-text-muted)]">
-                        {formatBengaliDate(new Date(item.createdAt))}
+                        {formatDateString(item.createdAt)}
                       </span>
                     </div>
 
-                    <h3 className="text-sm font-bold text-[var(--color-text)] leading-snug font-serif">
+                    <h3 className="text-sm font-bold text-[var(--color-text)] leading-snug">
                       <Link
                         href={`/fact-check/${item.slug}`}
                         target="_blank"
@@ -550,8 +591,10 @@ export function AdminFactChecksClient({
                     </h3>
 
                     <p className="text-xs text-[var(--color-text-muted)] line-clamp-1">
-                      <strong className="text-[var(--color-text)]">দাবি:</strong> {item.claim} •{" "}
-                      <span className="text-[var(--color-text-faint)]">উৎস: {item.claimant}</span>
+                      <strong className="text-[var(--color-text)]">{isEn ? "Claim:" : "দাবি:"}</strong> {item.claim} •{" "}
+                      <span className="text-[var(--color-text-faint)]">
+                        {isEn ? "Source:" : "উৎস:"} {item.claimant}
+                      </span>
                     </p>
                   </div>
 
@@ -560,12 +603,12 @@ export function AdminFactChecksClient({
                     <button
                       type="button"
                       onClick={() => handleToggleFeatured(item.id, item.isFeatured)}
-                      className={`p-2 rounded-lg border transition-colors ${
+                      className={`p-2 rounded-lg border transition-colors cursor-pointer ${
                         item.isFeatured
                           ? "border-amber-300 bg-amber-50 dark:bg-amber-950 text-amber-600"
                           : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-amber-500"
                       }`}
-                      title={item.isFeatured ? "ফিচার্ড থেকে সরান" : "ফিচার্ড হিসেবে পিন করুন"}
+                      title={item.isFeatured ? (isEn ? "Unpin featured" : "ফিচার্ড থেকে সরান") : (isEn ? "Pin to featured" : "ফিচার্ড হিসেবে পিন করুন")}
                     >
                       <Star size={14} className={item.isFeatured ? "fill-amber-500" : ""} />
                     </button>
@@ -574,7 +617,7 @@ export function AdminFactChecksClient({
                       href={`/fact-check/${item.slug}`}
                       target="_blank"
                       className="p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:bg-[var(--color-bg)] transition-colors"
-                      title="লাইভ প্রিভিউ দেখুন"
+                      title={isEn ? "Live preview" : "লাইভ প্রিভিউ দেখুন"}
                     >
                       <Eye size={14} />
                     </Link>
@@ -583,7 +626,7 @@ export function AdminFactChecksClient({
                       type="button"
                       onClick={() => openEditModal(item)}
                       className="p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-purple-600 hover:bg-[var(--color-bg)] transition-colors cursor-pointer"
-                      title="সম্পাদনা করুন"
+                      title={isEn ? "Edit" : "সম্পাদনা করুন"}
                     >
                       <Edit size={14} />
                     </button>
@@ -592,7 +635,7 @@ export function AdminFactChecksClient({
                       type="button"
                       onClick={() => setDeleteConfirmId(item.id)}
                       className="p-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors cursor-pointer"
-                      title="মুছে ফেলুন"
+                      title={isEn ? "Delete" : "মুছে ফেলুন"}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -609,7 +652,7 @@ export function AdminFactChecksClient({
         <div className="space-y-4">
           <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] flex items-center justify-between text-xs">
             <span className="font-bold text-[var(--color-text)]">
-              পাঠকদের পাঠানো যাচাই দাবি তালিকা:
+              {isEn ? "Reader Verification Claims Inbox:" : "পাঠকদের পাঠানো যাচাই দাবি তালিকা:"}
             </span>
 
             <div className="flex items-center gap-2">
@@ -618,11 +661,11 @@ export function AdminFactChecksClient({
                 onChange={(e) => setSubmissionStatusFilter(e.target.value)}
                 className="px-2.5 py-1.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs text-[var(--color-text)] focus:outline-none"
               >
-                <option value="all">সব আবেদন (All)</option>
-                <option value="pending">অপেক্ষমাণ (Pending)</option>
-                <option value="reviewing">তদন্তাধীন (Reviewing)</option>
-                <option value="published">সম্পন্ন/প্রকাশিত (Published)</option>
-                <option value="dismissed">বাতিল (Dismissed)</option>
+                <option value="all">{isEn ? "All Submissions" : "সব আবেদন (All)"}</option>
+                <option value="pending">{isEn ? "Pending" : "অপেক্ষমাণ (Pending)"}</option>
+                <option value="reviewing">{isEn ? "Under Investigation" : "তদন্তাধীন (Reviewing)"}</option>
+                <option value="published">{isEn ? "Published" : "সম্পন্ন/প্রকাশিত (Published)"}</option>
+                <option value="dismissed">{isEn ? "Dismissed" : "বাতিল (Dismissed)"}</option>
               </select>
             </div>
           </div>
@@ -631,9 +674,13 @@ export function AdminFactChecksClient({
             {filteredSubmissions.length === 0 ? (
               <div className="p-12 text-center text-xs text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-xl bg-[var(--color-bg)]">
                 <Inbox size={36} className="mx-auto opacity-40 mb-2.5 text-sky-600" />
-                <p className="font-semibold text-sm text-[var(--color-text)]">বর্তমানে কোনো পাঠক দাবি বা আবেদন জমা নেই</p>
+                <p className="font-semibold text-sm text-[var(--color-text)]">
+                  {isEn ? "No reader verification claims submitted currently" : "বর্তমানে কোনো পাঠক দাবি বা আবেদন জমা নেই"}
+                </p>
                 <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
-                  পাঠকরা পোর্টালের ফ্যাক্ট-চেক কর্নার থেকে কোনো সন্দেহভাজন খবর যাচাইয়ের জন্য জমা দিলে এখানে স্বয়ংক্রিয়ভাবে প্রদর্শিত হবে।
+                  {isEn
+                    ? "When readers submit suspicious rumors or viral links from the public fact-check portal, they appear here."
+                    : "পাঠকরা পোর্টালের ফ্যাক্ট-চেক কর্নার থেকে কোনো সন্দেহভাজন খবর যাচাইয়ের জন্য জমা দিলে এখানে স্বয়ংক্রিয়ভাবে প্রদর্শিত হবে।"}
                 </p>
               </div>
             ) : (
@@ -661,18 +708,22 @@ export function AdminFactChecksClient({
                               : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                           }`}
                         >
-                          {isPending && "অপেক্ষমাণ"}
-                          {isReviewing && "তদন্তাধীন"}
-                          {isPublished && "প্রকাশিত / নিষ্পত্তি"}
-                          {isDismissed && "বাতিল"}
+                          {isPending && (isEn ? "Pending" : "অপেক্ষমাণ")}
+                          {isReviewing && (isEn ? "Under Investigation" : "তদন্তাধীন")}
+                          {isPublished && (isEn ? "Published" : "প্রকাশিত / নিষ্পত্তি")}
+                          {isDismissed && (isEn ? "Dismissed" : "বাতিল")}
                         </span>
                         <span className="text-[11px] text-[var(--color-text-muted)]">
-                          {formatBengaliDate(new Date(sub.createdAt))}
+                          {formatDateString(sub.createdAt)}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                        {sub.submitterName && <span>প্রেরক: <strong>{sub.submitterName}</strong></span>}
+                        {sub.submitterName && (
+                          <span>
+                            {isEn ? "Sender:" : "প্রেরক:"} <strong>{sub.submitterName}</strong>
+                          </span>
+                        )}
                         {sub.submitterEmail && <span>({sub.submitterEmail})</span>}
                       </div>
                     </div>
@@ -689,7 +740,7 @@ export function AdminFactChecksClient({
 
                     {sub.sourceUrl && (
                       <div className="text-xs text-sky-600 font-mono truncate">
-                        উৎস / লিংক:{" "}
+                        {isEn ? "Source / Link:" : "উৎস / লিংক:"}{" "}
                         <a href={sub.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">
                           {sub.sourceUrl}
                         </a>
@@ -701,9 +752,9 @@ export function AdminFactChecksClient({
                         <button
                           type="button"
                           onClick={() => handleConvertSubmission(sub)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
                         >
-                          <span>এটি দিয়ে ফ্যাক্ট-চেক তৈরি করুন</span>
+                          <span>{isEn ? "Create Fact-Check from this" : "এটি দিয়ে ফ্যাক্ট-চেক তৈরি করুন"}</span>
                           <ArrowRight size={12} />
                         </button>
 
@@ -711,18 +762,18 @@ export function AdminFactChecksClient({
                           <button
                             type="button"
                             onClick={() => handleUpdateSubmissionStatus(sub.id, "reviewing")}
-                            className="px-2.5 py-1.5 rounded-lg border border-sky-300 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950 font-semibold text-xs"
+                            className="px-2.5 py-1.5 rounded-lg border border-sky-300 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950 font-semibold text-xs cursor-pointer"
                           >
-                            তদন্তাধীন চিহ্নিত করুন
+                            {isEn ? "Mark Reviewing" : "তদন্তাধীন চিহ্নিত করুন"}
                           </button>
                         )}
                         {!isDismissed && (
                           <button
                             type="button"
                             onClick={() => handleUpdateSubmissionStatus(sub.id, "dismissed")}
-                            className="px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs"
+                            className="px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs cursor-pointer"
                           >
-                            বাতিল করুন
+                            {isEn ? "Dismiss" : "বাতিল করুন"}
                           </button>
                         )}
                       </div>
@@ -730,8 +781,8 @@ export function AdminFactChecksClient({
                       <button
                         type="button"
                         onClick={() => handleDeleteSubmission(sub.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                        title="মুছে ফেলুন"
+                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                        title={isEn ? "Delete" : "মুছে ফেলুন"}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -751,18 +802,26 @@ export function AdminFactChecksClient({
             <div className="flex items-center gap-2">
               <Sparkles size={18} className="text-amber-500" />
               <h3 className="text-sm font-bold text-[var(--color-text)]">
-                এআই গুজব স্ক্রিনার ও প্রাথমিক তদন্ত ফ্রেমওয়ার্ক
+                {isEn
+                  ? "AI Rumor Screener & Preliminary Investigation Framework"
+                  : "এআই গুজব স্ক্রিনার ও প্রাথমিক তদন্ত ফ্রেমওয়ার্ক"}
               </h3>
             </div>
             <p className="text-xs text-[var(--color-text-muted)]">
-              সামাজিক মাধ্যমে ভাইরাল হওয়া যেকোনো টেক্সট, ক্যাপশন বা স্ক্রিনশটের বিবরণ পেস্ট করুন। এআই সম্ভাব্য বিকৃতি শনাক্ত করবে।
+              {isEn
+                ? "Paste any viral caption, claim, or screenshot transcript. AI will detect potential indicators of falsehood."
+                : "সামাজিক মাধ্যমে ভাইরাল হওয়া যেকোনো টেক্সট, ক্যাপশন বা স্ক্রিনশটের বিবরণ পেস্ট করুন। এআই সম্ভাব্য বিকৃতি শনাক্ত করবে।"}
             </p>
 
             <textarea
               rows={4}
               value={screenerInput}
               onChange={(e) => setScreenerInput(e.target.value)}
-              placeholder="যেমন: পদ্মা সেতুতে টোল দ্বিগুণ করার প্রজ্ঞাপন ভাইরাল হয়েছে, আগামী শুক্রবার থেকে কার্যকর হবে..."
+              placeholder={
+                isEn
+                  ? "Example: Viral post claiming toll on Padma Bridge is doubled starting this Friday..."
+                  : "যেমন: পদ্মা সেতুতে টোল দ্বিগুণ করার প্রজ্ঞাপন ভাইরাল হয়েছে, আগামী শুক্রবার থেকে কার্যকর হবে..."
+              }
               className="w-full p-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-emerald-600"
             />
 
@@ -773,21 +832,25 @@ export function AdminFactChecksClient({
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Sparkles size={14} className={screenerLoading ? "animate-spin" : ""} />
-              <span>{screenerLoading ? "স্ক্রিনিং চলছে..." : "গুজব স্ক্রিন করুন"}</span>
+              <span>
+                {screenerLoading
+                  ? (isEn ? "Screening..." : "স্ক্রিনিং চলছে...")
+                  : (isEn ? "Screen Rumor" : "গুজব স্ক্রিন করুন")}
+              </span>
             </button>
 
             {screenerResult && (
               <div className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/20 space-y-3 animate-in fade-in">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                    প্রাথমিক স্ক্রিনিং ফলাফল:
+                    {isEn ? "Preliminary Screening Result:" : "প্রাথমিক স্ক্রিনিং ফলাফল:"}
                   </span>
                   <FactCheckBadge verdict={screenerResult.suggestedVerdict} size="sm" />
                 </div>
 
                 <div className="space-y-1.5 text-xs">
                   <p className="font-semibold text-gray-800 dark:text-gray-200">
-                    শনাক্তকৃত অসঙ্গতি ও লক্ষণ:
+                    {isEn ? "Detected Indicators & Anomalies:" : "শনাক্তকৃত অসঙ্গতি ও লক্ষণ:"}
                   </p>
                   <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-0.5">
                     {screenerResult.indicators.map((ind, i) => (
@@ -798,7 +861,7 @@ export function AdminFactChecksClient({
 
                 <div className="space-y-1.5 text-xs">
                   <p className="font-semibold text-gray-800 dark:text-gray-200">
-                    যাচাই করার প্রয়োজনীয় অফিশিয়াল সূত্র:
+                    {isEn ? "Recommended Official Sources for Verification:" : "যাচাই করার প্রয়োজনীয় অফিশিয়াল সূত্র:"}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {screenerResult.officialSources.map((src, i) => (
@@ -817,12 +880,12 @@ export function AdminFactChecksClient({
                   onClick={() =>
                     openCreateModal({
                       claim: screenerInput,
-                      claimant: "সামাজিক মাধ্যমে ভাইরাল পোস্ট",
+                      claimant: isEn ? "Viral social media post" : "সামাজিক মাধ্যমে ভাইরাল পোস্ট",
                     })
                   }
-                  className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs"
+                  className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs cursor-pointer"
                 >
-                  <span>এই তথ্য দিয়ে ফ্যাক্ট-চেক তৈরি করুন</span>
+                  <span>{isEn ? "Create Fact-Check with this claim" : "এই তথ্য দিয়ে ফ্যাক্ট-চেক তৈরি করুন"}</span>
                   <ArrowRight size={12} />
                 </button>
               </div>
@@ -846,12 +909,14 @@ export function AdminFactChecksClient({
               <div className="flex items-center gap-2">
                 <ShieldCheck size={20} className="text-emerald-200" />
                 <h3 className="font-bold text-sm sm:text-base">
-                  {editingItem ? "ফ্যাক্ট-চেক সম্পাদনা করুন" : "নতুন ফ্যাক্ট-চেক রিপোর্ট প্রকাশ করুন"}
+                  {editingItem
+                    ? (isEn ? "Edit Fact-Check Report" : "ফ্যাক্ট-চেক সম্পাদনা করুন")
+                    : (isEn ? "Publish New Fact-Check Report" : "নতুন ফ্যাক্ট-চেক রিপোর্ট প্রকাশ করুন")}
                 </h3>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 hover:bg-white/20 rounded text-white"
+                className="p-1 hover:bg-white/20 rounded text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -869,14 +934,18 @@ export function AdminFactChecksClient({
               {/* Title */}
               <div>
                 <label className="block font-bold text-[var(--color-text)] mb-1">
-                  ফ্যাক্ট-চেক শিরোনাম (বাংলা) *
+                  {isEn ? "Fact-Check Headline *" : "ফ্যাক্ট-চেক শিরোনাম (বাংলা) *"}
                 </label>
                 <input
                   type="text"
                   required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="যেমন: পদ্মা সেতুতে টোল বৃদ্ধির তথ্যটি ভুয়া; ভাইরাল প্রজ্ঞাপনটি এডিটেড"
+                  placeholder={
+                    isEn
+                      ? "e.g. Viral circular claiming toll doubled on Padma Bridge is edited and fake"
+                      : "যেমন: পদ্মা সেতুতে টোল বৃদ্ধির তথ্যটি ভুয়া; ভাইরাল প্রজ্ঞাপনটি এডিটেড"
+                  }
                   className="w-full p-2.5 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:outline-none focus:border-emerald-600 font-semibold"
                 />
               </div>
@@ -885,27 +954,31 @@ export function AdminFactChecksClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[var(--color-text)] mb-1">
-                    ভাইরাল দাবি (The Claim) *
+                    {isEn ? "Viral Claim (The Claim) *" : "ভাইরাল দাবি (The Claim) *"}
                   </label>
                   <input
                     type="text"
                     required
                     value={formClaim}
                     onChange={(e) => setFormClaim(e.target.value)}
-                    placeholder="যেমন: পদ্মা সেতুতে সব যানবাহনের টোল ৫০ শতাংশ বৃদ্ধি..."
+                    placeholder={
+                      isEn
+                        ? "e.g. Toll charges on Padma bridge to double starting next week..."
+                        : "যেমন: পদ্মা সেতুতে সব যানবাহনের টোল ৫০ শতাংশ বৃদ্ধি..."
+                    }
                     className="w-full p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:outline-none focus:border-emerald-600"
                   />
                 </div>
                 <div>
                   <label className="block font-bold text-[var(--color-text)] mb-1">
-                    দাবিকারী / প্রচারকারী (Claimant / Source) *
+                    {isEn ? "Claimant / Source *" : "দাবিকারী / প্রচারকারী (Claimant / Source) *"}
                   </label>
                   <input
                     type="text"
                     required
                     value={formClaimant}
                     onChange={(e) => setFormClaimant(e.target.value)}
-                    placeholder="যেমন: ফেসবুকে ভাইরাল পোস্ট ও বিভিন্ন গ্রুপ"
+                    placeholder={isEn ? "e.g. Viral Facebook posts & groups" : "যেমন: ফেসবুকে ভাইরাল পোস্ট ও বিভিন্ন গ্রুপ"}
                     className="w-full p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:outline-none focus:border-emerald-600"
                   />
                 </div>
@@ -915,7 +988,7 @@ export function AdminFactChecksClient({
               <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-[var(--color-text)]">
-                    ফ্যাক্ট-চেক রায় নির্ধারণ (IFCN Verdict Rating) *
+                    {isEn ? "IFCN Verdict Rating *" : "ফ্যাক্ট-চেক রায় নির্ধারণ (IFCN Verdict Rating) *"}
                   </label>
                   <FactCheckBadge verdict={formVerdict} size="sm" />
                 </div>
@@ -923,24 +996,24 @@ export function AdminFactChecksClient({
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {(
                     [
-                      { id: "false", label: "❌ ভুয়া / মিথ্যা" },
-                      { id: "misleading", label: "⚠️ বিভ্রান্তিকর" },
-                      { id: "altered_media", label: "🎭 বিকৃত মিডিয়া" },
-                      { id: "partially_true", label: "⚖️ আংশিক সত্য" },
-                      { id: "true", label: "✅ সত্য" },
+                      { id: "false", labelEn: "❌ False", labelBn: "❌ ভুয়া / মিথ্যা" },
+                      { id: "misleading", labelEn: "⚠️ Misleading", labelBn: "⚠️ বিভ্রান্তিকর" },
+                      { id: "altered_media", labelEn: "🎭 Altered", labelBn: "🎭 বিকৃত মিডিয়া" },
+                      { id: "partially_true", labelEn: "⚖️ Partial", labelBn: "⚖️ আংশিক সত্য" },
+                      { id: "true", labelEn: "✅ True", labelBn: "✅ সত্য" },
                     ] as const
                   ).map((v) => (
                     <button
                       key={v.id}
                       type="button"
                       onClick={() => setFormVerdict(v.id as VerdictType)}
-                      className={`p-2 rounded-lg text-center font-bold text-xs border transition-all ${
+                      className={`p-2 rounded-lg text-center font-bold text-xs border transition-all cursor-pointer ${
                         formVerdict === v.id
                           ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
                           : "border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text)]"
                       }`}
                     >
-                      {v.label}
+                      {isEn ? v.labelEn : v.labelBn}
                     </button>
                   ))}
                 </div>
@@ -949,14 +1022,18 @@ export function AdminFactChecksClient({
               {/* Verdict Summary */}
               <div>
                 <label className="block font-bold text-[var(--color-text)] mb-1">
-                  রায়ের সারসংক্ষেপ (Verdict Summary) *
+                  {isEn ? "Verdict Summary *" : "রায়ের সারসংক্ষেপ (Verdict Summary) *"}
                 </label>
                 <textarea
                   rows={2}
                   required
                   value={formVerdictSummary}
                   onChange={(e) => setFormVerdictSummary(e.target.value)}
-                  placeholder="পাঠকদের জন্য স্পষ্ট ১-২ বাক্যের সিদ্ধান্ত..."
+                  placeholder={
+                    isEn
+                      ? "Clear 1-2 sentence conclusion for readers..."
+                      : "পাঠকদের জন্য স্পষ্ট ১-২ বাক্যের সিদ্ধান্ত..."
+                  }
                   className="w-full p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:outline-none focus:border-emerald-600"
                 />
               </div>
@@ -964,13 +1041,17 @@ export function AdminFactChecksClient({
               {/* Investigation Details */}
               <div>
                 <label className="block font-bold text-[var(--color-text)] mb-1">
-                  তদন্ত পদ্ধতি ও প্রমাণের বিবরণ (Investigation Details)
+                  {isEn ? "Investigation Details & Evidence" : "তদন্ত পদ্ধতি ও প্রমাণের বিবরণ (Investigation Details)"}
                 </label>
                 <textarea
                   rows={4}
                   value={formInvestigationDetails}
                   onChange={(e) => setFormInvestigationDetails(e.target.value)}
-                  placeholder="১. রিভার্স ইমেজ সার্চের ফলাফল...&#10;২. সংশ্লিষ্ট কর্তৃপক্ষের বক্তব্য...&#10;৩. ডিজিটাল ফরেনসিক পরীক্ষা..."
+                  placeholder={
+                    isEn
+                      ? "1. Reverse image search findings...\n2. Official statement from authorities...\n3. Digital forensics analysis..."
+                      : "১. রিভার্স ইমেজ সার্চের ফলাফল...&#10;২. সংশ্লিষ্ট কর্তৃপক্ষের বক্তব্য...&#10;৩. ডিজিটাল ফরেনসিক পরীক্ষা..."
+                  }
                   className="w-full p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] focus:outline-none focus:border-emerald-600 font-mono text-xs"
                 />
               </div>
@@ -979,7 +1060,7 @@ export function AdminFactChecksClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[var(--color-text)] mb-1">
-                    ভাইরাল ভুয়া মিডিয়ার ছবি (Image URL)
+                    {isEn ? "Viral Rumor Image URL" : "ভাইরাল ভুয়া মিডিয়ার ছবি (Image URL)"}
                   </label>
                   <input
                     type="url"
@@ -991,7 +1072,7 @@ export function AdminFactChecksClient({
                 </div>
                 <div>
                   <label className="block font-bold text-[var(--color-text)] mb-1">
-                    আসল সত্য প্রমাণ ছবি (Debunked Image URL)
+                    {isEn ? "Debunked Proof Image URL" : "আসল সত্য প্রমাণ ছবি (Debunked Image URL)"}
                   </label>
                   <input
                     type="url"
@@ -1007,25 +1088,25 @@ export function AdminFactChecksClient({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                 <div>
                   <label className="block font-bold text-[var(--color-text)] mb-1">
-                    বিভাগ (Category)
+                    {isEn ? "Category" : "বিভাগ (Category)"}
                   </label>
                   <input
                     type="text"
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    placeholder="যেমন: যোগাযোগ, রাজনীতি, স্বাস্থ্য"
+                    placeholder={isEn ? "e.g. Politics, Health, Viral" : "যেমন: যোগাযোগ, রাজনীতি, স্বাস্থ্য"}
                     className="w-full p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
                   />
                 </div>
                 <div>
                   <label className="block font-bold text-[var(--color-text)] mb-1">
-                    ট্যাগসমূহ (কমা দিয়ে আলাদা)
+                    {isEn ? "Tags (comma-separated)" : "ট্যাগসমূহ (কমা দিয়ে আলাদা)"}
                   </label>
                   <input
                     type="text"
                     value={formTags}
                     onChange={(e) => setFormTags(e.target.value)}
-                    placeholder="পদ্মা সেতু, গুজব, এডিটেড প্রজ্ঞাপন"
+                    placeholder={isEn ? "rumor, fake news, debunk" : "পদ্মা সেতু, গুজব, এডিটেড প্রজ্ঞাপন"}
                     className="w-full p-2 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)]"
                   />
                 </div>
@@ -1035,10 +1116,10 @@ export function AdminFactChecksClient({
                     id="featuredCheckbox"
                     checked={formIsFeatured}
                     onChange={(e) => setFormIsFeatured(e.target.checked)}
-                    className="w-4 h-4 text-emerald-600 rounded"
+                    className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
                   />
                   <label htmlFor="featuredCheckbox" className="font-bold text-[var(--color-text)] cursor-pointer">
-                    হোমপেজে পিন করুন (Featured)
+                    {isEn ? "Pin to Featured" : "হোমপেজে পিন করুন (Featured)"}
                   </label>
                 </div>
               </div>
@@ -1048,9 +1129,9 @@ export function AdminFactChecksClient({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] font-semibold text-[var(--color-text)]"
+                  className="px-4 py-2 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] font-semibold text-[var(--color-text)] cursor-pointer"
                 >
-                  বাতিল
+                  {isEn ? "Cancel" : "বাতিল"}
                 </button>
                 <button
                   type="submit"
@@ -1058,7 +1139,11 @@ export function AdminFactChecksClient({
                   className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <CheckCircle2 size={14} />
-                  <span>{formLoading ? "সংরক্ষণ হচ্ছে..." : "প্রকাশ করুন"}</span>
+                  <span>
+                    {formLoading
+                      ? (isEn ? "Saving..." : "সংরক্ষণ হচ্ছে...")
+                      : (isEn ? "Publish Fact-Check" : "প্রকাশ করুন")}
+                  </span>
                 </button>
               </div>
             </form>
@@ -1080,25 +1165,29 @@ export function AdminFactChecksClient({
               <Trash2 size={24} />
             </div>
             <h4 className="text-sm font-bold text-[var(--color-text)]">
-              আপনি কি নিশ্চিতভাবে এই ফ্যাক্ট-চেকটি মুছে ফেলতে চান?
+              {isEn
+                ? "Are you sure you want to delete this fact-check?"
+                : "আপনি কি নিশ্চিতভাবে এই ফ্যাক্ট-চেকটি মুছে ফেলতে চান?"}
             </h4>
             <p className="text-xs text-[var(--color-text-muted)]">
-              একবার মুছে ফেললে এটি পাবলিক সাইট থেকেও অপসারিত হবে।
+              {isEn
+                ? "Once deleted, it will also be removed from the public portal immediately."
+                : "একবার মুছে ফেললে এটি পাবলিক সাইট থেকেও অপসারিত হবে।"}
             </p>
             <div className="flex items-center justify-center gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmId(null)}
-                className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-xs font-semibold"
+                className="px-4 py-2 rounded-lg border border-[var(--color-border)] text-xs font-semibold cursor-pointer"
               >
-                বাতিল
+                {isEn ? "Cancel" : "বাতিল"}
               </button>
               <button
                 type="button"
                 onClick={() => handleDeleteFactCheck(deleteConfirmId)}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer"
               >
-                হ্যাঁ, মুছে ফেলুন
+                {isEn ? "Yes, Delete" : "হ্যাঁ, মুছে ফেলুন"}
               </button>
             </div>
           </div>

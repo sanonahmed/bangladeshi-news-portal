@@ -8,15 +8,32 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { CheckSquare, ExternalLink, Clock, CheckCircle2, RotateCcw } from "lucide-react";
 import { formatBengaliDateTime, toBengaliDigits } from "@/lib/bengali-date";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "সম্পাদকীয় পর্যালোচনা ও অনুমোদন কিউ | দৈনিক বাংলাদেশ বার্তা অ্যাডমিন",
-  description: "সাংবাদিকদের প্রেরিত খসড়া সংবাদ প্রকাশের পূর্বে সম্পাদনা ও অনুমোদন করুন",
+  title: "Review & Approval Queue | Admin",
+  description: "Editorial review and approval queue for submitted drafts",
 };
 
 export default async function AdminReviewsPage() {
+  const cookieStore = await cookies();
+  const isEn = cookieStore.get("admin_lang")?.value !== "bn";
+  const formatNum = (n: number | string) => (isEn ? String(n) : toBengaliDigits(n));
+  const formatDateTime = (d: Date | null) => {
+    if (!d) return "";
+    return isEn
+      ? d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : formatBengaliDateTime(d);
+  };
+
   let pendingArticles: any[] = [];
   try {
     pendingArticles = await db
@@ -78,26 +95,30 @@ export default async function AdminReviewsPage() {
     <div className="space-y-6">
       <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
             <CheckSquare size={24} className="text-[var(--color-primary)]" />
-            সম্পাদকীয় পর্যালোচনা ও অনুমোদন কিউ
+            <span>{isEn ? "Editorial Review & Approval Queue" : "সম্পাদকীয় পর্যালোচনা ও অনুমোদন কিউ"}</span>
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            সাংবাদিকদের প্রেরিত খসড়া সংবাদ প্রকাশের পূর্বে সম্পাদনা, গুণগত মান যাচাই ও অনুমোদন
+            {isEn
+              ? "Review submitted drafts from journalists, verify editorial quality and approve for publishing"
+              : "সাংবাদিকদের প্রেরিত খসড়া সংবাদ প্রকাশের পূর্বে সম্পাদনা, গুণগত মান যাচাই ও অনুমোদন"}
           </p>
         </div>
 
         <span className="text-xs font-semibold px-3 py-1 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded">
-          অপেক্ষমান: {toBengaliDigits(pendingArticles.length)}টি সংবাদ
+          {isEn
+            ? `Pending: ${formatNum(pendingArticles.length)} stories`
+            : `অপেক্ষমান: ${formatNum(pendingArticles.length)}টি সংবাদ`}
         </span>
       </div>
 
-      <div className="border border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
         <div className="p-4 border-b border-[var(--color-border)] font-bold text-xs uppercase tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
-          <span>পর্যালোচনার কিউ তালিকা</span>
+          <span>{isEn ? "Review Queue Submissions" : "পর্যালোচনার কিউ তালিকা"}</span>
           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            লাইভ ডাটাবেজ
+            {isEn ? "Live Database" : "লাইভ ডাটাবেজ"}
           </span>
         </div>
 
@@ -105,26 +126,37 @@ export default async function AdminReviewsPage() {
           <div className="p-12 text-center bg-[var(--color-bg)]">
             <CheckSquare size={44} className="mx-auto text-emerald-600 mb-3 opacity-60" />
             <h3 className="font-bold text-base text-[var(--color-text)]">
-              বর্তমানে পর্যালোচনার অপেক্ষায় কোনো সংবাদ নেই
+              {isEn ? "No articles currently pending review" : "বর্তমানে পর্যালোচনার অপেক্ষায় কোনো সংবাদ নেই"}
             </h3>
             <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-md mx-auto">
-              সাংবাদিক বা লেখকরা নতুন কোনো সংবাদ পর্যালোচনার জন্য জমা দিলে এখানে সরাসরি অনুমোদনের জন্য প্রদর্শিত হবে।
+              {isEn
+                ? "When reporters or contributors submit stories for review, they will appear here for editorial approval."
+                : "সাংবাদিক বা লেখকরা নতুন কোনো সংবাদ পর্যালোচনার জন্য জমা দিলে এখানে সরাসরি অনুমোদনের জন্য প্রদর্শিত হবে।"}
             </p>
           </div>
         ) : (
           <div className="divide-y divide-[var(--color-border)]">
             {pendingArticles.map((art) => (
-              <div key={art.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[var(--color-bg-secondary)] transition-colors">
+              <div
+                key={art.id}
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[var(--color-bg-secondary)] transition-colors"
+              >
                 <div className="space-y-1">
                   <h3 className="font-bold text-sm text-[var(--color-text)]">
                     {art.title}
                   </h3>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-text-muted)]">
-                    <span>বিভাগ: <b className="text-[var(--color-text)]">{art.categoryName || "জাতীয়"}</b></span>
-                    <span>লেখক: <b className="text-[var(--color-text)]">{art.authorName || "নিজস্ব প্রতিবেদক"}</b></span>
+                    <span>
+                      {isEn ? "Category:" : "বিভাগ:"}{" "}
+                      <b className="text-[var(--color-text)]">{art.categoryName || (isEn ? "National" : "জাতীয়")}</b>
+                    </span>
+                    <span>
+                      {isEn ? "Author:" : "লেখক:"}{" "}
+                      <b className="text-[var(--color-text)]">{art.authorName || (isEn ? "Staff Reporter" : "নিজস্ব প্রতিবেদক")}</b>
+                    </span>
                     <span className="flex items-center gap-1">
                       <Clock size={12} />
-                      {formatBengaliDateTime(art.createdAt)}
+                      {formatDateTime(art.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -134,7 +166,7 @@ export default async function AdminReviewsPage() {
                     href={`/admin/articles/${art.id}/edit`}
                     className="px-3 py-1.5 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] text-xs font-semibold text-[var(--color-text)] rounded transition-colors"
                   >
-                    সম্পাদনা
+                    {isEn ? "Edit" : "সম্পাদনা"}
                   </Link>
 
                   <form action={handleRejectToDraft}>
@@ -144,7 +176,7 @@ export default async function AdminReviewsPage() {
                       className="px-3 py-1.5 border border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-xs font-semibold rounded transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <RotateCcw size={12} />
-                      <span>খসড়ায় ফেরত</span>
+                      <span>{isEn ? "Return to Draft" : "খসড়ায় ফেরত"}</span>
                     </button>
                   </form>
 
@@ -155,7 +187,7 @@ export default async function AdminReviewsPage() {
                       className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <CheckCircle2 size={13} />
-                      <span>প্রকাশ অনুমোদন</span>
+                      <span>{isEn ? "Approve & Publish" : "প্রকাশ অনুমোদন"}</span>
                     </button>
                   </form>
                 </div>
