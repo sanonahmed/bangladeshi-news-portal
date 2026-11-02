@@ -7,7 +7,7 @@ export function cleanHtmlToText(html: string): string {
   if (!html) return "";
 
   // Replace block elements with space or newline
-  let text = html
+  const text = html
     .replace(/<script[^>]*>([\S\s]*?)<\/script>/gim, "")
     .replace(/<style[^>]*>([\S\s]*?)<\/style>/gim, "")
     .replace(/<figcaption[^>]*>([\S\s]*?)<\/figcaption>/gim, "")

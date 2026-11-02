@@ -127,7 +127,7 @@ const BENGALI_WEEKDAYS = ["রবিবার", "সোমবার", "মঙ্
 export function formatPrayerTimeBengali(time24: string): { timeBn: string; periodBn: string } {
   if (!time24) return { timeBn: "--:--", periodBn: "" };
   const parts = time24.split(":");
-  let hours = parseInt(parts[0] || "0", 10);
+  const hours = parseInt(parts[0] || "0", 10);
   const minutes = parts[1] || "00";
 
   let periodBn = "সকাল";
