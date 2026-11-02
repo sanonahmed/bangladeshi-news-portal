@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import {
   Sun,
@@ -20,9 +20,11 @@ import {
   MapPin,
   Calendar,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DIVISIONS_GEO,
+  computePrayerState,
   type DivisionWeatherPrayerResult,
   type PrayerItem,
   type DayForecast,
@@ -37,6 +39,45 @@ export function WeatherPrayerWidget({ initialData }: WeatherPrayerWidgetProps) {
   const [data, setData] = useState<DivisionWeatherPrayerResult>(initialData);
   const [selectedDivisionKey, setSelectedDivisionKey] = useState<string>(initialData.division.key);
   const [isPending, startTransition] = useTransition();
+
+  // Dynamic live client-side recalculation every 5 seconds so active prayer & countdown are never stale
+  useEffect(() => {
+    const updateTiming = () => {
+      if (!data.prayer?.fajr) return;
+      const state = computePrayerState({
+        fajr: data.prayer.fajr,
+        sunrise: data.prayer.sunrise,
+        dhuhr: data.prayer.dhuhr,
+        asr: data.prayer.asr,
+        maghrib: data.prayer.maghrib,
+        isha: data.prayer.isha,
+      });
+
+      setData((prev) => ({
+        ...prev,
+        prayer: {
+          ...prev.prayer,
+          activePrayerName: state.activeName,
+          nextPrayerName: state.nextName,
+          nextPrayerCountdown: state.nextPrayerCountdown,
+          isProhibited: state.isProhibited,
+          prohibitedNote: state.prohibitedNote,
+          items: state.items,
+        },
+      }));
+    };
+
+    updateTiming();
+    const timer = setInterval(updateTiming, 5000);
+    return () => clearInterval(timer);
+  }, [
+    data.prayer?.fajr,
+    data.prayer?.sunrise,
+    data.prayer?.dhuhr,
+    data.prayer?.asr,
+    data.prayer?.maghrib,
+    data.prayer?.isha,
+  ]);
 
   const handleSelectDivision = (key: string) => {
     setSelectedDivisionKey(key);
@@ -228,9 +269,17 @@ export function WeatherPrayerWidget({ initialData }: WeatherPrayerWidgetProps) {
                 </span>
               </div>
               <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/40">
-                ইসলামিক ফাউন্ডেশন
+                ৫ ওয়াক্ত ফরজ ও নফল সময়সূচি
               </span>
             </div>
+
+            {/* Prohibited Time Warning Banner (if currently in sunrise, jawwal or sunset) */}
+            {data.prayer.isProhibited && (
+              <div className="mb-3 px-3 py-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+                <span className="font-semibold">{data.prayer.prohibitedNote || "বর্তমানে নামাজ পড়া নিষিদ্ধ (মাকরূহ সময়)"}</span>
+              </div>
+            )}
 
             {/* Active & Next Prayer Highlight Banner */}
             <div className="bg-gradient-to-r from-red-950 via-zinc-900 to-black text-white p-4 mb-4 border-l-4 border-[var(--color-primary)] shadow-sm">
@@ -238,7 +287,7 @@ export function WeatherPrayerWidget({ initialData }: WeatherPrayerWidgetProps) {
                 <div>
                   <div className="text-xs text-red-300 font-semibold flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>চলমান ওয়াক্ত: {data.prayer.activePrayerName}</span>
+                    <span>চলমান অবস্থা: {data.prayer.activePrayerName}</span>
                   </div>
                   <div className="text-lg md:text-xl font-bold bengali-headline mt-1">
                     পরবর্তী ওয়াক্ত: {data.prayer.nextPrayerName}
@@ -255,24 +304,37 @@ export function WeatherPrayerWidget({ initialData }: WeatherPrayerWidgetProps) {
             </div>
 
             {/* 5 Daily Prayers Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
               {data.prayer.items.map((item) => {
                 const isActive = item.isActive;
+                const isNext = item.isNext;
                 return (
                   <div
                     key={item.id}
-                    className={`p-2.5 border transition-all text-center ${
+                    className={`p-2.5 border transition-all text-center relative ${
                       isActive
                         ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md"
+                        : isNext
+                        ? "bg-[var(--color-bg)] border-red-400 dark:border-red-600 shadow-xs"
                         : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-primary)]"
                     }`}
                   >
+                    {isActive && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-white text-[var(--color-primary)] font-bold text-[9px] px-1.5 py-0.2 rounded shadow">
+                        চলমান
+                      </span>
+                    )}
+                    {isNext && !isActive && (
+                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold text-[9px] px-1.5 py-0.2 rounded shadow">
+                        পরবর্তী
+                      </span>
+                    )}
                     <div className="text-xs font-semibold">{item.name}</div>
-                    <div className="text-sm font-bold font-mono mt-0.5">
+                    <div className="text-base font-bold font-mono mt-0.5">
                       {item.timeBn}
                     </div>
-                    <div className={`text-[10px] ${isActive ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
-                      {item.periodBn}
+                    <div className={`text-[10px] mt-0.5 ${isActive ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
+                      শেষ {item.endTimeBn}
                     </div>
                   </div>
                 );
@@ -280,16 +342,25 @@ export function WeatherPrayerWidget({ initialData }: WeatherPrayerWidgetProps) {
             </div>
           </div>
 
-          {/* Sehri & Iftar Bottom Bar */}
-          <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs bg-[var(--color-bg-secondary)] p-2.5 border">
-            <div className="flex items-center gap-1.5 text-[var(--color-text)]">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span>সেহরি শেষ: <strong className="font-mono text-[var(--color-primary)]">{data.prayer.sehriEnd}</strong></span>
+          {/* Sehri, Sunrise & Iftar Bottom Bar */}
+          <div className="pt-3 border-t border-[var(--color-border)] grid grid-cols-3 gap-2 text-center text-xs bg-[var(--color-bg-secondary)] p-2.5 border">
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-[10px] text-[var(--color-text-muted)]">সেহরি শেষ</span>
+              <strong className="font-mono text-[var(--color-text)] font-bold text-xs mt-0.5">
+                ভোর {data.prayer.sehriEndBn || data.prayer.sehriEnd}
+              </strong>
             </div>
-            <div className="text-[var(--color-border-strong)]">|</div>
-            <div className="flex items-center gap-1.5 text-[var(--color-text)]">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-              <span>ইফতার: <strong className="font-mono text-[var(--color-primary)]">{data.prayer.iftar}</strong></span>
+            <div className="flex flex-col items-center justify-center border-x border-[var(--color-border)]">
+              <span className="text-[10px] text-[var(--color-text-muted)]">সূর্যোদয় (ইশরাক)</span>
+              <strong className="font-mono text-amber-600 dark:text-amber-400 font-bold text-xs mt-0.5">
+                সকাল {data.prayer.sunriseBn || data.prayer.sunrise}
+              </strong>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-[10px] text-[var(--color-text-muted)]">সূর্যাস্ত ও ইফতার</span>
+              <strong className="font-mono text-[var(--color-primary)] font-bold text-xs mt-0.5">
+                সন্ধ্যা {data.prayer.iftarBn || data.prayer.iftar}
+              </strong>
             </div>
           </div>
         </div>

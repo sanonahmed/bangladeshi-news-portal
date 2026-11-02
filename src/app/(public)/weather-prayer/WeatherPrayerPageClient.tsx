@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import {
   Sun,
@@ -24,9 +24,11 @@ import {
   HelpCircle,
   Building2,
   Table,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DIVISIONS_GEO,
+  computePrayerState,
   type DivisionWeatherPrayerResult,
   type PrayerItem,
   type DayForecast,
@@ -64,6 +66,45 @@ export function WeatherPrayerPageClient({
   const [data, setData] = useState<DivisionWeatherPrayerResult>(initialData);
   const [selectedDivisionKey, setSelectedDivisionKey] = useState<string>(initialData.division.key);
   const [isPending, startTransition] = useTransition();
+
+  // Dynamic live client-side recalculation every 5 seconds so active prayer & countdown are never stale
+  useEffect(() => {
+    const updateTiming = () => {
+      if (!data.prayer?.fajr) return;
+      const state = computePrayerState({
+        fajr: data.prayer.fajr,
+        sunrise: data.prayer.sunrise,
+        dhuhr: data.prayer.dhuhr,
+        asr: data.prayer.asr,
+        maghrib: data.prayer.maghrib,
+        isha: data.prayer.isha,
+      });
+
+      setData((prev) => ({
+        ...prev,
+        prayer: {
+          ...prev.prayer,
+          activePrayerName: state.activeName,
+          nextPrayerName: state.nextName,
+          nextPrayerCountdown: state.nextPrayerCountdown,
+          isProhibited: state.isProhibited,
+          prohibitedNote: state.prohibitedNote,
+          items: state.items,
+        },
+      }));
+    };
+
+    updateTiming();
+    const timer = setInterval(updateTiming, 5000);
+    return () => clearInterval(timer);
+  }, [
+    data.prayer?.fajr,
+    data.prayer?.sunrise,
+    data.prayer?.dhuhr,
+    data.prayer?.asr,
+    data.prayer?.maghrib,
+    data.prayer?.isha,
+  ]);
 
   const handleSelectDivision = (key: string) => {
     setSelectedDivisionKey(key);
@@ -253,12 +294,23 @@ export function WeatherPrayerPageClient({
             <div className="flex items-center justify-between pb-3 border-b border-[var(--color-border)] mb-5">
               <h3 className="bengali-headline text-xl font-bold text-[var(--color-text)] flex items-center gap-2">
                 <Clock className="w-5 h-5 text-[var(--color-primary)]" />
-                <span>{data.division.name}ে আজকের নামাজের সময়সূচি</span>
+                <span>{data.division.name}ে আজকের ৫ ওয়াক্ত নামাজের সময়সূচি</span>
               </h3>
               <span className="text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/40">
                 হানাফি মাযহাব মানদণ্ড
               </span>
             </div>
+
+            {/* Prohibited Time Warning Banner (if currently in sunrise, jawwal or sunset) */}
+            {data.prayer.isProhibited && (
+              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2.5 rounded">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 animate-pulse" />
+                <div>
+                  <strong className="block font-bold">বর্তমানে নামাজ পড়া নিষিদ্ধ (মাকরূহ সময়)</strong>
+                  <span>{data.prayer.prohibitedNote || "সূর্যোদয়, দ্বিপ্রহর বা সূর্যাস্তের সময় নামাজ পড়া নিষেধ।"}</span>
+                </div>
+              </div>
+            )}
 
             {/* Active & Next Prayer Callout */}
             <div className="bg-gradient-to-r from-red-950 via-zinc-900 to-black text-white p-5 mb-6 border-l-4 border-[var(--color-primary)]">
@@ -266,7 +318,7 @@ export function WeatherPrayerPageClient({
                 <div>
                   <div className="text-xs text-red-300 font-semibold flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>চলমান ওয়াক্ত: {data.prayer.activePrayerName}</span>
+                    <span>চলমান অবস্থা: {data.prayer.activePrayerName}</span>
                   </div>
                   <div className="text-xl font-bold bengali-headline mt-1">
                     পরবর্তী ওয়াক্ত: {data.prayer.nextPrayerName}
@@ -287,43 +339,105 @@ export function WeatherPrayerPageClient({
               {data.prayer.items.map((item) => (
                 <div
                   key={item.id}
-                  className={`p-3 border flex items-center justify-between transition-all ${
+                  className={`p-3.5 border flex items-center justify-between transition-all relative ${
                     item.isActive
                       ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md"
+                      : item.isNext
+                      ? "bg-[var(--color-bg)] border-red-400 dark:border-red-600 shadow-xs"
                       : "bg-[var(--color-bg)] text-[var(--color-text)] border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)]"
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`w-3 h-3 rounded-full ${item.isActive ? "bg-white animate-pulse" : "bg-[var(--color-border-strong)]"}`}></span>
+                    <span className={`w-3.5 h-3.5 rounded-full ${item.isActive ? "bg-white animate-pulse" : item.isNext ? "bg-red-500" : "bg-[var(--color-border-strong)]"}`}></span>
                     <div>
-                      <div className="font-bold text-sm">{item.name}</div>
-                      <div className={`text-[10px] ${item.isActive ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
-                        {item.periodBn}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-base">{item.name}</span>
+                        {item.isActive && (
+                          <span className="bg-white text-[var(--color-primary)] font-bold text-[10px] px-2 py-0.5 rounded shadow-xs">
+                            চলমান ওয়াক্ত
+                          </span>
+                        )}
+                        {item.isNext && !item.isActive && (
+                          <span className="bg-red-600 text-white font-bold text-[10px] px-2 py-0.5 rounded shadow-xs">
+                            পরবর্তী ওয়াক্ত
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-xs mt-0.5 ${item.isActive ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
+                        ওয়াক্তের সময়কাল: {item.periodBn} • ওয়াক্ত শেষ: {item.endTimeBn}
                       </div>
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <div className="text-base font-bold font-mono">{item.timeBn}</div>
+                    <div className="text-lg font-bold font-mono">{item.timeBn}</div>
                     <div className={`text-[10px] font-mono ${item.isActive ? "text-white/80" : "text-[var(--color-text-muted)]"}`}>
-                      {item.time24} (২৪ ঘণ্টা)
+                      {item.time24}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Sehri & Iftar Banner */}
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs mb-6">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500"></span>
-                <span>সেহরি শেষ সময়: <strong className="text-sm font-mono text-[var(--color-text)]">{data.prayer.sehriEnd}</strong></span>
+            {/* Sehri, Sunrise, Iftar & Special Times Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] mb-6 text-xs">
+              <div className="p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-center">
+                <span className="text-[10px] text-[var(--color-text-muted)] block">সেহরি শেষ (সতর্কতামূলক)</span>
+                <strong className="text-sm font-mono text-[var(--color-text)] font-bold mt-0.5 block">
+                  ভোর {data.prayer.sehriEndBn || data.prayer.sehriEnd}
+                </strong>
               </div>
-              <div className="text-[var(--color-border-strong)] hidden sm:block">|</div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                <span>ইফতারের সময়: <strong className="text-sm font-mono text-[var(--color-primary)]">{data.prayer.iftar}</strong></span>
+
+              <div className="p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-center">
+                <span className="text-[10px] text-[var(--color-text-muted)] block">সূর্যোদয় (ইশরাক শুরু)</span>
+                <strong className="text-sm font-mono text-amber-600 dark:text-amber-400 font-bold mt-0.5 block">
+                  সকাল {data.prayer.sunriseBn || data.prayer.sunrise}
+                </strong>
               </div>
+
+              <div className="p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-center">
+                <span className="text-[10px] text-[var(--color-text-muted)] block">ইফতার ও সূর্যাস্ত</span>
+                <strong className="text-sm font-mono text-[var(--color-primary)] font-bold mt-0.5 block">
+                  সন্ধ্যা {data.prayer.iftarBn || data.prayer.iftar}
+                </strong>
+              </div>
+
+              <div className="p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-center">
+                <span className="text-[10px] text-[var(--color-text-muted)] block">চাশত / দুহা (নফল)</span>
+                <strong className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold mt-0.5 block">
+                  সকাল {data.prayer.ishraqBn || "০৬:২৫"} হতে
+                </strong>
+              </div>
+
+              <div className="p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-center">
+                <span className="text-[10px] text-red-500 font-semibold block">জাওয়াল (নামাজ নিষিদ্ধ)</span>
+                <strong className="text-xs font-mono text-red-600 dark:text-red-400 font-bold mt-0.5 block">
+                  {data.prayer.jawwalBn || "১১:২০ - ১১:৪২"}
+                </strong>
+              </div>
+
+              <div className="p-2 border border-[var(--color-border)] bg-[var(--color-bg)] text-center">
+                <span className="text-[10px] text-[var(--color-text-muted)] block">তাহাজ্জুদ সময়</span>
+                <strong className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold mt-0.5 block">
+                  {data.prayer.tahajjudBn || "রাত ১২:০০ - ৪:০০"}
+                </strong>
+              </div>
+            </div>
+
+            {/* Prohibited Times Guide Box */}
+            <div className="p-3 border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 mb-6 text-xs">
+              <h4 className="font-bold text-red-700 dark:text-red-400 flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>দৈনিক যে ৩টি সময়ে যে কোনো নামাজ পড়া নিষেধ (মাকরূহে তাহরিমি):</span>
+              </h4>
+              <ul className="space-y-1 text-[11px] text-[var(--color-text-muted)]">
+                {data.prayer.prohibitedTimes?.map((p, idx) => (
+                  <li key={idx} className="flex flex-col sm:flex-row sm:items-baseline gap-1">
+                    <strong className="text-[var(--color-text)] shrink-0">• {p.name} ({p.timeRangeBn}):</strong>
+                    <span>{p.noteBn}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {/* District Time Differences Guide */}

@@ -52,13 +52,20 @@ export interface DayForecast {
 }
 
 export interface PrayerItem {
-  id: "fajr" | "sunrise" | "dhuhr" | "asr" | "maghrib" | "isha";
+  id: "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
   name: string;
   time24: string;
   timeBn: string;
+  endTimeBn: string;
   periodBn: string;
   isActive: boolean;
   isNext: boolean;
+}
+
+export interface ProhibitedTimeItem {
+  name: string;
+  timeRangeBn: string;
+  noteBn: string;
 }
 
 export interface PrayerTimesData {
@@ -69,11 +76,21 @@ export interface PrayerTimesData {
   maghrib: string;
   isha: string;
   sehriEnd: string;
+  sehriEndBn: string;
   iftar: string;
+  iftarBn: string;
+  sunriseBn: string;
+  sunsetBn: string;
+  ishraqBn: string;
+  jawwalBn: string;
+  tahajjudBn: string;
   items: PrayerItem[];
   activePrayerName: string;
   nextPrayerName: string;
   nextPrayerCountdown: string;
+  isProhibited: boolean;
+  prohibitedNote?: string;
+  prohibitedTimes: ProhibitedTimeItem[];
 }
 
 export interface DivisionWeatherPrayerResult {
@@ -271,69 +288,28 @@ export async function fetchDivisionWeather(div: DivisionGeo): Promise<{ current:
   }
 }
 
-/**
- * Fetch or compute Islamic Prayer Times for a division
- */
-export async function fetchDivisionPrayerTimes(div: DivisionGeo): Promise<PrayerTimesData> {
-  const now = Date.now();
-  const cached = prayerCache.get(div.key);
-  if (cached && cached.expiresAt > now) {
-    return cached.data;
-  }
-
-  try {
-    const url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(div.nameEn)}&country=Bangladesh&method=1&school=1`;
-    const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok) throw new Error(`Aladhan API status: ${res.status}`);
-
-    const json = await res.json();
-    const t = json.data?.timings;
-
-    const rawFajr = t.Fajr?.slice(0, 5) || "04:47";
-    const rawSunrise = t.Sunrise?.slice(0, 5) || "06:04";
-    const rawDhuhr = t.Dhuhr?.slice(0, 5) || "11:42";
-    const rawAsr = t.Asr?.slice(0, 5) || "15:44";
-    const rawMaghrib = t.Maghrib?.slice(0, 5) || "17:20";
-    const rawIsha = t.Isha?.slice(0, 5) || "18:36";
-
-    const payload = buildPrayerStructure(div, rawFajr, rawSunrise, rawDhuhr, rawAsr, rawMaghrib, rawIsha);
-    prayerCache.set(div.key, { data: payload, expiresAt: now + 60 * 60 * 1000 });
-    return payload;
-  } catch (err) {
-    console.warn(`Prayer fetch failed for ${div.key}, using calculated baseline:`, err);
-    // Baseline Dhaka timings adjusted by division delta
-    const delta = div.prayerOffsetMinutes;
-    const rawFajr = adjustTime("04:47", delta);
-    const rawSunrise = adjustTime("06:04", delta);
-    const rawDhuhr = adjustTime("11:42", delta);
-    const rawAsr = adjustTime("15:44", delta);
-    const rawMaghrib = adjustTime("17:20", delta);
-    const rawIsha = adjustTime("18:36", delta);
-
-    return buildPrayerStructure(div, rawFajr, rawSunrise, rawDhuhr, rawAsr, rawMaghrib, rawIsha);
-  }
+export interface RawPrayerTimings {
+  fajr: string;
+  sunrise: string;
+  dhuhr: string;
+  asr: string;
+  maghrib: string;
+  isha: string;
 }
 
-function buildPrayerStructure(
-  div: DivisionGeo,
-  fajr: string,
-  sunrise: string,
-  dhuhr: string,
-  asr: string,
-  maghrib: string,
-  isha: string
-): PrayerTimesData {
-  const sehriEnd = adjustTime(fajr, -5); // Sehri ends 5 mins before Fajr
-  const iftar = maghrib; // Iftar is at Maghrib
+const rawPrayerTimingsCache = new Map<string, { timings: RawPrayerTimings; expiresAt: number }>();
 
-  // Determine current active and next prayer using Bangladesh local time (Asia/Dhaka)
+/**
+ * Compute active prayer, next prayer, and live countdown dynamically
+ */
+export function computePrayerState(timings: RawPrayerTimings, referenceDate: Date = new Date()) {
   const bdFormatter = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Dhaka",
     hour: "numeric",
     minute: "numeric",
     hour12: false,
   });
-  const parts = bdFormatter.formatToParts(new Date());
+  const parts = bdFormatter.formatToParts(referenceDate);
   const bdHour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
   const bdMinute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
   const currentMinutes = bdHour * 60 + bdMinute;
@@ -343,51 +319,78 @@ function buildPrayerStructure(
     return (h || 0) * 60 + (m || 0);
   };
 
-  const mFajr = toMinutes(fajr);
-  const mSunrise = toMinutes(sunrise);
-  const mDhuhr = toMinutes(dhuhr);
-  const mAsr = toMinutes(asr);
-  const mMaghrib = toMinutes(maghrib);
-  const mIsha = toMinutes(isha);
+  const mFajr = toMinutes(timings.fajr);
+  const mSunrise = toMinutes(timings.sunrise);
+  const mDhuhr = toMinutes(timings.dhuhr);
+  const mAsr = toMinutes(timings.asr);
+  const mMaghrib = toMinutes(timings.maghrib);
+  const mIsha = toMinutes(timings.isha);
+  const mJawwal = Math.max(0, mDhuhr - 22); // ~11:20 AM
 
-  let activeId: string = "isha";
+  let activeId: "fajr" | "dhuhr" | "asr" | "maghrib" | "isha" | "none" = "none";
   let activeName = "এশা";
+  let nextId: "fajr" | "dhuhr" | "asr" | "maghrib" | "isha" = "fajr";
   let nextName = "ফজর";
   let nextMinutes = mFajr;
+  let isProhibited = false;
+  let prohibitedNote = "";
 
   if (currentMinutes < mFajr) {
-    activeId = "tahajjud";
-    activeName = "তাহাজ্জুদ ও সাহরি";
+    activeId = "none";
+    activeName = "তাহাজ্জুদ ও সেহরি";
+    nextId = "fajr";
     nextName = "ফজর";
     nextMinutes = mFajr;
   } else if (currentMinutes >= mFajr && currentMinutes < mSunrise) {
     activeId = "fajr";
     activeName = "ফজর";
-    nextName = "সূর্যোদয় (ইশরাক)";
-    nextMinutes = mSunrise;
-  } else if (currentMinutes >= mSunrise && currentMinutes < mDhuhr) {
-    activeId = "sunrise";
-    activeName = "ইশরাক ও চাশত";
+    nextId = "dhuhr";
+    nextName = "জোহর";
+    nextMinutes = mDhuhr;
+  } else if (currentMinutes >= mSunrise && currentMinutes < mSunrise + 20) {
+    activeId = "none";
+    activeName = "সূর্যোদয় (নামাজ নিষিদ্ধ সময়)";
+    isProhibited = true;
+    prohibitedNote = "সূর্যোদয়ের সময় প্রায় ১৫-২০ মিনিট যে কোনো নামাজ পড়া নিষিদ্ধ (মাকরূহে তাহরিমি)";
+    nextId = "dhuhr";
+    nextName = "জোহর";
+    nextMinutes = mDhuhr;
+  } else if (currentMinutes >= mSunrise + 20 && currentMinutes < mJawwal) {
+    activeId = "none";
+    activeName = "ইশরাক ও চাশত (নফল ওয়াক্ত)";
+    nextId = "dhuhr";
+    nextName = "জোহর";
+    nextMinutes = mDhuhr;
+  } else if (currentMinutes >= mJawwal && currentMinutes < mDhuhr) {
+    activeId = "none";
+    activeName = "দ্বিপ্রহর / জাওয়াল (নামাজ নিষিদ্ধ সময়)";
+    isProhibited = true;
+    prohibitedNote = "সূর্য ঠিক মধ্যাকাশে অবস্থানকালে নামাজ পড়া নিষিদ্ধ";
+    nextId = "dhuhr";
     nextName = "জোহর";
     nextMinutes = mDhuhr;
   } else if (currentMinutes >= mDhuhr && currentMinutes < mAsr) {
     activeId = "dhuhr";
     activeName = "জোহর";
+    nextId = "asr";
     nextName = "আসর";
     nextMinutes = mAsr;
   } else if (currentMinutes >= mAsr && currentMinutes < mMaghrib) {
     activeId = "asr";
-    activeName = "আসর";
-    nextName = "মাগরিব";
+    activeName = "আসর (হানাফি)";
+    nextId = "maghrib";
+    nextName = "মাগরিব (ইফতার)";
     nextMinutes = mMaghrib;
   } else if (currentMinutes >= mMaghrib && currentMinutes < mIsha) {
     activeId = "maghrib";
     activeName = "মাগরিব";
+    nextId = "isha";
     nextName = "এশা";
     nextMinutes = mIsha;
   } else {
     activeId = "isha";
     activeName = "এশা";
+    nextId = "fajr";
     nextName = "ফজর";
     nextMinutes = mFajr + 24 * 60;
   }
@@ -407,71 +410,169 @@ function buildPrayerStructure(
     {
       id: "fajr",
       name: "ফজর",
-      time24: fajr,
-      timeBn: formatPrayerTimeBengali(fajr).timeBn,
+      time24: timings.fajr,
+      timeBn: formatPrayerTimeBengali(timings.fajr).timeBn,
+      endTimeBn: formatPrayerTimeBengali(timings.sunrise).timeBn,
       periodBn: "ভোর",
       isActive: activeId === "fajr",
-      isNext: nextName === "ফজর",
-    },
-    {
-      id: "sunrise",
-      name: "সূর্যোদয় (ইশরাক)",
-      time24: sunrise,
-      timeBn: formatPrayerTimeBengali(sunrise).timeBn,
-      periodBn: "সকাল",
-      isActive: activeId === "sunrise",
-      isNext: nextName.includes("সূর্যোদয়"),
+      isNext: nextId === "fajr",
     },
     {
       id: "dhuhr",
       name: "জোহর",
-      time24: dhuhr,
-      timeBn: formatPrayerTimeBengali(dhuhr).timeBn,
+      time24: timings.dhuhr,
+      timeBn: formatPrayerTimeBengali(timings.dhuhr).timeBn,
+      endTimeBn: formatPrayerTimeBengali(timings.asr).timeBn,
       periodBn: "দুপুর",
       isActive: activeId === "dhuhr",
-      isNext: nextName === "জোহর",
+      isNext: nextId === "dhuhr",
     },
     {
       id: "asr",
       name: "আসর",
-      time24: asr,
-      timeBn: formatPrayerTimeBengali(asr).timeBn,
+      time24: timings.asr,
+      timeBn: formatPrayerTimeBengali(timings.asr).timeBn,
+      endTimeBn: formatPrayerTimeBengali(timings.maghrib).timeBn,
       periodBn: "বিকেল",
       isActive: activeId === "asr",
-      isNext: nextName === "আসর",
+      isNext: nextId === "asr",
     },
     {
       id: "maghrib",
-      name: "মাগরিব (ইফতার)",
-      time24: maghrib,
-      timeBn: formatPrayerTimeBengali(maghrib).timeBn,
+      name: "মাগরিব",
+      time24: timings.maghrib,
+      timeBn: formatPrayerTimeBengali(timings.maghrib).timeBn,
+      endTimeBn: formatPrayerTimeBengali(timings.isha).timeBn,
       periodBn: "সন্ধ্যা",
       isActive: activeId === "maghrib",
-      isNext: nextName === "মাগরিব",
+      isNext: nextId === "maghrib",
     },
     {
       id: "isha",
       name: "এশা",
-      time24: isha,
-      timeBn: formatPrayerTimeBengali(isha).timeBn,
+      time24: timings.isha,
+      timeBn: formatPrayerTimeBengali(timings.isha).timeBn,
+      endTimeBn: formatPrayerTimeBengali(timings.fajr).timeBn,
       periodBn: "রাত",
       isActive: activeId === "isha",
-      isNext: nextName === "এশা",
+      isNext: nextId === "isha",
     },
   ];
 
   return {
-    fajr,
-    sunrise,
-    dhuhr,
-    asr,
-    maghrib,
-    isha,
-    sehriEnd,
-    iftar,
-    items,
-    activePrayerName: activeName,
-    nextPrayerName: nextName,
+    activeId,
+    activeName,
+    nextId,
+    nextName,
     nextPrayerCountdown,
+    isProhibited,
+    prohibitedNote,
+    items,
+  };
+}
+
+/**
+ * Fetch or compute Islamic Prayer Times for a division
+ */
+export async function fetchDivisionPrayerTimes(div: DivisionGeo): Promise<PrayerTimesData> {
+  const now = Date.now();
+  let entry = rawPrayerTimingsCache.get(div.key);
+
+  if (!entry || entry.expiresAt <= now) {
+    try {
+      const url = `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(div.nameEn)}&country=Bangladesh&method=1&school=1`;
+      const res = await fetch(url, { next: { revalidate: 3600 } });
+      if (!res.ok) throw new Error(`Aladhan API status: ${res.status}`);
+
+      const json = await res.json();
+      const t = json.data?.timings;
+
+      const rawFajr = t.Fajr?.slice(0, 5) || "04:48";
+      const rawSunrise = t.Sunrise?.slice(0, 5) || "06:05";
+      const rawDhuhr = t.Dhuhr?.slice(0, 5) || "11:42";
+      const rawAsr = t.Asr?.slice(0, 5) || "15:43";
+      const rawMaghrib = t.Maghrib?.slice(0, 5) || "17:19";
+      const rawIsha = t.Isha?.slice(0, 5) || "18:36";
+
+      entry = {
+        timings: {
+          fajr: rawFajr,
+          sunrise: rawSunrise,
+          dhuhr: rawDhuhr,
+          asr: rawAsr,
+          maghrib: rawMaghrib,
+          isha: rawIsha,
+        },
+        expiresAt: now + 4 * 60 * 60 * 1000,
+      };
+      rawPrayerTimingsCache.set(div.key, entry);
+    } catch (err) {
+      console.warn(`Prayer fetch failed for ${div.key}, using calculated baseline:`, err);
+      const delta = div.prayerOffsetMinutes;
+      entry = {
+        timings: {
+          fajr: adjustTime("04:48", delta),
+          sunrise: adjustTime("06:05", delta),
+          dhuhr: adjustTime("11:42", delta),
+          asr: adjustTime("15:43", delta),
+          maghrib: adjustTime("17:19", delta),
+          isha: adjustTime("18:36", delta),
+        },
+        expiresAt: now + 60 * 60 * 1000,
+      };
+      rawPrayerTimingsCache.set(div.key, entry);
+    }
+  }
+
+  return buildPrayerStructure(div, entry.timings);
+}
+
+function buildPrayerStructure(div: DivisionGeo, timings: RawPrayerTimings): PrayerTimesData {
+  const sehriEnd = adjustTime(timings.fajr, -5); // Sehri ends 5 mins before Fajr
+  const iftar = timings.maghrib; // Iftar is at Maghrib
+
+  const state = computePrayerState(timings, new Date());
+
+  const prohibitedTimes: ProhibitedTimeItem[] = [
+    {
+      name: "সূর্যোদয়কালীন সময়",
+      timeRangeBn: `সকাল ${formatPrayerTimeBengali(timings.sunrise).timeBn} - ${formatPrayerTimeBengali(adjustTime(timings.sunrise, 20)).timeBn}`,
+      noteBn: "সূর্যোদয়ের সময় থেকে সূর্য পূর্ণ রূপ লাভ করা পর্যন্ত (১৫-২০ মিনিট) নামাজ পড়া নিষেধ।",
+    },
+    {
+      name: "ঠিক দ্বিপ্রহর / জাওয়াল",
+      timeRangeBn: `দুপুর ${formatPrayerTimeBengali(adjustTime(timings.dhuhr, -22)).timeBn} - ${formatPrayerTimeBengali(timings.dhuhr).timeBn}`,
+      noteBn: "সূর্য ঠিক মধ্যাকাশে থাকার সময় নামাজ পড়া নিষেধ (জোহর শুরু হওয়ার সাথে সাথে নিষেধাজ্ঞা শেষ হয়)।",
+    },
+    {
+      name: "সূর্যাস্তকালীন সময়",
+      timeRangeBn: `বিকেল ${formatPrayerTimeBengali(adjustTime(timings.maghrib, -15)).timeBn} - ${formatPrayerTimeBengali(timings.maghrib).timeBn}`,
+      noteBn: "সূর্যাস্তের সময় যে কোনো নফল নামাজ পড়া নিষেধ (তবে সেদিনের আসর কাযা হয়ে থাকলে তা আদায় করতে হবে)।",
+    },
+  ];
+
+  return {
+    fajr: timings.fajr,
+    sunrise: timings.sunrise,
+    dhuhr: timings.dhuhr,
+    asr: timings.asr,
+    maghrib: timings.maghrib,
+    isha: timings.isha,
+    sehriEnd,
+    sehriEndBn: formatPrayerTimeBengali(sehriEnd).timeBn,
+    iftar,
+    iftarBn: formatPrayerTimeBengali(iftar).timeBn,
+    sunriseBn: formatPrayerTimeBengali(timings.sunrise).timeBn,
+    sunsetBn: formatPrayerTimeBengali(timings.maghrib).timeBn,
+    ishraqBn: formatPrayerTimeBengali(adjustTime(timings.sunrise, 20)).timeBn,
+    jawwalBn: `${formatPrayerTimeBengali(adjustTime(timings.dhuhr, -22)).timeBn} - ${formatPrayerTimeBengali(timings.dhuhr).timeBn}`,
+    tahajjudBn: "রাত ১২:০০ - ভোর ৪:০০",
+    items: state.items,
+    activePrayerName: state.activeName,
+    nextPrayerName: state.nextName,
+    nextPrayerCountdown: state.nextPrayerCountdown,
+    isProhibited: state.isProhibited,
+    prohibitedNote: state.prohibitedNote,
+    prohibitedTimes,
   };
 }

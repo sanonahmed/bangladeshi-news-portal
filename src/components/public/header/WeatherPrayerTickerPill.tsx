@@ -8,19 +8,20 @@ import { toBengaliDigits } from "@/lib/bengali-date";
 interface WeatherPrayerTickerPillProps {
   initialTemp?: string;
   initialCondition?: string;
+  initialActivePrayer?: string;
   initialNextPrayer?: string;
   initialCountdown?: string;
 }
 
 export function WeatherPrayerTickerPill({
   initialTemp = "৩১",
-  initialCondition = "মেঘলা আকাশ",
-  initialNextPrayer = "জোহর",
-  initialCountdown = "বাকি",
+  initialActivePrayer = "জোহর",
+  initialNextPrayer = "আসর",
+  initialCountdown = "",
 }: WeatherPrayerTickerPillProps) {
   const [data, setData] = useState({
     temp: initialTemp,
-    condition: initialCondition,
+    activePrayer: initialActivePrayer,
     nextPrayer: initialNextPrayer,
     countdown: initialCountdown,
   });
@@ -35,8 +36,8 @@ export function WeatherPrayerTickerPill({
         if (json.success && json.data && isMounted) {
           setData({
             temp: json.data.weather?.temperatureBn || "৩১",
-            condition: json.data.weather?.conditionBn || "সাধারণ",
-            nextPrayer: json.data.prayer?.nextPrayerName || "জোহর",
+            activePrayer: json.data.prayer?.activePrayerName || "জোহর",
+            nextPrayer: json.data.prayer?.nextPrayerName || "আসর",
             countdown: json.data.prayer?.nextPrayerCountdown || "",
           });
         }
@@ -46,7 +47,7 @@ export function WeatherPrayerTickerPill({
     }
 
     loadLiveData();
-    const interval = setInterval(loadLiveData, 300000); // refresh every 5 mins
+    const interval = setInterval(loadLiveData, 60000); // refresh every 1 min
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -56,7 +57,7 @@ export function WeatherPrayerTickerPill({
   return (
     <Link
       href="/weather-prayer"
-      className="hidden md:inline-flex items-center gap-2 px-2.5 py-0.5 rounded text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-all group shrink-0"
+      className="hidden md:inline-flex items-center gap-2 px-2 py-0.5 rounded text-[11px] bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-all group shrink-0"
       title="আবহাওয়া ও নামাজের পূর্ণাঙ্গ সময়সূচি"
     >
       <div className="flex items-center gap-1 text-[var(--color-text)]">
@@ -66,9 +67,14 @@ export function WeatherPrayerTickerPill({
 
       <span className="text-[var(--color-border-strong)]">|</span>
 
-      <div className="flex items-center gap-1 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+      <div className="flex items-center gap-1.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
         <Clock className="w-3 h-3 text-[var(--color-primary)]" />
-        <span>পরবর্তী ওয়াক্ত: <strong className="text-[var(--color-text)]">{data.nextPrayer}</strong></span>
+        <span>ওয়াক্ত: <strong className="text-[var(--color-text)]">{data.activePrayer}</strong></span>
+        {data.countdown && (
+          <span className="text-[10px] bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-medium px-1 rounded">
+            পরবর্তী {data.nextPrayer}: {data.countdown}
+          </span>
+        )}
       </div>
     </Link>
   );
