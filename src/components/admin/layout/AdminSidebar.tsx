@@ -24,6 +24,7 @@ import {
   Share2,
   Sparkles,
   ShieldCheck,
+  Bell,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -43,6 +44,7 @@ const NAV_ITEMS = [
   { label: "হোমপেজ সেকশন", href: "/admin/homepage", icon: Layers },
   { label: "নেভিগেশন মেনু", href: "/admin/navigation", icon: Compass },
   { label: "ব্রেকিং নিউজ", href: "/admin/breaking-news", icon: Zap },
+  { label: "পুশ নোটিফিকেশন", href: "/admin/notifications", icon: Bell },
   { label: "বিজ্ঞাপন ব্যবস্থাপনা", href: "/admin/advertisements", icon: DollarSign },
   { label: "সোশ্যাল কার্ড প্রিভিউ", href: "/admin/social-preview", icon: Share2 },
   { label: "পাঠক বিশ্লেষণ ও মেট্রিক্স", href: "/admin/analytics", icon: BarChart3 },
