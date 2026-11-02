@@ -6,14 +6,14 @@ import { breakingNews } from "@/db/schema/breaking-news";
 import { polls } from "@/db/schema/polls";
 import { comments } from "@/db/schema/comments";
 import { categories } from "@/db/schema/categories";
-import { eq, desc, count, and, sql } from "drizzle-orm";
+import { eq, desc, count } from "drizzle-orm";
 import {
   FileText,
   Clock,
   CheckCircle2,
   Users,
   Eye,
-  PlusCircle,
+  Plus,
   Zap,
   Vote,
   MessageSquare,
@@ -21,20 +21,23 @@ import {
   Sparkles,
   ExternalLink,
   ArrowRight,
-  Radio,
-  BarChart2,
-  FolderTree,
-  AlertCircle,
   Bell,
-  Activity,
-  Layers,
-  ChevronRight,
+  ArrowUpRight,
+  SlidersHorizontal,
 } from "lucide-react";
-import { formatBengaliDateTime, toBengaliDigits, formatBengaliDate } from "@/lib/bengali-date";
+import {
+  formatBengaliDateTime,
+  toBengaliDigits,
+  formatBengaliDate,
+  formatBengaliDay,
+  getDhakaDate,
+} from "@/lib/bengali-date";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
+  const today = getDhakaDate();
+
   let stats = {
     published: 0,
     drafts: 0,
@@ -189,251 +192,168 @@ export default async function AdminDashboardPage() {
     console.error("Could not query admin dashboard stats from DB:", error);
   }
 
-  // KPI stat cards configuration
-  const statCards = [
-    {
-      title: "প্রকাশিত সংবাদ",
-      value: toBengaliDigits(stats.published),
-      subtitle: "সরাসরি ওয়েবসাইটে লাইভ",
-      icon: CheckCircle2,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60",
-      href: "/admin/articles",
-    },
-    {
-      title: "পর্যালোচনার অপেক্ষায়",
-      value: toBengaliDigits(stats.pending),
-      subtitle: stats.pending > 0 ? "জরুরি অনুমোদন প্রয়োজন" : "সব ড্রাফট অনুমোদিত",
-      icon: Clock,
-      color: stats.pending > 0 ? "text-red-600 dark:text-red-400" : "text-blue-600 dark:text-blue-400",
-      bg: stats.pending > 0
-        ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 animate-pulse"
-        : "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/60",
-      href: "/admin/reviews",
-    },
-    {
-      title: "খসড়া (Drafts)",
-      value: toBengaliDigits(stats.drafts),
-      subtitle: "অসম্পূর্ণ বা পর্যালোচনাধীন",
-      icon: FileText,
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60",
-      href: "/admin/articles",
-    },
-    {
-      title: "সক্রিয় ব্রেকিং নিউজ",
-      value: toBengaliDigits(stats.activeBreaking),
-      subtitle: "হোমপেজের হেডারে চলমান",
-      icon: Zap,
-      color: "text-red-600 dark:text-red-400",
-      bg: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/60",
-      href: "/admin/breaking-news",
-    },
-    {
-      title: "সক্রিয় জনমত জরিপ",
-      value: toBengaliDigits(stats.activePolls),
-      subtitle: "পাঠক ভোট গ্রহণ চলছে",
-      icon: Vote,
-      color: "text-purple-600 dark:text-purple-400",
-      bg: "bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/60",
-      href: "/admin/polls",
-    },
-    {
-      title: "সাংবাদিক ও কর্মী",
-      value: toBengaliDigits(stats.journalists),
-      subtitle: "নিউজ রুমের সক্রিয় সদস্য",
-      icon: Users,
-      color: "text-indigo-600 dark:text-indigo-400",
-      bg: "bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/60",
-      href: "/admin/users",
-    },
-  ];
-
-  // Quick Action Buttons
-  const quickActions = [
-    {
-      label: "নতুন সংবাদ রচনা",
-      href: "/admin/articles/new",
-      icon: PlusCircle,
-      primary: true,
-    },
-    {
-      label: "ব্রেকিং নিউজ ফ্ল্যাশ",
-      href: "/admin/breaking-news",
-      icon: Zap,
-    },
-    {
-      label: "পুশ নোটিফিকেশন",
-      href: "/admin/notifications",
-      icon: Bell,
-    },
-    {
-      label: "এআই সহকারী",
-      href: "/admin/ai-assistant",
-      icon: Sparkles,
-    },
-    {
-      label: "অনলাইন ভোট তৈরি",
-      href: "/admin/polls",
-      icon: Vote,
-    },
-    {
-      label: "ফ্যাক্ট-চেক যোগ",
-      href: "/admin/fact-checks",
-      icon: ShieldCheck,
-    },
-    {
-      label: "মন্তব্য মডারেশন",
-      href: "/admin/comments",
-      icon: MessageSquare,
-    },
-  ];
-
   return (
-    <div className="space-y-6">
-      {/* Newsroom Command Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg shadow-2xs">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border)]">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              নিউজ রুম কমান্ড সেন্টার • লাইভ সিঙ্ক
-            </span>
-          </div>
-          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] mt-1">
-            দৈনিক বাংলাদেশ বার্তা সম্পাদকীয় ড্যাশবোর্ড
+          <h1 className="bengali-headline text-2xl font-bold text-[var(--color-text)] tracking-tight">
+            সম্পাদকীয় ড্যাশবোর্ড
           </h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            আজকের সার্বিক প্রকাশনা গতি, ব্রেকিং নিউজ মনিটর এবং সাংবাদিক দলের কার্যক্রম
+          <p className="text-xs text-[var(--color-text-muted)] mt-1 font-medium">
+            {formatBengaliDay(today)}, {formatBengaliDate(today)} &bull; ঢাকা ব্যুরো
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/admin/breaking-news"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-secondary)] text-xs font-medium text-[var(--color-text)] transition-colors rounded"
+          >
+            <Zap size={14} className="text-red-600" />
+            <span>ব্রেকিং নিউজ</span>
+          </Link>
+
           <Link
             href="/admin/articles/new"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold rounded shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors rounded shadow-xs"
           >
-            <PlusCircle size={15} />
-            <span>নতুন সংবাদ তৈরি করুন</span>
-          </Link>
-          <Link
-            href="/"
-            target="_blank"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-border)] border border-[var(--color-border)] text-xs font-semibold text-[var(--color-text)] rounded transition-colors"
-          >
-            <span>পাবলিক সাইট</span>
-            <ExternalLink size={13} />
+            <Plus size={15} />
+            <span>নতুন সংবাদ</span>
           </Link>
         </div>
       </div>
 
-      {/* Quick Action Bar (অ্যাকশন হাব) */}
-      <div className="p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-muted)] px-1 mb-2 flex items-center gap-1.5">
-          <Activity size={12} className="text-[var(--color-primary)]" />
-          <span>দ্রুত সম্পাদকীয় পদক্ষেপ (Quick Launchpad)</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {quickActions.map((qa) => {
-            const Icon = qa.icon;
-            return (
-              <Link
-                key={qa.href}
-                href={qa.href}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded transition-all cursor-pointer ${
-                  qa.primary
-                    ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] shadow-2xs font-bold"
-                    : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-border)] text-[var(--color-text)] border border-[var(--color-border)]"
-                }`}
-              >
-                <Icon size={14} className={qa.primary ? "text-white" : "text-[var(--color-primary)]"} />
-                <span>{qa.label}</span>
-              </Link>
-            );
-          })}
-        </div>
+      {/* Primary Newsroom Metric Cards (Clean, Human, Grounded) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Published */}
+        <Link
+          href="/admin/articles"
+          className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors group"
+        >
+          <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-medium">
+            <span>প্রকাশিত সংবাদ</span>
+            <FileText size={15} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
+              {toBengaliDigits(stats.published)}
+            </span>
+            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] flex items-center">
+              সব দেখুন <ArrowUpRight size={12} className="ml-0.5" />
+            </span>
+          </div>
+        </Link>
+
+        {/* Pending Reviews */}
+        <Link
+          href="/admin/reviews"
+          className={`p-4 border rounded transition-colors group ${
+            stats.pending > 0
+              ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80"
+              : "bg-[var(--color-bg)] border-[var(--color-border)] hover:border-zinc-400 dark:hover:border-zinc-700"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-medium">
+            <span className={stats.pending > 0 ? "text-amber-800 dark:text-amber-300 font-bold" : "text-[var(--color-text-muted)]"}>
+              পর্যালোচনার অপেক্ষায়
+            </span>
+            <Clock size={15} className={stats.pending > 0 ? "text-amber-600" : "text-[var(--color-text-muted)]"} />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
+              {toBengaliDigits(stats.pending)}
+            </span>
+            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] flex items-center">
+              {stats.pending > 0 ? "অনুমোদন করুন" : "হালনাগাদ"} <ArrowUpRight size={12} className="ml-0.5" />
+            </span>
+          </div>
+        </Link>
+
+        {/* Active Breaking News */}
+        <Link
+          href="/admin/breaking-news"
+          className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors group"
+        >
+          <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-medium">
+            <span>চলমান ব্রেকিং নিউজ</span>
+            <Zap size={15} className="text-red-600" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
+              {toBengaliDigits(stats.activeBreaking)}
+            </span>
+            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-red-600 flex items-center">
+              ব্যবস্থাপনা <ArrowUpRight size={12} className="ml-0.5" />
+            </span>
+          </div>
+        </Link>
+
+        {/* Active Polls */}
+        <Link
+          href="/admin/polls"
+          className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors group"
+        >
+          <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-medium">
+            <span>সক্রিয় জনমত জরিপ</span>
+            <Vote size={15} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
+              {toBengaliDigits(stats.activePolls)}
+            </span>
+            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] flex items-center">
+              ফলাফল <ArrowUpRight size={12} className="ml-0.5" />
+            </span>
+          </div>
+        </Link>
       </div>
 
-      {/* Core KPI Metrics Grid (৬টি কার্ড) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link
-              key={card.title}
-              href={card.href}
-              className={`p-4 border rounded-lg flex flex-col justify-between hover:shadow-sm transition-all group ${card.bg}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] transition-colors">
-                  {card.title}
-                </span>
-                <Icon size={16} className={card.color} />
-              </div>
-              <div className="mt-3">
-                <h3 className="text-2xl font-black text-[var(--color-text)] tracking-tight">
-                  {card.value}
-                </h3>
-                <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">
-                  {card.subtitle}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Two-Column Responsive Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Reviews & Recent Articles (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Pending Editorial Reviews Queue Widget */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg overflow-hidden shadow-2xs">
-            <div className="p-3.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+      {/* Main Workspace (Editorial Layout) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Review Queue & Recent Stories (8 cols) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Pending Reviews Queue (Prioritized Action) */}
+          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-amber-500" />
-                <h3 className="bengali-headline text-sm font-bold text-[var(--color-text)]">
-                  পর্যালোচনা ও অনুমোদনের অপেক্ষায় ({toBengaliDigits(stats.pending)}টি)
-                </h3>
+                <Clock size={15} className="text-[var(--color-primary)]" />
+                <h2 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
+                  অনুমোদনের অপেক্ষায় থাকা প্রতিবেদন ({toBengaliDigits(stats.pending)})
+                </h2>
               </div>
               <Link
                 href="/admin/reviews"
-                className="text-xs text-[var(--color-primary)] hover:underline font-bold inline-flex items-center gap-1"
+                className="text-xs text-[var(--color-primary)] hover:underline font-semibold"
               >
-                <span>সকল রিভিউ</span>
-                <ArrowRight size={13} />
+                সবগুলো পর্যালোচনা করুন &rarr;
               </Link>
             </div>
 
             {pendingReviews.length === 0 ? (
-              <div className="p-6 text-center bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col items-center justify-center space-y-2">
-                <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                  <CheckCircle2 size={20} />
-                </div>
-                <h4 className="font-bold text-xs text-emerald-800 dark:text-emerald-300">
-                  সকল প্রতিবেদন অনুমোদিত ও হালনাগাদ রয়েছে
-                </h4>
-                <p className="text-[11px] text-[var(--color-text-muted)] max-w-xs">
-                  সাংবাদিকরা কোনো নতুন খসড়া পর্যালোচনার জন্য জমা দিলে তা সরাসরি এখানে দেখা যাবে।
-                </p>
+              <div className="p-6 text-center text-xs text-[var(--color-text-muted)]">
+                বর্তমানে পর্যালোচনার জন্য কোনো প্রতিবেদন জমা নেই।
               </div>
             ) : (
               <div className="divide-y divide-[var(--color-border)]">
                 {pendingReviews.map((art) => (
-                  <div key={art.id} className="p-3.5 flex items-center justify-between hover:bg-[var(--color-bg-secondary)] transition-colors">
-                    <div className="min-w-0 pr-3">
-                      <h4 className="text-xs font-bold text-[var(--color-text)] truncate">
+                  <div
+                    key={art.id}
+                    className="p-3.5 flex items-center justify-between gap-4 hover:bg-[var(--color-bg-secondary)] transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <h3 className="text-xs font-bold text-[var(--color-text)] truncate">
                         {art.title}
-                      </h4>
-                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                        জমা: {formatBengaliDateTime(art.createdAt)}
+                      </h3>
+                      <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
+                        জমার সময়: {formatBengaliDateTime(art.createdAt)}
                       </p>
                     </div>
                     <Link
                       href="/admin/reviews"
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded transition-colors flex-shrink-0"
+                      className="px-2.5 py-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[11px] font-semibold rounded flex-shrink-0 transition-colors"
                     >
-                      রিভিউ করুন
+                      রিভিউ
                     </Link>
                   </div>
                 ))}
@@ -441,65 +361,68 @@ export default async function AdminDashboardPage() {
             )}
           </div>
 
-          {/* Recent Editorial Articles Table */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg overflow-hidden shadow-2xs">
-            <div className="p-3.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+          {/* Recent Editorial Stories Table */}
+          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileText size={16} className="text-[var(--color-primary)]" />
-                <h3 className="bengali-headline text-sm font-bold text-[var(--color-text)]">
-                  সাম্প্রতিক প্রকাশিত সংবাদ ও খসড়া
-                </h3>
+                <FileText size={15} className="text-[var(--color-text-muted)]" />
+                <h2 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
+                  সাম্প্রতিক সংবাদ তালিকা
+                </h2>
               </div>
               <Link
                 href="/admin/articles"
-                className="text-xs text-[var(--color-primary)] hover:underline font-bold inline-flex items-center gap-1"
+                className="text-xs text-[var(--color-primary)] hover:underline font-semibold"
               >
-                <span>সকল সংবাদ</span>
-                <ArrowRight size={13} />
+                সকল সংবাদ দেখুন &rarr;
               </Link>
             </div>
 
             {recentArticles.length === 0 ? (
-              <div className="p-12 text-center text-xs text-[var(--color-text-muted)]">
-                এখনও কোনো সংবাদ তৈরি হয়নি।
+              <div className="p-8 text-center text-xs text-[var(--color-text-muted)]">
+                কোনো সংবাদ পাওয়া যায়নি।
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-semibold">
+                  <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-medium">
                     <tr>
-                      <th className="p-3">শিরোনাম</th>
-                      <th className="p-3">অবস্থা</th>
-                      <th className="p-3">তারিখ</th>
-                      <th className="p-3 text-right">পদক্ষেপ</th>
+                      <th className="px-4 py-2.5">শিরোনাম</th>
+                      <th className="px-3 py-2.5">অবস্থা</th>
+                      <th className="px-3 py-2.5">তারিখ</th>
+                      <th className="px-4 py-2.5 text-right">পদক্ষেপ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--color-border)]">
                     {recentArticles.map((art) => (
                       <tr key={art.id} className="hover:bg-[var(--color-bg-secondary)] transition-colors">
-                        <td className="p-3 font-semibold text-[var(--color-text)] max-w-xs truncate">
+                        <td className="px-4 py-3 font-semibold text-[var(--color-text)] max-w-sm truncate">
                           {art.title}
                         </td>
-                        <td className="p-3">
+                        <td className="px-3 py-3">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
                               art.status === "published"
                                 ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                 : art.status === "draft"
-                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                             }`}
                           >
-                            {art.status === "published" ? "প্রকাশিত" : art.status === "draft" ? "খসড়া" : "রিভিউ"}
+                            {art.status === "published"
+                              ? "প্রকাশিত"
+                              : art.status === "draft"
+                              ? "খসড়া"
+                              : "রিভিউ"}
                           </span>
                         </td>
-                        <td className="p-3 text-[var(--color-text-muted)] font-mono text-[11px]">
+                        <td className="px-3 py-3 text-[var(--color-text-muted)] whitespace-nowrap">
                           {formatBengaliDate(art.publishedAt ?? art.createdAt)}
                         </td>
-                        <td className="p-3 text-right space-x-2">
+                        <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
                           <Link
                             href={`/admin/articles/${art.id}/edit`}
-                            className="text-[var(--color-primary)] hover:underline font-bold"
+                            className="text-[var(--color-primary)] hover:underline font-semibold"
                           >
                             সম্পাদনা
                           </Link>
@@ -523,41 +446,38 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Right Column: Live Tickers, Polls & Category Distribution (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Active Breaking News Monitor */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg overflow-hidden shadow-2xs">
-            <div className="p-3.5 border-b border-[var(--color-border)] bg-red-50 dark:bg-red-950/40 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-xs">
-                <Radio size={15} className="animate-pulse" />
-                <span>চলমান ব্রেকিং নিউজ ({toBengaliDigits(stats.activeBreaking)}টি)</span>
+        {/* Right Column: Breaking News, Live Poll & Tools (4 cols) */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Active Breaking Headlines */}
+          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-red-600" />
+                <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
+                  চলমান ব্রেকিং নিউজ
+                </h3>
               </div>
               <Link
                 href="/admin/breaking-news"
-                className="text-[11px] font-bold text-red-700 dark:text-red-300 hover:underline"
+                className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
               >
-                ব্যবস্থাপনা
+                সম্পাদনা
               </Link>
             </div>
 
             {activeBreakingList.length === 0 ? (
               <div className="p-4 text-center text-xs text-[var(--color-text-muted)]">
-                বর্তমানে কোনো সক্রিয় ব্রেকিং নিউজ নেই।
+                বর্তমানে কোনো ব্রেকিং নিউজ চলমান নেই।
               </div>
             ) : (
               <div className="divide-y divide-[var(--color-border)]">
                 {activeBreakingList.map((item) => (
-                  <div key={item.id} className="p-3 space-y-1 hover:bg-[var(--color-bg-secondary)]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300">
-                        অগ্রাধিকার: {toBengaliDigits(item.priority)}
-                      </span>
-                      <span className="text-[10px] text-[var(--color-text-muted)]">
-                        {formatBengaliDateTime(item.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-xs font-bold text-[var(--color-text)] leading-snug">
+                  <div key={item.id} className="p-3.5 space-y-1">
+                    <p className="text-xs font-semibold text-[var(--color-text)] leading-snug">
                       {item.headline}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      অগ্রাধিকার ক্রম: {toBengaliDigits(item.priority)}
                     </p>
                   </div>
                 ))}
@@ -565,30 +485,30 @@ export default async function AdminDashboardPage() {
             )}
           </div>
 
-          {/* Featured Live Poll Snapshot */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg overflow-hidden shadow-2xs">
-            <div className="p-3.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+          {/* Active Poll Overview */}
+          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Vote size={15} className="text-purple-600" />
-                <h3 className="bengali-headline text-xs font-bold text-[var(--color-text)]">
-                  হোমপেজের প্রধান জরিপ (Live Poll)
+                <Vote size={14} className="text-[var(--color-text-muted)]" />
+                <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
+                  সক্রিয় জনমত জরিপ
                 </h3>
               </div>
               <Link
                 href="/admin/polls"
-                className="text-[11px] font-bold text-[var(--color-primary)] hover:underline"
+                className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
               >
-                সব জরিপ
+                সবগুলো
               </Link>
             </div>
 
             {featuredPoll ? (
               <div className="p-4 space-y-3">
-                <h4 className="bengali-headline text-xs font-bold text-[var(--color-text)] leading-relaxed">
+                <p className="text-xs font-bold text-[var(--color-text)] leading-relaxed">
                   {featuredPoll.question}
-                </h4>
+                </p>
 
-                <div className="space-y-2">
+                <div className="space-y-2 pt-1">
                   {Array.isArray(featuredPoll.options) &&
                     featuredPoll.options.map((opt: string, idx: number) => {
                       const count = Array.isArray(featuredPoll?.votes)
@@ -600,16 +520,16 @@ export default async function AdminDashboardPage() {
                       return (
                         <div key={idx} className="space-y-1">
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[var(--color-text-muted)] font-medium truncate max-w-[180px]">
+                            <span className="text-[var(--color-text-muted)] truncate max-w-[160px]">
                               {opt}
                             </span>
-                            <span className="font-mono font-bold text-[var(--color-text)]">
+                            <span className="font-semibold text-[var(--color-text)]">
                               {toBengaliDigits(pct)}% ({toBengaliDigits(count)})
                             </span>
                           </div>
-                          <div className="w-full h-1.5 bg-[var(--color-bg-secondary)] rounded-full overflow-hidden border border-[var(--color-border)]">
+                          <div className="w-full h-1 bg-[var(--color-border)] rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-[var(--color-primary)] transition-all"
+                              className="h-full bg-[var(--color-primary)]"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -618,42 +538,39 @@ export default async function AdminDashboardPage() {
                     })}
                 </div>
 
-                <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
-                  <span>মোট সংগৃহীত ভোট:</span>
-                  <span className="font-mono font-bold text-[var(--color-text)]">
+                <div className="pt-2 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] flex justify-between">
+                  <span>মোট ভোট:</span>
+                  <span className="font-semibold text-[var(--color-text)]">
                     {toBengaliDigits(featuredPoll.totalVotes)}টি
                   </span>
                 </div>
               </div>
             ) : (
               <div className="p-4 text-center text-xs text-[var(--color-text-muted)]">
-                কোনো সক্রিয় জরিপ নেই।
+                কোনো সক্রিয় জরিপ নেই।
               </div>
             )}
           </div>
 
-          {/* Category Distribution Breakdown */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-lg overflow-hidden shadow-2xs">
-            <div className="p-3.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FolderTree size={15} className="text-emerald-600" />
-                <h3 className="bengali-headline text-xs font-bold text-[var(--color-text)]">
-                  বিভাগভিত্তিক সংবাদ সংখ্যা
-                </h3>
-              </div>
+          {/* Section Distribution */}
+          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+              <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
+                বিভাগভিত্তিক সংবাদ সংখ্যা
+              </h3>
               <Link
                 href="/admin/categories"
-                className="text-[11px] font-bold text-[var(--color-primary)] hover:underline"
+                className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
               >
-                বিভাগসমূহ
+                বিভাগ তালিকা
               </Link>
             </div>
 
-            <div className="p-3.5 space-y-2.5">
+            <div className="p-3.5 space-y-2">
               {categoryBreakdown.map((cat, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-[var(--color-text)]">{cat.name}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] font-mono font-bold text-[var(--color-text-muted)]">
+                  <span className="text-[var(--color-text)] font-medium">{cat.name}</span>
+                  <span className="text-xs font-semibold text-[var(--color-text-muted)]">
                     {toBengaliDigits(cat.count)}টি
                   </span>
                 </div>
@@ -661,25 +578,40 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* System & Architecture Status */}
-          <div className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-xs space-y-2 shadow-2xs">
-            <div className="font-bold text-[var(--color-text)] flex items-center justify-between">
-              <span>সিস্টেম ও পরিকাঠামো স্ট্যাটাস</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            </div>
-            <div className="space-y-1.5 text-[11px] text-[var(--color-text-muted)] font-mono">
-              <div className="flex justify-between">
-                <span>ডাটাবেজ:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">PostgreSQL Neon (Active)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>সার্ভার ইঞ্জিন:</span>
-                <span>Next.js 16 (Turbopack)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>সিডিএন ক্যাশ:</span>
-                <span>Edge ISR (30s)</span>
-              </div>
+          {/* Editorial Quick Tools */}
+          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded p-4 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+              নিয়মিত সরঞ্জাম
+            </h3>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Link
+                href="/admin/notifications"
+                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
+              >
+                <Bell size={13} className="text-[var(--color-primary)]" />
+                <span>পুশ নোটিফিকেশন</span>
+              </Link>
+              <Link
+                href="/admin/ai-assistant"
+                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
+              >
+                <Sparkles size={13} className="text-[var(--color-primary)]" />
+                <span>এআই সহকারী</span>
+              </Link>
+              <Link
+                href="/admin/fact-checks"
+                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
+              >
+                <ShieldCheck size={13} className="text-[var(--color-primary)]" />
+                <span>ফ্যাক্ট-চেক</span>
+              </Link>
+              <Link
+                href="/admin/comments"
+                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
+              >
+                <MessageSquare size={13} className="text-[var(--color-primary)]" />
+                <span>মন্তব্য মডারেশন</span>
+              </Link>
             </div>
           </div>
         </div>
