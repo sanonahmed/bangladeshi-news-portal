@@ -127,3 +127,47 @@ export const FALLBACK_FACT_CHECKS: FactCheckItem[] = [
     createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
   },
 ];
+
+export interface FactCheckSubmissionItem {
+  id: string;
+  titleOrClaim: string;
+  sourceUrl: string | null;
+  description: string | null;
+  submitterName: string | null;
+  submitterEmail: string | null;
+  status: "pending" | "reviewing" | "published" | "dismissed";
+  createdAt: string;
+}
+
+export const FALLBACK_SUBMISSIONS: FactCheckSubmissionItem[] = [
+  {
+    id: "sub-1",
+    titleOrClaim: "ফেসবুকে ছড়িয়ে পড়া দাবি: আগামী শুক্রবার থেকে ৩ দিন গ্যাস সরবরাহ সম্পূর্ণ বন্ধ থাকবে",
+    sourceUrl: "https://facebook.com/groups/dhaka-updates/posts/102938472",
+    description: "একাধিক গ্রুপে একটি গ্রাফিক কার্ড শেয়ার করে বলা হচ্ছে জাতীয় গ্রিডে সংস্কারের জন্য সারাদেশে গ্যাস থাকবে না। এটি যাচাই করা দরকার।",
+    submitterName: "তানভীর আহমেদ",
+    submitterEmail: "tanvir.ahmed@gmail.com",
+    status: "pending",
+    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: "sub-2",
+    titleOrClaim: "টিকটকে ভাইরাল ভিডিও: সেন্টমার্টিন দ্বীপে নাকি বিদেশি নৌবাহিনীর জাহাজ মোতায়েন করা হয়েছে",
+    sourceUrl: "https://tiktok.com/@banglanews_viral/video/7283918231",
+    description: "ভিডিওতে একটি যুদ্ধজাহাজের দৃশ্য দেখিয়ে বলা হচ্ছে সেন্টমার্টিন নিয়ন্ত্রণ নেওয়া হয়েছে। তবে জাহাজটির পতাকা স্পষ্ট নয়।",
+    submitterName: "রফিকুল ইসলাম",
+    submitterEmail: "rafiq.ctg@yahoo.com",
+    status: "reviewing",
+    createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: "sub-3",
+    titleOrClaim: "হোয়াটসঅ্যাপে ফরোয়ার্ড করা অডিও: বেসরকারি এক্স ব্যাংকের গ্রাহকদের টাকা তুলে নেওয়ার আহ্বান",
+    sourceUrl: "WhatsApp Voice Note (Forwarded Many Times)",
+    description: "একটি অডিও ক্লিপে বলা হচ্ছে ব্যাংকটির তারল্য সংকট চরম আকার ধারণ করেছে। গ্রাহকদের মধ্যে আতঙ্ক ছড়িয়ে পড়েছে।",
+    submitterName: "নাজমুল হাসান",
+    submitterEmail: "nazmul.hasan@outlook.com",
+    status: "published",
+    createdAt: new Date(Date.now() - 20 * 3600 * 1000).toISOString(),
+  },
+];

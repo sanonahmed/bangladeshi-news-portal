@@ -23,12 +23,14 @@ import {
   Vote,
   Share2,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "ড্যাশবোর্ড", href: "/admin", icon: LayoutDashboard },
   { label: "সংবাদ ব্যবস্থাপনা", href: "/admin/articles", icon: FileText },
   { label: "এআই সহকারী", href: "/admin/ai-assistant", icon: Sparkles },
+  { label: "ফ্যাক্ট-চেক কর্নার", href: "/admin/fact-checks", icon: ShieldCheck },
   { label: "পর্যালোচনা ও অনুমোদন", href: "/admin/reviews", icon: CheckSquare },
   { label: "পাঠক মন্তব্য মডারেশন", href: "/admin/comments", icon: MessageSquare },
   { label: "অনলাইন ভোট ও জরিপ", href: "/admin/polls", icon: Vote },
