@@ -630,8 +630,11 @@ export function AdminFactChecksClient({
           <div className="space-y-3">
             {filteredSubmissions.length === 0 ? (
               <div className="p-12 text-center text-xs text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-xl bg-[var(--color-bg)]">
-                <Inbox size={32} className="mx-auto opacity-40 mb-2 text-sky-600" />
-                <p>কোনো আবেদন মেলেনি</p>
+                <Inbox size={36} className="mx-auto opacity-40 mb-2.5 text-sky-600" />
+                <p className="font-semibold text-sm text-[var(--color-text)]">বর্তমানে কোনো পাঠক দাবি বা আবেদন জমা নেই</p>
+                <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+                  পাঠকরা পোর্টালের ফ্যাক্ট-চেক কর্নার থেকে কোনো সন্দেহভাজন খবর যাচাইয়ের জন্য জমা দিলে এখানে স্বয়ংক্রিয়ভাবে প্রদর্শিত হবে।
+                </p>
               </div>
             ) : (
               filteredSubmissions.map((sub) => {

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { factChecks, factCheckSubmissions, type FactCheck } from "@/db/schema/fact-checks";
 import { desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { FALLBACK_FACT_CHECKS, FALLBACK_SUBMISSIONS, type FactCheckItem, type FactCheckSubmissionItem } from "@/types/fact-check";
+import type { FactCheckItem, FactCheckSubmissionItem } from "@/types/fact-check";
 
 export async function getFactChecks(): Promise<FactCheckItem[]> {
   try {
@@ -14,7 +14,7 @@ export async function getFactChecks(): Promise<FactCheckItem[]> {
       .orderBy(desc(factChecks.createdAt));
 
     if (!records || records.length === 0) {
-      return FALLBACK_FACT_CHECKS;
+      return [];
     }
 
     return records.map((r) => ({
@@ -38,8 +38,8 @@ export async function getFactChecks(): Promise<FactCheckItem[]> {
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
     }));
   } catch (err) {
-    console.warn("getFactChecks DB error, using fallbacks:", err);
-    return FALLBACK_FACT_CHECKS;
+    console.warn("getFactChecks DB error:", err);
+    return [];
   }
 }
 
@@ -75,12 +75,10 @@ export async function getFactCheckBySlug(slug: string): Promise<FactCheckItem | 
       };
     }
 
-    const fallback = FALLBACK_FACT_CHECKS.find((f) => f.slug === slug);
-    return fallback || null;
+    return null;
   } catch (err) {
-    console.warn("getFactCheckBySlug DB error, using fallbacks:", err);
-    const fallback = FALLBACK_FACT_CHECKS.find((f) => f.slug === slug);
-    return fallback || null;
+    console.error("getFactCheckBySlug DB error:", err);
+    return null;
   }
 }
 
@@ -274,7 +272,7 @@ export async function getFactCheckSubmissions(): Promise<FactCheckSubmissionItem
       .orderBy(desc(factCheckSubmissions.createdAt));
 
     if (!records || records.length === 0) {
-      return FALLBACK_SUBMISSIONS;
+      return [];
     }
 
     return records.map((r) => ({
@@ -288,8 +286,8 @@ export async function getFactCheckSubmissions(): Promise<FactCheckSubmissionItem
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
     }));
   } catch (err) {
-    console.warn("getFactCheckSubmissions DB error, using fallbacks:", err);
-    return FALLBACK_SUBMISSIONS;
+    console.warn("getFactCheckSubmissions DB error:", err);
+    return [];
   }
 }
 
