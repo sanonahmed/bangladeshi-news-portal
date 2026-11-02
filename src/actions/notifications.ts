@@ -6,7 +6,6 @@ import { desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   FALLBACK_ALERTS,
-  FALLBACK_SUBSCRIBERS,
   type AlertItem,
   type AdminSubscriberItem,
   type AdminNotificationStats,
@@ -15,7 +14,7 @@ import {
 export type { AlertItem, AdminSubscriberItem, AdminNotificationStats };
 
 function parseUserAgent(ua?: string | null): { browser: string; device: string } {
-  if (!ua) return { browser: "ক্রোম (Chrome)", device: "মোবাইল" };
+  if (!ua) return { browser: "অজানা ব্রাউজার (Unknown)", device: "অজানা ডিভাইস" };
   const lower = ua.toLowerCase();
 
   let browser = "ক্রোম (Chrome)";
@@ -36,6 +35,9 @@ function parseUserAgent(ua?: string | null): { browser: string; device: string }
   return { browser, device };
 }
 
+/**
+ * Public facing alerts fetcher with fallback if DB fails
+ */
 export async function getRecentAlerts(limit: number = 10): Promise<AlertItem[]> {
   try {
     const records = await db
@@ -66,6 +68,9 @@ export async function getRecentAlerts(limit: number = 10): Promise<AlertItem[]> 
   }
 }
 
+/**
+ * Admin: Real alerts strictly from the database
+ */
 export async function getAllAdminAlerts(): Promise<AlertItem[]> {
   try {
     const records = await db
@@ -74,7 +79,7 @@ export async function getAllAdminAlerts(): Promise<AlertItem[]> {
       .orderBy(desc(breakingAlerts.createdAt));
 
     if (!records || records.length === 0) {
-      return FALLBACK_ALERTS;
+      return [];
     }
 
     return records.map((r) => ({
@@ -90,32 +95,43 @@ export async function getAllAdminAlerts(): Promise<AlertItem[]> {
       createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
     }));
   } catch (err) {
-    console.warn("getAllAdminAlerts error, using fallback alerts:", err);
-    return FALLBACK_ALERTS;
+    console.warn("getAllAdminAlerts error:", err);
+    return [];
   }
 }
 
+/**
+ * Admin: Real statistical calculation directly from database rows
+ */
 export async function getAdminNotificationStats(): Promise<AdminNotificationStats> {
   try {
+    // 1. Fetch real alerts
     const alerts = await getAllAdminAlerts();
-    let subsCount = FALLBACK_SUBSCRIBERS.length * 1850; // realistic baseline multiplier for reader display
+
+    // 2. Fetch real subscribers from push_subscriptions table
+    let activeSubscribers = 0;
     try {
       const dbSubs = await db.select().from(pushSubscriptions);
       if (dbSubs && dbSubs.length > 0) {
-        subsCount = Math.max(subsCount, dbSubs.length);
+        activeSubscribers = dbSubs.filter((s) => s.isActive).length;
       }
-    } catch {
-      // fallback
+    } catch (subErr) {
+      console.warn("pushSubscriptions query error in stats:", subErr);
     }
 
+    // 3. Real total clicks summed across database rows
     const totalClicks = alerts.reduce((acc, a) => acc + (a.clicksCount || 0), 0);
     const urgentCount = alerts.filter((a) => a.priority === "urgent").length;
 
-    // Estimate CTR based on totalClicks and total broadcast reach
-    const estimatedImpressions = Math.max(alerts.length * (subsCount * 0.45), 1000);
-    const rawCtr = (totalClicks / estimatedImpressions) * 100;
-    const avgCtr = (rawCtr > 0 ? rawCtr.toFixed(1) : "14.2") + "%";
+    // 4. Real CTR calculation
+    let avgCtr = "০%";
+    if (activeSubscribers > 0 && alerts.length > 0 && totalClicks > 0) {
+      const totalOpportunities = activeSubscribers * alerts.length;
+      const rate = (totalClicks / totalOpportunities) * 100;
+      avgCtr = rate.toFixed(1) + "%";
+    }
 
+    // 5. Real categories breakdown from actual alerts
     const catMap: Record<string, { label: string; count: number; clicks: number; color: string }> = {
       breaking: { label: "ব্রেকিং ও জরুরি", count: 0, clicks: 0, color: "bg-red-500" },
       "fact-check": { label: "ফ্যাক্ট-চেক সতর্কবার্তা", count: 0, clicks: 0, color: "bg-indigo-600" },
@@ -140,7 +156,7 @@ export async function getAdminNotificationStats(): Promise<AdminNotificationStat
 
     return {
       totalAlerts: alerts.length,
-      activeSubscribers: subsCount,
+      activeSubscribers,
       totalClicks,
       avgCtr,
       urgentCount,
@@ -149,32 +165,29 @@ export async function getAdminNotificationStats(): Promise<AdminNotificationStat
   } catch (err) {
     console.warn("getAdminNotificationStats error:", err);
     return {
-      totalAlerts: FALLBACK_ALERTS.length,
-      activeSubscribers: 12950,
-      totalClicks: 10410,
-      avgCtr: "16.8%",
-      urgentCount: 2,
-      categoryBreakdown: [
-        { category: "breaking", label: "ব্রেকিং ও জরুরি", count: 2, clicks: 2610, color: "bg-red-500" },
-        { category: "sports", label: "খেলাধুলা", count: 1, clicks: 3890, color: "bg-emerald-600" },
-        { category: "fact-check", label: "ফ্যাক্ট-চেক", count: 1, clicks: 2450, color: "bg-indigo-600" },
-        { category: "business", label: "বাণিজ্য", count: 1, clicks: 840, color: "bg-amber-600" },
-        { category: "politics", label: "রাজনীতি", count: 1, clicks: 620, color: "bg-purple-600" },
-      ],
+      totalAlerts: 0,
+      activeSubscribers: 0,
+      totalClicks: 0,
+      avgCtr: "০%",
+      urgentCount: 0,
+      categoryBreakdown: [],
     };
   }
 }
 
+/**
+ * Admin: Real subscribers list directly from database
+ */
 export async function getAdminPushSubscribers(): Promise<AdminSubscriberItem[]> {
   try {
     const records = await db
       .select()
       .from(pushSubscriptions)
       .orderBy(desc(pushSubscriptions.createdAt))
-      .limit(50);
+      .limit(100);
 
     if (!records || records.length === 0) {
-      return FALLBACK_SUBSCRIBERS;
+      return [];
     }
 
     const items: AdminSubscriberItem[] = records.map((r) => {
@@ -191,13 +204,16 @@ export async function getAdminPushSubscribers(): Promise<AdminSubscriberItem[]> 
       };
     });
 
-    return items.length > 0 ? items : FALLBACK_SUBSCRIBERS;
+    return items;
   } catch (err) {
-    console.warn("getAdminPushSubscribers error, using fallback:", err);
-    return FALLBACK_SUBSCRIBERS;
+    console.warn("getAdminPushSubscribers error:", err);
+    return [];
   }
 }
 
+/**
+ * Public & Admin: Save real push subscription to database
+ */
 export async function savePushSubscription(data: {
   endpoint: string;
   p256dh: string;
@@ -230,13 +246,19 @@ export async function savePushSubscription(data: {
         },
       });
 
+    revalidatePath("/admin/notifications");
+    revalidatePath("/notifications");
+
     return { success: true, message: "পুশ নোটিফিকেশন সফলভাবে সক্রিয় হয়েছে!" };
   } catch (error: any) {
     console.error("savePushSubscription error:", error);
-    return { success: true, message: "সাবস্ক্রিপশন স্থানীয়ভাবে সংরক্ষিত হয়েছে।" };
+    return { success: false, message: "ডাটাবেজে সাবস্ক্রিপশন সংরক্ষণ ব্যর্থ হয়েছে।" };
   }
 }
 
+/**
+ * Admin: Real broadcast breaking alert insertion to database
+ */
 export async function broadcastBreakingAlertAction(data: {
   title: string;
   message: string;
@@ -264,20 +286,18 @@ export async function broadcastBreakingAlertAction(data: {
       isBroadcasted: true,
     };
 
-    try {
-      await db.insert(breakingAlerts).values({
-        id: newAlert.id,
-        title: newAlert.title,
-        message: newAlert.message,
-        url: newAlert.url,
-        category: newAlert.category,
-        priority: newAlert.priority,
-        soundAlert: newAlert.soundAlert,
-        clicksCount: 0,
-      });
-    } catch (dbErr) {
-      console.warn("Could not insert breakingAlert into DB:", dbErr);
-    }
+    await db.insert(breakingAlerts).values({
+      id: newAlert.id,
+      title: newAlert.title,
+      message: newAlert.message,
+      url: newAlert.url,
+      category: newAlert.category,
+      priority: newAlert.priority,
+      soundAlert: newAlert.soundAlert,
+      clicksCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     revalidatePath("/notifications");
     revalidatePath("/admin/notifications");
@@ -286,7 +306,7 @@ export async function broadcastBreakingAlertAction(data: {
     return {
       success: true,
       alert: newAlert,
-      message: "ওয়েব পুশ অ্যালার্ট সফলভাবে প্রচারিত হয়েছে!",
+      message: "ওয়েব পুশ অ্যালার্ট সফলভাবে ডাটাবেজে সংরক্ষিত ও প্রচারিত হয়েছে!",
     };
   } catch (error: any) {
     console.error("broadcastBreakingAlertAction error:", error);
@@ -294,6 +314,9 @@ export async function broadcastBreakingAlertAction(data: {
   }
 }
 
+/**
+ * Admin: Delete real alert from database
+ */
 export async function deleteAlertAction(id: string): Promise<{ success: boolean; message: string }> {
   try {
     await db.delete(breakingAlerts).where(eq(breakingAlerts.id, id));
@@ -303,58 +326,35 @@ export async function deleteAlertAction(id: string): Promise<{ success: boolean;
     return { success: true, message: "নোটিফিকেশন সফলভাবে মুছে ফেলা হয়েছে।" };
   } catch (err: any) {
     console.error("deleteAlertAction error:", err);
-    revalidatePath("/notifications");
-    revalidatePath("/admin/notifications");
-    return { success: true, message: "নোটিফিকেশন সফলভাবে অপসারণ করা হয়েছে।" };
+    return { success: false, message: "মুছে ফেলতে সমস্যা হয়েছে।" };
   }
 }
 
+/**
+ * Admin: Resend real alert
+ */
 export async function resendAlertAction(
   id: string
 ): Promise<{ success: boolean; message: string; alert?: AlertItem }> {
   try {
-    let targetAlert: AlertItem | undefined;
+    const records = await db
+      .select()
+      .from(breakingAlerts)
+      .where(eq(breakingAlerts.id, id))
+      .limit(1);
 
-    try {
-      const records = await db
-        .select()
-        .from(breakingAlerts)
-        .where(eq(breakingAlerts.id, id))
-        .limit(1);
-      if (records && records.length > 0 && records[0]) {
-        const r = records[0];
-        targetAlert = {
-          id: r.id,
-          title: r.title,
-          message: r.message,
-          url: r.url || "/",
-          category: r.category,
-          priority: r.priority,
-          soundAlert: r.soundAlert,
-          clicksCount: r.clicksCount,
-          createdAt: new Date().toISOString(),
-          isBroadcasted: true,
-        };
-      }
-    } catch (dbErr) {
-      console.warn("resendAlertAction DB lookup fallback:", dbErr);
+    if (!records || records.length === 0 || !records[0]) {
+      return { success: false, message: "প্রদত্ত অ্যালার্টটি ডাটাবেজে খুঁজে পাওয়া যায়নি" };
     }
 
-    if (!targetAlert) {
-      targetAlert = FALLBACK_ALERTS.find((a) => a.id === id);
-    }
-
-    if (!targetAlert) {
-      return { success: false, message: "প্রদত্ত অ্যালার্টটি খুঁজে পাওয়া যায়নি" };
-    }
-
+    const r = records[0];
     return await broadcastBreakingAlertAction({
-      title: targetAlert.title,
-      message: targetAlert.message,
-      url: targetAlert.url,
-      category: targetAlert.category,
-      priority: targetAlert.priority,
-      soundAlert: targetAlert.soundAlert,
+      title: r.title,
+      message: r.message,
+      url: r.url || "/",
+      category: r.category,
+      priority: r.priority,
+      soundAlert: r.soundAlert,
     });
   } catch (err: any) {
     console.error("resendAlertAction error:", err);
@@ -362,12 +362,16 @@ export async function resendAlertAction(
   }
 }
 
+/**
+ * Public: Track click count on real alert
+ */
 export async function incrementAlertClicks(id: string): Promise<void> {
   try {
     await db
       .update(breakingAlerts)
       .set({ clicksCount: sql`${breakingAlerts.clicksCount} + 1` })
       .where(eq(breakingAlerts.id, id));
+    revalidatePath("/admin/notifications");
   } catch (err) {
     // silently ignore
   }
