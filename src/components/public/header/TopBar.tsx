@@ -87,6 +87,14 @@ export function TopBar({ settings }: TopBarProps) {
           >
             বিতর্ক
           </Link>
+          <span className="text-[var(--color-border-strong)] hidden sm:inline">|</span>
+          <Link
+            href="/history"
+            className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] hidden sm:inline"
+            title="ঐতিহাসিক এই দিনে ও স্বাধীনতা আর্কাইভ"
+          >
+            ইতিহাস
+          </Link>
           <Link
             href="/archive"
             className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"

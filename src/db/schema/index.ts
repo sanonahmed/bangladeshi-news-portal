@@ -210,4 +210,20 @@ export type {
   NewFactCheckSubmission,
 } from "./fact-checks";
 
+// History & 1971 Liberation War Archive
+export {
+  historicalEvents,
+  liberationWarSectors,
+  birSreshthoHeroes,
+} from "./history";
+export type {
+  HistoricalEvent,
+  NewHistoricalEvent,
+  LiberationWarSector,
+  NewLiberationWarSector,
+  BirSreshthoHero,
+  NewBirSreshthoHero,
+} from "./history";
+
+
 

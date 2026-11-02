@@ -10,6 +10,7 @@ export function SiteFooter({ settings }: SiteFooterProps) {
 
   const footerLinks = [
     { label: "আমাদের সম্পর্কে", href: "/about" },
+    { label: "ঐতিহাসিক এই দিনে ও স্বাধীনতা আর্কাইভ", href: "/history" },
     { label: "অডিও নিউজ ও পডকাস্ট হাব", href: "/audio-news" },
     { label: "ফ্যাক্ট-চেক ও সত্যসন্ধান কর্নার", href: "/fact-check" },
     { label: "পুশ নোটিফিকেশন ও ব্রেকিং অ্যালার্ট", href: "/notifications" },
