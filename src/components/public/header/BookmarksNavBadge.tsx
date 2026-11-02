@@ -30,10 +30,11 @@ export function BookmarksNavBadge() {
     return (
       <Link
         href="/bookmarks"
-        className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] flex items-center gap-1"
+        className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] flex items-center gap-1 p-1"
+        aria-label="সংরক্ষিত সংবাদ"
       >
-        <Bookmark className="w-3 h-3" />
-        <span>সংরক্ষিত</span>
+        <Bookmark size={14} />
+        <span className="hidden sm:inline">সংরক্ষিত</span>
       </Link>
     );
   }
@@ -41,13 +42,14 @@ export function BookmarksNavBadge() {
   return (
     <Link
       href="/bookmarks"
-      className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] flex items-center gap-1"
+      className="relative hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)] flex items-center gap-1 p-1"
       title="আমার সংরক্ষিত সংবাদ ও রিডিং লিস্ট"
+      aria-label="সংরক্ষিত সংবাদ"
     >
-      <Bookmark className={`w-3 h-3 ${count > 0 ? "fill-[var(--color-primary)] text-[var(--color-primary)]" : ""}`} />
-      <span>সংরক্ষিত</span>
+      <Bookmark size={14} className={count > 0 ? "fill-[var(--color-primary)] text-[var(--color-primary)]" : ""} />
+      <span className="hidden sm:inline">সংরক্ষিত</span>
       {count > 0 && (
-        <span className="bg-[var(--color-primary)] text-white text-[9px] font-mono px-1 rounded-full font-bold">
+        <span className="absolute -top-1 -right-1.5 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-[var(--color-primary)] text-[9px] font-bold text-white shadow-xs">
           {toBengaliDigits(count)}
         </span>
       )}

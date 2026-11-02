@@ -1,6 +1,7 @@
 import { TopBar } from "./TopBar";
 import { Masthead } from "./Masthead";
 import { NavBar } from "./NavBar";
+import { MobileQuickServicesBar } from "./MobileQuickServicesBar";
 import type { NavigationItem, SiteSettings } from "@/types";
 
 interface SiteHeaderProps {
@@ -14,6 +15,7 @@ export function SiteHeader({ navigation, settings }: SiteHeaderProps) {
       <TopBar settings={settings} />
       <Masthead settings={settings} />
       <NavBar items={navigation} />
+      <MobileQuickServicesBar />
     </header>
   );
 }
