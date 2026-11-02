@@ -326,9 +326,17 @@ function buildPrayerStructure(
   const sehriEnd = adjustTime(fajr, -5); // Sehri ends 5 mins before Fajr
   const iftar = maghrib; // Iftar is at Maghrib
 
-  // Determine current active and next prayer using Bangladesh local time
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  // Determine current active and next prayer using Bangladesh local time (Asia/Dhaka)
+  const bdFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Dhaka",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  });
+  const parts = bdFormatter.formatToParts(new Date());
+  const bdHour = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
+  const bdMinute = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
+  const currentMinutes = bdHour * 60 + bdMinute;
 
   const toMinutes = (time24: string) => {
     const [h, m] = time24.split(":").map(Number);
@@ -345,9 +353,14 @@ function buildPrayerStructure(
   let activeId: string = "isha";
   let activeName = "এশা";
   let nextName = "ফজর";
-  let nextMinutes = mFajr + 24 * 60; // Next morning Fajr
+  let nextMinutes = mFajr;
 
-  if (currentMinutes >= mFajr && currentMinutes < mSunrise) {
+  if (currentMinutes < mFajr) {
+    activeId = "tahajjud";
+    activeName = "তাহাজ্জুদ ও সাহরি";
+    nextName = "ফজর";
+    nextMinutes = mFajr;
+  } else if (currentMinutes >= mFajr && currentMinutes < mSunrise) {
     activeId = "fajr";
     activeName = "ফজর";
     nextName = "সূর্যোদয় (ইশরাক)";
@@ -372,7 +385,7 @@ function buildPrayerStructure(
     activeName = "মাগরিব";
     nextName = "এশা";
     nextMinutes = mIsha;
-  } else if (currentMinutes >= mIsha) {
+  } else {
     activeId = "isha";
     activeName = "এশা";
     nextName = "ফজর";

@@ -13,9 +13,9 @@ interface WeatherPrayerTickerPillProps {
 }
 
 export function WeatherPrayerTickerPill({
-  initialTemp = "৩০",
-  initialCondition = "পরিষ্কার আকাশ",
-  initialNextPrayer = "ফজর",
+  initialTemp = "৩১",
+  initialCondition = "মেঘলা আকাশ",
+  initialNextPrayer = "জোহর",
   initialCountdown = "বাকি",
 }: WeatherPrayerTickerPillProps) {
   const [data, setData] = useState({
@@ -24,6 +24,34 @@ export function WeatherPrayerTickerPill({
     nextPrayer: initialNextPrayer,
     countdown: initialCountdown,
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveData() {
+      try {
+        const res = await fetch("/api/weather-prayer?division=dhaka");
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success && json.data && isMounted) {
+          setData({
+            temp: json.data.weather?.temperatureBn || "৩১",
+            condition: json.data.weather?.conditionBn || "সাধারণ",
+            nextPrayer: json.data.prayer?.nextPrayerName || "জোহর",
+            countdown: json.data.prayer?.nextPrayerCountdown || "",
+          });
+        }
+      } catch {
+        // keep current
+      }
+    }
+
+    loadLiveData();
+    const interval = setInterval(loadLiveData, 300000); // refresh every 5 mins
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
     <Link
