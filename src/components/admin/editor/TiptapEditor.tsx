@@ -8,6 +8,7 @@ import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import Youtube from "@tiptap/extension-youtube";
+import { Node } from "@tiptap/core";
 import {
   Bold,
   Italic,
@@ -27,6 +28,55 @@ import {
   Video,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+import { detectVideoPlatform, getFacebookEmbedUrl } from "@/lib/video-embed";
+
+// Custom Iframe extension for rich Facebook and multimedia embeds
+const IframeExtension = Node.create({
+  name: "iframe",
+  group: "block",
+  atom: true,
+  selectable: true,
+  draggable: true,
+
+  addAttributes() {
+    return {
+      src: {
+        default: null,
+      },
+      frameborder: {
+        default: 0,
+      },
+      allowfullscreen: {
+        default: "true",
+      },
+      allow: {
+        default:
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share",
+      },
+      class: {
+        default: "w-full aspect-video rounded my-4 border-0",
+      },
+      style: {
+        default: "border:none;overflow:hidden",
+      },
+      scrolling: {
+        default: "no",
+      },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "iframe",
+      },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ["iframe", HTMLAttributes];
+  },
+});
 
 interface TiptapEditorProps {
   content: string;
@@ -69,6 +119,7 @@ export function TiptapEditor({
       Youtube.configure({
         inline: false,
       }),
+      IframeExtension,
     ],
     content,
     editorProps: {
@@ -102,11 +153,67 @@ export function TiptapEditor({
     }
   };
 
-  const addYoutube = () => {
-    const url = window.prompt(isEn ? "Enter YouTube video URL:" : "ইউটিউব ভিডিওর লিঙ্ক লিখুন:");
-    if (url) {
-      editor.commands.setYoutubeVideo({ src: url });
+  // Embed video (YouTube or Facebook)
+  const embedVideo = () => {
+    const url = window.prompt(
+      isEn
+        ? "Enter YouTube or Facebook video URL:\n(e.g., https://youtube.com/watch?v=... or https://facebook.com/.../videos/... or https://fb.watch/...)"
+        : "ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন:\n(যেমন: https://youtube.com/... বা https://facebook.com/... বা https://fb.watch/...)"
+    );
+    if (!url || !url.trim()) return;
+
+    const trimmed = url.trim();
+    const platform = detectVideoPlatform(trimmed);
+
+    if (platform === "youtube") {
+      editor.commands.setYoutubeVideo({ src: trimmed });
+    } else if (platform === "facebook") {
+      const embedSrc = getFacebookEmbedUrl(trimmed, false);
+      (editor.chain().focus() as any)
+        .insertContent({
+          type: "iframe",
+          attrs: {
+            src: embedSrc,
+            class: "w-full aspect-video rounded my-4 border-0",
+            allowfullscreen: "true",
+            style: "border:none;overflow:hidden",
+            scrolling: "no",
+            allow: "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share",
+          },
+        })
+        .run();
+    } else {
+      window.alert(
+        isEn
+          ? "Please provide a valid YouTube or Facebook video URL."
+          : "অনুগ্রহ করে একটি বৈধ ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন।"
+      );
     }
+  };
+
+  // Quick Direct Facebook Video Embed
+  const embedFacebookVideo = () => {
+    const url = window.prompt(
+      isEn
+        ? "Enter Facebook video URL (e.g. https://facebook.com/.../videos/... or https://fb.watch/...):"
+        : "ফেসবুক ভিডিওর লিংক লিখুন (যেমন: https://facebook.com/.../videos/... বা https://fb.watch/...):"
+    );
+    if (!url || !url.trim()) return;
+
+    const embedSrc = getFacebookEmbedUrl(url.trim(), false);
+    (editor.chain().focus() as any)
+      .insertContent({
+        type: "iframe",
+        attrs: {
+          src: embedSrc,
+          class: "w-full aspect-video rounded my-4 border-0",
+          allowfullscreen: "true",
+          style: "border:none;overflow:hidden",
+          scrolling: "no",
+          allow: "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share",
+        },
+      })
+      .run();
   };
 
   return (
@@ -258,13 +365,27 @@ export function TiptapEditor({
         >
           <ImageIcon size={16} />
         </button>
+
+        {/* Unified Video Embed Button (YouTube & Facebook) */}
         <button
           type="button"
-          onClick={addYoutube}
-          className="p-1.5 rounded hover:bg-[var(--color-border)]"
-          title={isEn ? "Embed YouTube Video" : "ভিডিও এম্বেড"}
+          onClick={embedVideo}
+          className="p-1.5 rounded hover:bg-[var(--color-border)] text-[var(--color-text)] hover:text-[var(--color-primary)] flex items-center gap-1"
+          title={isEn ? "Embed Video (YouTube & Facebook)" : "ভিডিও এম্বেড (ইউটিউব ও ফেসবুক)"}
         >
           <Video size={16} />
+        </button>
+
+        {/* Direct Facebook Video Embed Button */}
+        <button
+          type="button"
+          onClick={embedFacebookVideo}
+          className="p-1.5 rounded hover:bg-[var(--color-border)] text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-0.5"
+          title={isEn ? "Embed Facebook Video" : "ফেসবুক ভিডিও এম্বেড"}
+        >
+          <span className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-black leading-none">
+            f
+          </span>
         </button>
 
         <span className="w-[1px] h-4 bg-[var(--color-border)] mx-1" />

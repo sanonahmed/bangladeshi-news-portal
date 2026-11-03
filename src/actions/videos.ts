@@ -7,7 +7,12 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
-import { extractYouTubeId } from "@/lib/youtube";
+import {
+  detectVideoPlatform,
+  extractYouTubeId,
+  extractFacebookVideoId,
+  getVideoThumbnail,
+} from "@/lib/video-embed";
 
 export async function getVideos(): Promise<Video[]> {
   try {
@@ -55,7 +60,7 @@ export async function getVideoBySlug(slug: string): Promise<Video | null> {
 
 const VideoSchema = z.object({
   title: z.string().min(1, "শিরোনাম আবশ্যক").max(300),
-  youtubeUrl: z.string().url("সঠিক ইউটিউব লিংক দিন"),
+  youtubeUrl: z.string().url("সঠিক ভিডিও লিংক দিন"),
   description: z.string().optional(),
   duration: z.string().default("৩:৪৫"),
   category: z.string().default("জাতীয়"),
@@ -81,27 +86,46 @@ export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ 
 
     const { title, youtubeUrl, description, duration, category, isFeatured, customThumbnailUrl } = parsed.data;
 
-    const videoId = extractYouTubeId(youtubeUrl);
-    if (!videoId) {
-      return { success: false, error: "সঠিক ইউটিউব ভিডিও আইডি খুঁজে পাওয়া যায়নি। অনুগ্রহ করে বৈধ ইউটিউব লিংক দিন।" };
+    const platform = detectVideoPlatform(youtubeUrl);
+    if (platform === "unknown") {
+      return {
+        success: false,
+        error: "অনুগ্রহ করে একটি বৈধ ইউটিউব (YouTube) বা ফেসবুক (Facebook) ভিডিওর লিংক দিন।",
+      };
     }
 
-    // Default to YouTube HQ thumbnail if no custom thumbnail provided
-    const thumbnailUrl = customThumbnailUrl?.trim() || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    let videoId: string | null = null;
+    if (platform === "youtube") {
+      videoId = extractYouTubeId(youtubeUrl);
+      if (!videoId) {
+        return {
+          success: false,
+          error: "সঠিক ইউটিউব ভিডিও আইডি সনাক্ত করা যায়নি। লিংকটি পুনরায় পরীক্ষা করুন।",
+        };
+      }
+    } else if (platform === "facebook") {
+      videoId = extractFacebookVideoId(youtubeUrl);
+      if (!videoId) {
+        videoId = `fb-${Date.now().toString(36)}`;
+      }
+    }
+
+    // Determine thumbnail
+    const thumbnailUrl = getVideoThumbnail(youtubeUrl, customThumbnailUrl);
 
     // Generate unique slug
     let generatedSlug = parsed.data.slug?.trim();
     if (!generatedSlug) {
-      generatedSlug = `video-${videoId.toLowerCase()}-${Date.now().toString().slice(-4)}`;
+      generatedSlug = `video-${(videoId || "clip").toLowerCase()}-${Date.now().toString().slice(-4)}`;
     }
 
     // Check slug uniqueness
     const existing = await db.select({ id: videos.id }).from(videos).where(eq(videos.slug, generatedSlug)).limit(1);
     if (existing.length > 0) {
-      generatedSlug = `video-${videoId.toLowerCase()}-${Date.now()}`;
+      generatedSlug = `video-${(videoId || "clip").toLowerCase()}-${Date.now()}`;
     }
 
-    // If marked as featured, optionally un-feature others
+    // If marked as featured, un-feature others
     if (isFeatured) {
       await db.update(videos).set({ isFeatured: false });
     }
@@ -113,7 +137,7 @@ export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ 
         slug: generatedSlug,
         description: description || undefined,
         youtubeUrl,
-        youtubeVideoId: videoId,
+        youtubeVideoId: videoId || `video-${Date.now()}`,
         thumbnailUrl,
         duration: duration || "৩:৪৫",
         category: category || "জাতীয়",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Play, X, ExternalLink, Film } from "lucide-react";
-import type { Video } from "@/db/schema/videos";
+import { detectVideoPlatform, getVideoEmbedUrl } from "@/lib/video-embed";
 
 interface VideoItem {
   id: string;
@@ -30,10 +30,14 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
   const rest = videos.slice(1, 5);
 
   function openVideo(video: VideoItem) {
-    if (video.youtubeVideoId) {
+    if (video.youtubeUrl || video.youtubeVideoId) {
       setActiveVideo(video);
     }
   }
+
+  const activeUrl = activeVideo ? activeVideo.youtubeUrl || activeVideo.youtubeVideoId || "" : "";
+  const activePlatform = detectVideoPlatform(activeUrl);
+  const activeEmbedSrc = activeVideo ? getVideoEmbedUrl(activeUrl, true) : "";
 
   return (
     <>
@@ -70,7 +74,13 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
                     priority
                   />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-colors">
-                    <div className="w-16 h-16 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                    <div
+                      className={`w-16 h-16 rounded-full text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform ${
+                        detectVideoPlatform(featured.youtubeUrl || "") === "facebook"
+                          ? "bg-blue-600"
+                          : "bg-[var(--color-primary)]"
+                      }`}
+                    >
                       <Play size={28} className="fill-white translate-x-0.5" />
                     </div>
                   </div>
@@ -107,7 +117,13 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
                     sizes="144px"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/35 group-hover:bg-black/15 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow">
+                    <div
+                      className={`w-8 h-8 rounded-full text-white flex items-center justify-center group-hover:scale-110 transition-transform shadow ${
+                        detectVideoPlatform(video.youtubeUrl || "") === "facebook"
+                          ? "bg-blue-600"
+                          : "bg-[var(--color-primary)]"
+                      }`}
+                    >
                       <Play size={14} className="fill-white translate-x-0.5" />
                     </div>
                   </div>
@@ -131,8 +147,8 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
         </div>
       </section>
 
-      {/* Interactive YouTube Video Player Modal */}
-      {activeVideo && activeVideo.youtubeVideoId && (
+      {/* Interactive Video Player Modal (YouTube & Facebook) */}
+      {activeVideo && (
         <div
           role="dialog"
           aria-modal="true"
@@ -145,7 +161,11 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
           >
             <div className="flex items-center justify-between px-4 py-3 bg-zinc-950 border-b border-zinc-800">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse"></span>
+                <span
+                  className={`w-2.5 h-2.5 rounded-full animate-pulse ${
+                    activePlatform === "facebook" ? "bg-blue-500" : "bg-red-600"
+                  }`}
+                ></span>
                 <h3 className="bengali-headline text-sm md:text-base font-bold text-white truncate">
                   {activeVideo.title}
                 </h3>
@@ -156,10 +176,15 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
                     href={activeVideo.youtubeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-zinc-400 hover:text-white p-1"
-                    title="ইউটিউবে দেখুন"
+                    className={`text-xs px-2 py-1 rounded transition-colors flex items-center gap-1 font-semibold ${
+                      activePlatform === "facebook"
+                        ? "bg-blue-600 hover:bg-blue-500 text-white"
+                        : "bg-red-600 hover:bg-red-500 text-white"
+                    }`}
+                    title={activePlatform === "facebook" ? "ফেসবুকে দেখুন" : "ইউটিউবে দেখুন"}
                   >
-                    <ExternalLink size={16} />
+                    <span>{activePlatform === "facebook" ? "Facebook" : "YouTube"}</span>
+                    <ExternalLink size={13} />
                   </a>
                 )}
                 <button
@@ -175,9 +200,11 @@ export function VideoSectionClient({ videos }: VideoSectionClientProps) {
 
             <div className="relative aspect-video w-full bg-black">
               <iframe
-                src={`https://www.youtube.com/embed/${activeVideo.youtubeVideoId}?autoplay=1&rel=0&modestbranding=1`}
+                src={activeEmbedSrc}
                 title={activeVideo.title}
                 className="w-full h-full border-0"
+                scrolling="no"
+                style={{ border: "none", overflow: "hidden" }}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />

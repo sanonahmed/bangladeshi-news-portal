@@ -14,6 +14,7 @@ import {
   Video as VideoIcon,
 } from "lucide-react";
 import type { Video } from "@/db/schema/videos";
+import { detectVideoPlatform, getVideoEmbedUrl } from "@/lib/video-embed";
 
 const CATEGORIES = [
   "সব",
@@ -56,6 +57,10 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
     }
   }
 
+  const heroUrl = currentVideo ? currentVideo.youtubeUrl || currentVideo.youtubeVideoId : "";
+  const heroPlatform = detectVideoPlatform(heroUrl);
+  const heroEmbedSrc = currentVideo ? getVideoEmbedUrl(heroUrl, true) : "";
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-8">
       {/* Header Breadcrumb & Title */}
@@ -70,7 +75,7 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
           </div>
           <h1 className="bengali-headline text-2xl md:text-3xl font-extrabold text-[var(--color-text)] flex items-center gap-2">
             <span className="w-3 h-3 bg-[var(--color-primary)] inline-block"></span>
-            ভিডিও সংবাদ ও মাল্টিমিডিয়া গ্যালারি
+            ভিডিও সংবাদ ও মাল্টিমিডিয়া গ্যালারি
           </h1>
         </div>
 
@@ -89,10 +94,12 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
         >
           <div className="relative aspect-video w-full bg-black">
             <iframe
-              key={currentVideo.youtubeVideoId}
-              src={`https://www.youtube.com/embed/${currentVideo.youtubeVideoId}?autoplay=1&rel=0&modestbranding=1`}
+              key={heroEmbedSrc}
+              src={heroEmbedSrc}
               title={currentVideo.title}
               className="w-full h-full border-0"
+              scrolling="no"
+              style={{ border: "none", overflow: "hidden" }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
@@ -100,13 +107,23 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
 
           <div className="p-5 md:p-6 space-y-4">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="bg-[var(--color-primary)] text-white text-xs font-bold px-2.5 py-0.5 rounded shadow">
+              <span
+                className={`text-xs font-bold px-2.5 py-0.5 rounded shadow ${
+                  heroPlatform === "facebook" ? "bg-blue-600 text-white" : "bg-red-600 text-white"
+                }`}
+              >
+                {heroPlatform === "facebook" ? "Facebook Video" : "YouTube Video"}
+              </span>
+
+              <span className="bg-zinc-800 text-zinc-200 text-xs font-bold px-2.5 py-0.5 rounded border border-zinc-700">
                 {currentVideo.category || "জাতীয়"}
               </span>
+
               <span className="text-zinc-400 text-xs flex items-center gap-1 font-mono">
                 <Clock size={13} />
                 {currentVideo.duration}
               </span>
+
               {currentVideo.isFeatured && (
                 <span className="text-amber-400 text-xs font-semibold flex items-center gap-1 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/50">
                   <Sparkles size={12} />
@@ -133,7 +150,7 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
                 </span>
                 <a
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                    `${currentVideo.title} - দৈনিক বাংলাদেশ বার্তা`
+                    `${currentVideo.title} - দৈনিক বাংলাদেশ বার্তা ${currentVideo.youtubeUrl}`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -161,41 +178,31 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
                 </button>
               </div>
 
-              {currentVideo.youtubeUrl && (
-                <a
-                  href={currentVideo.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold transition-colors"
-                >
-                  <span>ইউটিউবে দেখুন</span>
-                  <ExternalLink size={13} />
-                </a>
-              )}
+              <a
+                href={currentVideo.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`px-3 py-1 text-white rounded transition-colors font-semibold flex items-center gap-1.5 ${
+                  heroPlatform === "facebook" ? "bg-blue-600 hover:bg-blue-500" : "bg-red-600 hover:bg-red-500"
+                }`}
+              >
+                <span>{heroPlatform === "facebook" ? "ফেসবুকে দেখুন" : "ইউটিউবে দেখুন"}</span>
+                <ExternalLink size={13} />
+              </a>
             </div>
           </div>
         </div>
       )}
 
-      {/* Category Filter Tabs */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
-          <h3 className="bengali-headline text-lg md:text-xl font-bold text-[var(--color-text)] flex items-center gap-2">
-            <VideoIcon size={20} className="text-[var(--color-primary)]" />
-            সব ভিডিও তালিকা
-          </h3>
-          <span className="text-xs text-[var(--color-text-muted)]">
-            যেকোনো ভিডিওতে ক্লিক করে সরাসরি উপরে উপভোগ করুন
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Category Tabs */}
+      <div className="border-b border-[var(--color-border)] pb-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 selectedCategory === cat
                   ? "bg-[var(--color-primary)] text-white shadow-sm"
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text)] border border-[var(--color-border)] hover:border-[var(--color-primary)]"
@@ -219,6 +226,8 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredVideos.map((video) => {
             const isSelected = currentVideo?.id === video.id;
+            const platform = detectVideoPlatform(video.youtubeUrl);
+
             return (
               <div
                 key={video.id}
@@ -243,7 +252,7 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
                   <div className="absolute inset-0 bg-black/35 flex items-center justify-center group-hover:bg-black/15 transition-colors">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform ${
-                        isSelected ? "bg-red-600 text-white" : "bg-[var(--color-primary)] text-white"
+                        platform === "facebook" ? "bg-blue-600 text-white" : "bg-[var(--color-primary)] text-white"
                       }`}
                     >
                       <Play size={18} className="fill-white translate-x-0.5" />
@@ -260,6 +269,17 @@ export function VideosGalleryClient({ initialVideos }: VideosGalleryClientProps)
                 </div>
 
                 <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                        platform === "facebook"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
+                      }`}
+                    >
+                      {platform === "facebook" ? "Facebook" : "YouTube"}
+                    </span>
+                  </div>
                   <h3 className="bengali-headline text-sm font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-2 leading-snug">
                     {video.title}
                   </h3>
