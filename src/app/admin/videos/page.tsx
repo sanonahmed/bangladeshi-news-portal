@@ -9,6 +9,8 @@ import {
 } from "@/actions/videos";
 import {
   detectVideoPlatform,
+  cleanFacebookUrl,
+  cleanYouTubeUrl,
   extractYouTubeId,
   extractFacebookVideoId,
   getFacebookEmbedUrl,
@@ -30,6 +32,7 @@ import {
   Eye,
   RefreshCw,
   Image as ImageIcon,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
@@ -91,6 +94,23 @@ export default function AdminVideosPage() {
     }
   }
 
+  function handleUrlChange(val: string) {
+    const trimmed = val.trim();
+    // If user pasted an iframe code or raw URL
+    if (trimmed.includes("<iframe") || trimmed.includes("&lt;iframe")) {
+      const p = detectVideoPlatform(trimmed);
+      if (p === "facebook") {
+        setVideoUrl(cleanFacebookUrl(trimmed));
+        return;
+      }
+      if (p === "youtube") {
+        setVideoUrl(cleanYouTubeUrl(trimmed));
+        return;
+      }
+    }
+    setVideoUrl(trimmed);
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -103,7 +123,7 @@ export default function AdminVideosPage() {
     if (!videoUrl.trim() || !isValidVideo) {
       setError(
         isEn
-          ? "Please provide a valid YouTube (youtube.com/watch?v=...) or Facebook (facebook.com/... or fb.watch/...) video link"
+          ? "Please provide a valid YouTube (youtube.com/watch?v=...) or Facebook (facebook.com/watch/?v=...) video link"
           : "অনুগ্রহ করে একটি বৈধ ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন"
       );
       return;
@@ -178,7 +198,7 @@ export default function AdminVideosPage() {
           </h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
             {isEn
-              ? "Publish and curate multimedia news with YouTube and Facebook video embeds, featureds and thumbnail controls"
+              ? "Publish and curate multimedia journalism with YouTube and Facebook video embeds, featureds and thumbnail controls"
               : "ইউটিউব ও ফেসবুক ভিডিও লিংক দিয়ে ভিডিও প্রতিবেদন প্রকাশনা, হোমপেজ ফিচার এবং থাম্বনেইল নিয়ন্ত্রণ"}
           </p>
         </div>
@@ -245,7 +265,7 @@ export default function AdminVideosPage() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-[var(--color-text-muted)]">
-                    {isEn ? "Video URL (YouTube or Facebook) *" : "ভিডিও লিংক (ইউটিউব বা ফেসবুক) *"}
+                    {isEn ? "Video URL (YouTube, Facebook, or Embed Code) *" : "ভিডিও লিংক বা এম্বেড কোড (ইউটিউব বা ফেসবুক) *"}
                   </label>
                   {platform !== "unknown" && (
                     <span
@@ -260,17 +280,46 @@ export default function AdminVideosPage() {
                   )}
                 </div>
                 <input
-                  type="url"
+                  type="text"
                   required
                   value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
+                  onChange={(e) => handleUrlChange(e.target.value)}
                   placeholder={
                     isEn
-                      ? "Paste YouTube (https://youtube.com/...) or Facebook (https://facebook.com/... or https://fb.watch/...)"
-                      : "ইউটিউব (https://youtube.com/...) বা ফেসবুক (https://facebook.com/... বা https://fb.watch/...) ভিডিও লিংক"
+                      ? "Paste link (https://facebook.com/watch/?v=... or https://youtube.com/watch?v=...) or <iframe> code"
+                      : "ভিডিওর লিংক (https://facebook.com/... বা https://youtube.com/...) অথবা <iframe> এম্বেড কোড দিন"
                   }
                   className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)] rounded"
                 />
+
+                {/* Facebook Video Guidance Checklist */}
+                {platform === "facebook" && (
+                  <div className="mt-2 p-3 rounded-lg bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-900 dark:text-blue-200 space-y-1.5">
+                    <div className="font-bold flex items-center gap-1.5 text-blue-800 dark:text-blue-300">
+                      <Info size={14} />
+                      <span>{isEn ? "Important Facebook Video Guidelines:" : "ফেসবুক ভিডিওর জন্য জরুরি নিয়মাবলী:"}</span>
+                    </div>
+                    <ul className="list-disc list-inside space-y-1 text-[10px] text-blue-950 dark:text-blue-200/90 leading-relaxed">
+                      <li>
+                        <strong>{isEn ? "Privacy MUST be Public (🌐):" : "ভিডিওটি অবশ্যই 'Public' (🌐) হতে হবে:"}</strong>{" "}
+                        {isEn
+                          ? "Facebook prohibits embedding videos from private groups or personal accounts set to 'Friends only'."
+                          : "ফেসবুকের নিরাপত্তা নীতি অনুযায়ী কোনো প্রাইভেট গ্রুপ বা ফ্রেন্ডস-অনলি ভিডিও অন্য সাইটে এম্বেড করা যায় না।"}
+                      </li>
+                      <li>
+                        <strong>{isEn ? "Watch Permalinks:" : "সঠিক লিংক ফরম্যাট:"}</strong>{" "}
+                        {isEn
+                          ? "Best format: https://www.facebook.com/watch/?v=VIDEO_ID or use Facebook's full <iframe> embed code."
+                          : "সবচেয়ে নির্ভরযোগ্য ফরম্যাট: https://www.facebook.com/watch/?v=ভিডিও_আইডি অথবা ফেসবুকের সম্পূর্ণ <iframe> কোড।"}
+                      </li>
+                      <li>
+                        {isEn
+                          ? "If Facebook displays 'Video Unavailable', verify that the video has no age (18+) or country restrictions."
+                          : "যদি 'Video Unavailable' বার্তা আসে, তবে নিশ্চিত করুন ভিডিওতে বয়সসীমা (১৮+) বা লোকেশন রেস্ট্রিকশন নেই।"}
+                      </li>
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -379,9 +428,22 @@ export default function AdminVideosPage() {
             {/* Live Interactive Embed Preview */}
             <div className="lg:col-span-5 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-[var(--color-border)] lg:pl-6 pt-4 lg:pt-0">
               <div>
-                <span className="block text-xs font-bold text-[var(--color-text-muted)] mb-2">
-                  {isEn ? "Live Video Player Embed Preview" : "লাইভ প্রিভিউ (Player Embed)"}
-                </span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="block text-xs font-bold text-[var(--color-text-muted)]">
+                    {isEn ? "Live Video Player Embed Preview" : "লাইভ প্রিভিউ (Player Embed)"}
+                  </span>
+                  {isValidVideo && (
+                    <a
+                      href={videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-[var(--color-primary)] hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <span>{isEn ? "Test Link Directly" : "সরাসরি টেস্ট করুন"}</span>
+                      <ExternalLink size={10} />
+                    </a>
+                  )}
+                </div>
 
                 {isValidVideo ? (
                   <div className="space-y-2">
@@ -408,20 +470,33 @@ export default function AdminVideosPage() {
                       )}
                     </div>
                     <div
-                      className={`text-[11px] font-mono flex items-center gap-1 font-semibold ${
+                      className={`text-[11px] font-mono flex items-center justify-between gap-1 font-semibold ${
                         platform === "facebook"
                           ? "text-blue-600 dark:text-blue-400"
                           : "text-emerald-600 dark:text-emerald-400"
                       }`}
                     >
-                      <CheckCircle2 size={12} />
-                      {platform === "facebook"
-                        ? isEn
-                          ? "Facebook Video verified"
-                          : "ফেসবুক ভিডিও ভেরিফায়েড"
-                        : isEn
-                        ? `YouTube ID: ${ytId}`
-                        : `ইউটিউব আইডি: ${ytId}`}
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 size={12} />
+                        {platform === "facebook"
+                          ? isEn
+                            ? "Facebook Video verified"
+                            : "ফেসবুক ভিডিও ভেরিফায়েড"
+                          : isEn
+                          ? `YouTube ID: ${ytId}`
+                          : `ইউটিউব আইডি: ${ytId}`}
+                      </span>
+
+                      {platform === "facebook" && (
+                        <a
+                          href={videoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] underline font-sans text-blue-500"
+                        >
+                          {isEn ? "Open in Facebook app/web" : "ফেসবুক অ্যাপে খুলুন"}
+                        </a>
+                      )}
                     </div>
                   </div>
                 ) : (

@@ -9,6 +9,8 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import {
   detectVideoPlatform,
+  cleanFacebookUrl,
+  cleanYouTubeUrl,
   extractYouTubeId,
   extractFacebookVideoId,
   getVideoThumbnail,
@@ -60,7 +62,7 @@ export async function getVideoBySlug(slug: string): Promise<Video | null> {
 
 const VideoSchema = z.object({
   title: z.string().min(1, "শিরোনাম আবশ্যক").max(300),
-  youtubeUrl: z.string().url("সঠিক ভিডিও লিংক দিন"),
+  youtubeUrl: z.string().min(1, "ভিডিও লিংক আবশ্যক"),
   description: z.string().optional(),
   duration: z.string().default("৩:৪৫"),
   category: z.string().default("জাতীয়"),
@@ -86,17 +88,21 @@ export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ 
 
     const { title, youtubeUrl, description, duration, category, isFeatured, customThumbnailUrl } = parsed.data;
 
-    const platform = detectVideoPlatform(youtubeUrl);
+    const rawUrl = youtubeUrl.trim();
+    const platform = detectVideoPlatform(rawUrl);
     if (platform === "unknown") {
       return {
         success: false,
-        error: "অনুগ্রহ করে একটি বৈধ ইউটিউব (YouTube) বা ফেসবুক (Facebook) ভিডিওর লিংক দিন।",
+        error: "অনুগ্রহ করে একটি বৈধ ইউটিউব (YouTube) বা ফেসবুক (Facebook) ভিডিওর লিংক বা এম্বেড কোড দিন।",
       };
     }
 
+    let finalVideoUrl = rawUrl;
     let videoId: string | null = null;
+
     if (platform === "youtube") {
-      videoId = extractYouTubeId(youtubeUrl);
+      finalVideoUrl = cleanYouTubeUrl(rawUrl);
+      videoId = extractYouTubeId(finalVideoUrl);
       if (!videoId) {
         return {
           success: false,
@@ -104,14 +110,15 @@ export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ 
         };
       }
     } else if (platform === "facebook") {
-      videoId = extractFacebookVideoId(youtubeUrl);
+      finalVideoUrl = cleanFacebookUrl(rawUrl);
+      videoId = extractFacebookVideoId(finalVideoUrl);
       if (!videoId) {
         videoId = `fb-${Date.now().toString(36)}`;
       }
     }
 
     // Determine thumbnail
-    const thumbnailUrl = getVideoThumbnail(youtubeUrl, customThumbnailUrl);
+    const thumbnailUrl = getVideoThumbnail(finalVideoUrl, customThumbnailUrl);
 
     // Generate unique slug
     let generatedSlug = parsed.data.slug?.trim();
@@ -136,7 +143,7 @@ export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ 
         title,
         slug: generatedSlug,
         description: description || undefined,
-        youtubeUrl,
+        youtubeUrl: finalVideoUrl,
         youtubeVideoId: videoId || `video-${Date.now()}`,
         thumbnailUrl,
         duration: duration || "৩:৪৫",

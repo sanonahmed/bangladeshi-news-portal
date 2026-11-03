@@ -1,20 +1,120 @@
 /**
  * Video Utility for YouTube and Facebook Video Embeds
- * Supports extracting IDs, constructing responsive iframe embed URLs, and generating thumbnails.
+ * Supports extracting IDs, normalizing tracking parameters, constructing responsive iframe embed URLs, and generating thumbnails.
  */
 
 export type VideoPlatform = "youtube" | "facebook" | "unknown";
+
+/**
+ * Clean and canonicalize Facebook URLs
+ * Handles:
+ * - Pasted <iframe> embed codes from Facebook
+ * - Mobile tracking query parameters (mibextid, ref, rdid, _rdr, etc.)
+ * - Re-formatting page/reel/watch URLs into canonical watch format
+ */
+export function cleanFacebookUrl(rawUrl: string): string {
+  if (!rawUrl) return "";
+  let url = rawUrl.trim();
+
+  // 1. If user pasted an <iframe> embed code from Facebook's "Embed" dialog
+  if (url.includes("<iframe") || url.includes("&lt;iframe")) {
+    const srcMatch = url.match(/src=["']([^"']+)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      url = srcMatch[1].replace(/&amp;/g, "&");
+      try {
+        const parsed = new URL(url);
+        const innerHref = parsed.searchParams.get("href");
+        if (innerHref) {
+          url = decodeURIComponent(innerHref);
+        }
+      } catch (e) {}
+    }
+  }
+
+  // 2. If it's already a plugins/video.php URL, extract the inner href
+  if (url.includes("plugins/video.php")) {
+    try {
+      const parsed = new URL(url.replace(/&amp;/g, "&"));
+      const innerHref = parsed.searchParams.get("href");
+      if (innerHref) {
+        url = decodeURIComponent(innerHref);
+      }
+    } catch (e) {}
+  }
+
+  // 3. Extract purely numeric video ID if present (e.g. from /videos/123456/, ?v=123456, /reel/123456)
+  const numericIdMatch = url.match(/(?:videos\/|v=|reel\/|videos%2F|share\/v\/|share\/r\/)([0-9]{8,})/i);
+  if (numericIdMatch && numericIdMatch[1]) {
+    // Canonical format that Facebook plugins/video.php accepts most reliably without redirects
+    return `https://www.facebook.com/watch/?v=${numericIdMatch[1]}`;
+  }
+
+  // 4. Strip tracking parameters that cause Facebook embeds to fail
+  try {
+    const u = new URL(url);
+    const trackingParams = [
+      "mibextid",
+      "rdid",
+      "ref",
+      "_rdr",
+      "startTime",
+      "fs",
+      "s",
+      "extid",
+      "sfnsn",
+      "locale",
+    ];
+    trackingParams.forEach((p) => u.searchParams.delete(p));
+    // Normalize mobile or web subdomains to standard www.facebook.com
+    if (u.hostname === "m.facebook.com" || u.hostname === "web.facebook.com") {
+      u.hostname = "www.facebook.com";
+    }
+    return u.toString();
+  } catch (e) {
+    return url;
+  }
+}
+
+/**
+ * Clean YouTube URLs (strip playlist, index, and tracking params)
+ */
+export function cleanYouTubeUrl(rawUrl: string): string {
+  if (!rawUrl) return "";
+  let url = rawUrl.trim();
+
+  // If user pasted an <iframe> embed code from YouTube
+  if (url.includes("<iframe") || url.includes("&lt;iframe")) {
+    const srcMatch = url.match(/src=["']([^"']+)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      url = srcMatch[1];
+    }
+  }
+
+  const ytId = extractYouTubeId(url);
+  if (ytId) {
+    return `https://www.youtube.com/watch?v=${ytId}`;
+  }
+  return url;
+}
 
 /**
  * Detect whether a URL is from YouTube or Facebook
  */
 export function detectVideoPlatform(url: string): VideoPlatform {
   if (!url) return "unknown";
-  const trimmed = url.trim();
-  if (/^(https?:\/\/)?((www|m)\.)?(youtube\.com|youtu\.be)\/.+/i.test(trimmed)) {
+  const trimmed = url.trim().toLowerCase();
+  if (
+    trimmed.includes("youtube.com") ||
+    trimmed.includes("youtu.be") ||
+    trimmed.includes("youtube-nocookie.com")
+  ) {
     return "youtube";
   }
-  if (/^(https?:\/\/)?((www|web|m)\.)?(facebook\.com|fb\.watch)\/.+/i.test(trimmed)) {
+  if (
+    trimmed.includes("facebook.com") ||
+    trimmed.includes("fb.watch") ||
+    trimmed.includes("fb.com")
+  ) {
     return "facebook";
   }
   return "unknown";
@@ -37,37 +137,30 @@ export function extractYouTubeId(url: string): string | null {
  */
 export function extractFacebookVideoId(url: string): string | null {
   if (!url) return null;
-  const trimmed = url.trim();
+  const cleaned = cleanFacebookUrl(url);
 
-  // Pattern 1: /videos/123456789/
-  // Pattern 2: ?v=123456789
-  // Pattern 3: /reel/123456789
-  // Pattern 4: fb.watch/abcdef/
-  // Pattern 5: /posts/123456789
-  const match = trimmed.match(
-    /(?:videos\/|v=|reel\/|fb\.watch\/|posts\/)([0-9a-zA-Z_-]+)/i
-  );
+  // Pattern 1: /videos/123456789/ or ?v=123456789 or /reel/123456789
+  const match = cleaned.match(/(?:videos\/|v=|reel\/|fb\.watch\/|posts\/)([0-9a-zA-Z_-]+)/i);
   if (match && match[1]) {
     return match[1];
   }
 
-  // Fallback: use clean alphanumeric hash of the URL if no specific ID matched
   return `fb-${Math.abs(
-    trimmed.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
+    cleaned.split("").reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)
   ).toString(36)}`;
 }
 
 /**
- * Generate official Facebook Video plugin embed URL
+ * Generate official Facebook Video plugin embed URL with auto-cleaning
  */
 export function getFacebookEmbedUrl(videoUrl: string, autoplay = false): string {
-  const cleanUrl = videoUrl.trim();
-  const encoded = encodeURIComponent(cleanUrl);
+  const cleaned = cleanFacebookUrl(videoUrl);
+  const encoded = encodeURIComponent(cleaned);
   return `https://www.facebook.com/plugins/video.php?href=${encoded}&show_text=false&autoplay=${autoplay ? "true" : "false"}&width=1280`;
 }
 
 /**
- * Generate official YouTube embed URL
+ * Generate official YouTube embed URL with auto-cleaning
  */
 export function getYouTubeEmbedUrl(videoIdOrUrl: string, autoplay = false): string {
   const id = extractYouTubeId(videoIdOrUrl) || videoIdOrUrl;
@@ -85,7 +178,6 @@ export function getVideoEmbedUrl(urlOrId: string, autoplay = false): string {
   if (platform === "youtube") {
     return getYouTubeEmbedUrl(urlOrId, autoplay);
   }
-  // If it's already an 11-char YouTube ID
   if (urlOrId.length === 11 && !urlOrId.includes("/")) {
     return getYouTubeEmbedUrl(urlOrId, autoplay);
   }
