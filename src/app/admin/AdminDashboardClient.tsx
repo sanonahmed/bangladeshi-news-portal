@@ -15,8 +15,11 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+import { TrendingVelocityCard } from "@/components/admin/dashboard/TrendingVelocityCard";
+import type { TrendingVelocityData } from "@/actions/articles";
 
 interface AdminDashboardClientProps {
+  trendingData: TrendingVelocityData;
   stats: {
     published: number;
     drafts: number;
@@ -62,6 +65,7 @@ interface AdminDashboardClientProps {
 }
 
 export function AdminDashboardClient({
+  trendingData,
   stats,
   recentArticles,
   pendingReviews,
@@ -202,8 +206,11 @@ export function AdminDashboardClient({
 
       {/* Main Workspace (Editorial Layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Review Queue & Recent Stories (8 cols) */}
+        {/* Left Column: Trending Velocity, Review Queue & Recent Stories (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
+          {/* Trending Stories & Real-Time Traffic Velocity Card */}
+          <TrendingVelocityCard initialData={trendingData} />
+
           {/* Pending Reviews Queue */}
           <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
             <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
