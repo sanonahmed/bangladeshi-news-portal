@@ -748,6 +748,7 @@ export interface TrendingStoryItem {
   isBreaking: boolean;
   velocityPerHour: number;
   momentumPercent: number;
+  activeReaders?: number;
 }
 
 export interface TrendingVelocityData {
@@ -767,6 +768,51 @@ export async function getTrendingArticlesWithVelocity(): Promise<TrendingVelocit
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+    // 1. Fetch live concurrent active readers from active_visitors table (within last 2 minutes)
+    let activeReaders = 0;
+    const storyReadersMap: Record<string, number> = {};
+
+    try {
+      const activeResult = await db.execute(
+        sql`SELECT count(*)::int AS count FROM active_visitors WHERE last_seen_at >= NOW() - INTERVAL '2 minutes';`
+      );
+      activeReaders = Number(activeResult.rows[0]?.count || 0);
+
+      const perStoryResult = await db.execute(
+        sql`SELECT article_id, count(*)::int AS count FROM active_visitors WHERE last_seen_at >= NOW() - INTERVAL '2 minutes' AND article_id IS NOT NULL GROUP BY article_id;`
+      );
+      for (const r of perStoryResult.rows as Array<{ article_id: string | null; count: number }>) {
+        if (r.article_id) {
+          storyReadersMap[r.article_id] = Number(r.count || 0);
+        }
+      }
+    } catch (e) {
+      console.warn("Active visitors query fallback:", e);
+    }
+
+    // 2. Query today's published articles count
+    let todayPublishedCount = 0;
+    try {
+      const todayPubResult = await db.execute(
+        sql`SELECT count(*)::int AS count FROM articles WHERE status = 'published' AND published_at >= ${startOfToday.toISOString()};`
+      );
+      todayPublishedCount = Number(todayPubResult.rows[0]?.count || 0);
+    } catch (e) {
+      console.warn("Today published count query fallback:", e);
+    }
+
+    // 3. Query total views across published articles
+    let todayTotalViews = 0;
+    try {
+      const totalViewsResult = await db.execute(
+        sql`SELECT COALESCE(sum(view_count), 0)::int AS total FROM articles WHERE status = 'published';`
+      );
+      todayTotalViews = Number(totalViewsResult.rows[0]?.total || 0);
+    } catch (e) {
+      console.warn("Total views query fallback:", e);
+    }
+
+    // 4. Fetch recent published articles to compute velocity
     const rows = await db
       .select({
         id: articles.id,
@@ -787,26 +833,21 @@ export async function getTrendingArticlesWithVelocity(): Promise<TrendingVelocit
       .orderBy(desc(articles.publishedAt))
       .limit(30);
 
-    let todayPublishedCount = 0;
-    let todayTotalViews = 0;
-
     const scoredStories = rows.map((art) => {
       const pubDate = art.publishedAt ? new Date(art.publishedAt) : new Date(art.createdAt);
-      if (pubDate >= startOfToday) {
-        todayPublishedCount++;
-      }
-      todayTotalViews += (art.viewCount || 0);
+      const elapsedHours = Math.max(0.1, (now.getTime() - pubDate.getTime()) / (3600 * 1000));
+      const views = art.viewCount || 0;
+      const storyActive = storyReadersMap[art.id] || 0;
 
-      const elapsedHours = Math.max(0.5, (now.getTime() - pubDate.getTime()) / (3600 * 1000));
-      const rawVelocity = Math.round((art.viewCount || 0) / elapsedHours);
-      const recencyBoost = elapsedHours <= 6 ? 1.5 : elapsedHours <= 24 ? 1.2 : 1.0;
-      const velocityPerHour = Math.max(15, Math.round(rawVelocity * recencyBoost));
+      // Real velocity: views divided by elapsed hours, plus weighted current active readers
+      const rawVelocity = views > 0 ? Math.round(views / elapsedHours) : 0;
+      const velocityPerHour = rawVelocity + storyActive * 10;
 
       return {
         id: art.id,
         title: art.title,
         slug: art.slug,
-        viewCount: art.viewCount || 0,
+        viewCount: views,
         publishedAt: art.publishedAt,
         categoryName: art.categoryName || "জাতীয়",
         categorySlug: art.categorySlug || "national",
@@ -814,44 +855,55 @@ export async function getTrendingArticlesWithVelocity(): Promise<TrendingVelocit
         isBreaking: art.isBreaking || false,
         velocityPerHour,
         momentumPercent: 0,
+        activeReaders: storyActive,
       };
     });
 
-    // Sort by velocity per hour descending
-    scoredStories.sort((a, b) => b.velocityPerHour - a.velocityPerHour);
+    // Sort by velocity per hour descending, with view count as tiebreaker
+    scoredStories.sort((a, b) => {
+      if (b.velocityPerHour !== a.velocityPerHour) {
+        return b.velocityPerHour - a.velocityPerHour;
+      }
+      return b.viewCount - a.viewCount;
+    });
 
     const topStories = scoredStories.slice(0, 6);
-    const maxVelocity = Math.max(...topStories.map((s) => s.velocityPerHour), 50);
+    const maxVelocity = Math.max(...topStories.map((s) => s.velocityPerHour), 0);
 
     const trendingStories = topStories.map((story) => ({
       ...story,
-      momentumPercent: Math.min(100, Math.round((story.velocityPerHour / maxVelocity) * 100)),
+      momentumPercent:
+        maxVelocity > 0
+          ? Math.min(100, Math.round((story.velocityPerHour / maxVelocity) * 100))
+          : 0,
     }));
 
-    // Calculate active concurrent readers estimate
-    const totalTopVelocity = trendingStories.reduce((acc, s) => acc + s.velocityPerHour, 0);
-    const baseline = 950;
-    const activeReaders = Math.round(baseline + totalTopVelocity * 0.45);
-    const trafficMultiplier = Number((activeReaders / 800).toFixed(1));
+    // Realistic multiplier & velocity status
+    const trafficMultiplier =
+      activeReaders === 0 ? 1.0 : Number((1.0 + activeReaders * 0.25).toFixed(1));
     const trafficVelocityRating: "viral" | "surging" | "steady" =
-      trafficMultiplier >= 2.2 ? "viral" : trafficMultiplier >= 1.5 ? "surging" : "steady";
+      activeReaders >= 50 || trafficMultiplier >= 2.5
+        ? "viral"
+        : activeReaders >= 10 || trafficMultiplier >= 1.5
+        ? "surging"
+        : "steady";
 
     return {
       activeReaders,
       trafficVelocityRating,
       trafficMultiplier,
-      todayTotalViews: Math.max(todayTotalViews, 14200),
+      todayTotalViews,
       todayPublishedCount,
       trendingStories,
     };
   } catch (error) {
     console.error("getTrendingArticlesWithVelocity error:", error);
     return {
-      activeReaders: 1250,
-      trafficVelocityRating: "surging",
-      trafficMultiplier: 1.8,
-      todayTotalViews: 14500,
-      todayPublishedCount: 5,
+      activeReaders: 0,
+      trafficVelocityRating: "steady",
+      trafficMultiplier: 1.0,
+      todayTotalViews: 0,
+      todayPublishedCount: 0,
       trendingStories: [],
     };
   }

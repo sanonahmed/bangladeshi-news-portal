@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -17,6 +17,7 @@ import {
   ArrowUpRight,
   Edit3,
   Layers,
+  RefreshCw,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 import {
@@ -39,20 +40,30 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
   const [activeReaders, setActiveReaders] = useState(initialData.activeReaders);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [featuredId, setFeaturedId] = useState<string | null>(
     initialData.trendingStories.find((s) => s.isFeatured)?.id || null
   );
 
-  // Subtle real-time active readers fluctuation (gives Chartbeat live feel)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveReaders((prev) => {
-        const delta = Math.floor(Math.random() * 15) - 7;
-        return Math.max(800, prev + delta);
-      });
-    }, 4000);
-    return () => clearInterval(interval);
+  // Authentic live polling from database telemetry (every 15 seconds)
+  const fetchRealtimeData = useCallback(async () => {
+    try {
+      const res = await fetch("/api/analytics/realtime", { cache: "no-store" });
+      if (res.ok) {
+        const fresh = (await res.json()) as TrendingVelocityData;
+        setData(fresh);
+        setActiveReaders(fresh.activeReaders);
+      }
+    } catch (err) {
+      console.warn("Real-time telemetry poll failed:", err);
+    }
   }, []);
+
+  useEffect(() => {
+    // 15-second background synchronization with database
+    const interval = setInterval(fetchRealtimeData, 15000);
+    return () => clearInterval(interval);
+  }, [fetchRealtimeData]);
 
   // Filter or sort stories based on active tab
   const displayedStories = [...data.trendingStories].sort((a, b) => {
@@ -132,6 +143,19 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
                   <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                   LIVE RADAR
                 </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsRefreshing(true);
+                    await fetchRealtimeData();
+                    setTimeout(() => setIsRefreshing(false), 500);
+                  }}
+                  disabled={isRefreshing}
+                  className="p-1 rounded-md hover:bg-[var(--color-bg)] border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-600 transition-colors cursor-pointer"
+                  title={isEn ? "Refresh live telemetry" : "লাইভ ডাটা রিফ্রেশ করুন"}
+                >
+                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-rose-600" : ""} />
+                </button>
               </h2>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                 {isEn
@@ -312,6 +336,16 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
                           ? `+${story.velocityPerHour} views/hr`
                           : `+${formatNumber(story.velocityPerHour)} ভিউ/ঘণ্টা`}
                       </span>
+
+                      {/* Active Concurrent Readers on this specific Story */}
+                      {story.activeReaders && story.activeReaders > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 animate-pulse">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          {isEn
+                            ? `${story.activeReaders} reading now`
+                            : `${formatNumber(story.activeReaders)} জন লাইভ পড়ছেন`}
+                        </span>
+                      ) : null}
                     </div>
 
                     <Link

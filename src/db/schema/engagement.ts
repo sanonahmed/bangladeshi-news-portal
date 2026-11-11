@@ -79,6 +79,25 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
 });
 
 // ---------------------------------------------------------------------------
+// active_visitors (real-time presence tracking)
+// ---------------------------------------------------------------------------
+export const activeVisitors = pgTable("active_visitors", {
+  sessionId: text("session_id").primaryKey(),
+  articleId: text("article_id").references(() => articles.id, { onDelete: "cascade" }),
+  pathname: text("pathname"),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const activeVisitorsRelations = relations(activeVisitors, ({ one }) => ({
+  article: one(articles, {
+    fields: [activeVisitors.articleId],
+    references: [articles.id],
+  }),
+}));
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 export type ArticleViewAggregate = typeof articleViewAggregates.$inferSelect;
@@ -89,3 +108,5 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
 export type NewNewsletterSubscriber =
   typeof newsletterSubscribers.$inferInsert;
+export type ActiveVisitor = typeof activeVisitors.$inferSelect;
+export type NewActiveVisitor = typeof activeVisitors.$inferInsert;

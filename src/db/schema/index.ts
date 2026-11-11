@@ -138,8 +138,10 @@ export {
   articleViewAggregates,
   bookmarks,
   newsletterSubscribers,
+  activeVisitors,
   articleViewAggregatesRelations,
   bookmarksRelations,
+  activeVisitorsRelations,
 } from "./engagement";
 export type {
   ArticleViewAggregate,
@@ -148,6 +150,8 @@ export type {
   NewBookmark,
   NewsletterSubscriber,
   NewNewsletterSubscriber,
+  ActiveVisitor,
+  NewActiveVisitor,
 } from "./engagement";
 
 // Security

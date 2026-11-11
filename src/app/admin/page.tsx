@@ -61,11 +61,11 @@ export default async function AdminDashboardPage() {
   }> = [];
 
   let trendingData: TrendingVelocityData = {
-    activeReaders: 1250,
-    trafficVelocityRating: "surging",
-    trafficMultiplier: 1.8,
-    todayTotalViews: 14500,
-    todayPublishedCount: 5,
+    activeReaders: 0,
+    trafficVelocityRating: "steady",
+    trafficMultiplier: 1.0,
+    todayTotalViews: 0,
+    todayPublishedCount: 0,
     trendingStories: [],
   };
 

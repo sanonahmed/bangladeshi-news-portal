@@ -3,6 +3,7 @@ import { LiveMatchTickerBar } from "@/components/public/sports/LiveMatchTickerBa
 import { BreakingNewsTicker } from "@/components/public/breaking-news/BreakingNewsTicker";
 import { FloatingBreakingAlert } from "@/components/public/notifications/FloatingBreakingAlert";
 import { SiteFooter } from "@/components/public/footer/SiteFooter";
+import { SitePresenceTracker } from "@/components/public/SitePresenceTracker";
 import { getBreakingNews } from "@/actions/breaking-news";
 import { getNavigation } from "@/actions/navigation";
 import { getSiteSettings } from "@/actions/settings";
@@ -21,6 +22,7 @@ export default async function PublicLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SitePresenceTracker />
       <SiteHeader navigation={navigation} settings={settings} />
       <LiveMatchTickerBar />
       {breakingNews.length > 0 && (
