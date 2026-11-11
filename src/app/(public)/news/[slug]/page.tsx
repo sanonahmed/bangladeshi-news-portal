@@ -15,6 +15,7 @@ import { ArticleCommentsSection } from "@/components/public/article/ArticleComme
 import { AuthorBioCard } from "@/components/public/author/AuthorBioCard";
 import { ArticleAudioPlayer } from "@/components/public/article/ArticleAudioPlayer";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
+import { AbHeadlineDisplay } from "@/components/public/article/AbHeadlineDisplay";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -157,9 +158,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             )}
 
             {/* Headline */}
-            <h1 className="bengali-serif-headline text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--color-text)] leading-tight mb-4">
-              {article.title}
-            </h1>
+            <AbHeadlineDisplay
+              articleId={article.id}
+              titleA={article.title}
+              headlineB={article.headlineB}
+              abTestStatus={article.abTestStatus}
+              as="h1"
+              className="bengali-serif-headline text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--color-text)] leading-tight mb-4 block"
+            />
 
             {/* Meta Row: Author, Date, Updated, Location, Social & Font Controls */}
             <div className="border-y border-[var(--color-border)] py-3 my-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-text-muted)]">

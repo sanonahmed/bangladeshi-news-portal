@@ -54,6 +54,10 @@ const ArticleCreateSchema = z.object({
   divisionId: z.string().optional(),
   districtId: z.string().optional(),
   language: z.enum(["bn", "en"]).default("bn"),
+  focusKeyword: z.string().max(100).optional(),
+  headlineB: z.string().max(500).optional(),
+  abTestStatus: z.enum(["none", "active", "completed_a", "completed_b"]).default("none"),
+  abTestDurationMinutes: z.coerce.number().default(30),
 });
 
 export async function createArticle(formData: z.infer<typeof ArticleCreateSchema>): Promise<{ success: boolean; error?: string; slug?: string; isScheduled?: boolean; status?: string }> {
@@ -136,6 +140,9 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
       finalPublishedAt = now;
     }
 
+    const hasAbVariant = !!data.headlineB?.trim();
+    const isAbActive = hasAbVariant && data.abTestStatus === "active";
+
     await db.insert(articles).values({
       id: articleId,
       title: data.title,
@@ -155,6 +162,11 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
       isFeatured: data.isFeatured,
       newsLocation: data.newsLocation,
       language: data.language,
+      focusKeyword: data.focusKeyword?.trim() || null,
+      headlineB: data.headlineB?.trim() || null,
+      abTestStatus: isAbActive ? "active" : "none",
+      abTestStartedAt: isAbActive ? now : null,
+      abTestDurationMinutes: data.abTestDurationMinutes || 30,
     });
 
     await db.insert(articleAuthors).values({
@@ -201,6 +213,14 @@ export async function updateArticle(data: {
   excerpt?: string;
   content?: string;
   correctionNote?: string;
+  focusKeyword?: string;
+  headlineB?: string;
+  abTestStatus?: "none" | "active" | "completed_a" | "completed_b";
+  abTestDurationMinutes?: number;
+  seoTitle?: string;
+  seoDescription?: string;
+  featuredImageUrl?: string;
+  featuredImageAlt?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const [existing] = await db.select().from(articles).where(eq(articles.id, data.id)).limit(1);
@@ -208,17 +228,44 @@ export async function updateArticle(data: {
       return { success: false, error: "সংবাদটি খুঁজে পাওয়া যায়নি" };
     }
 
+    const updates: Record<string, any> = {
+      title: data.title.trim(),
+      titleEn: data.titleEn?.trim() || existing.titleEn,
+      excerpt: data.excerpt !== undefined ? data.excerpt.trim() : existing.excerpt,
+      content: data.content ? sanitizeContent(data.content) : existing.content,
+      correctionNote: data.correctionNote !== undefined ? data.correctionNote.trim() : existing.correctionNote,
+      correctionAt: data.correctionNote ? new Date() : existing.correctionAt,
+      updatedAt: new Date(),
+    };
+
+    if (data.focusKeyword !== undefined) {
+      updates.focusKeyword = data.focusKeyword.trim() || null;
+    }
+    if (data.headlineB !== undefined) {
+      updates.headlineB = data.headlineB.trim() || null;
+    }
+    if (data.abTestStatus !== undefined) {
+      updates.abTestStatus = data.abTestStatus;
+      if (data.abTestStatus === "active" && !existing.abTestStartedAt) {
+        updates.abTestStartedAt = new Date();
+      }
+    }
+    if (data.abTestDurationMinutes !== undefined) {
+      updates.abTestDurationMinutes = data.abTestDurationMinutes;
+    }
+    if (data.seoTitle !== undefined) {
+      updates.seoTitle = data.seoTitle.trim() || null;
+    }
+    if (data.seoDescription !== undefined) {
+      updates.seoDescription = data.seoDescription.trim() || null;
+    }
+    if (data.featuredImageAlt !== undefined) {
+      updates.featuredImageAlt = data.featuredImageAlt.trim() || null;
+    }
+
     await db
       .update(articles)
-      .set({
-        title: data.title.trim(),
-        titleEn: data.titleEn?.trim() || existing.titleEn,
-        excerpt: data.excerpt !== undefined ? data.excerpt.trim() : existing.excerpt,
-        content: data.content ? sanitizeContent(data.content) : existing.content,
-        correctionNote: data.correctionNote !== undefined ? data.correctionNote.trim() : existing.correctionNote,
-        correctionAt: data.correctionNote ? new Date() : existing.correctionAt,
-        updatedAt: new Date(),
-      })
+      .set(updates)
       .where(eq(articles.id, data.id));
 
     revalidateArticle(existing.slug);
@@ -226,6 +273,133 @@ export async function updateArticle(data: {
   } catch (err: any) {
     console.error("updateArticle error:", err);
     return { success: false, error: err?.message || "সার্ভার এরর" };
+  }
+}
+
+/**
+ * Start or activate an A/B test for an existing article
+ */
+export async function startAbTest(articleId: string, headlineB: string, durationMinutes = 30): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [existing] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
+    if (!existing) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
+
+    await db
+      .update(articles)
+      .set({
+        headlineB: headlineB.trim(),
+        abTestStatus: "active",
+        abTestStartedAt: new Date(),
+        abTestDurationMinutes: durationMinutes,
+        abTestImpressionsA: 0,
+        abTestImpressionsB: 0,
+        abTestClicksA: 0,
+        abTestClicksB: 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, articleId));
+
+    revalidateArticle(existing.slug);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "এ/বি টেস্ট চালু করা যায়নি" };
+  }
+}
+
+/**
+ * Conclude an A/B test and declare a winner
+ */
+export async function finalizeAbTest(articleId: string, winner: "a" | "b"): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [existing] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
+    if (!existing) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
+
+    const newTitle = winner === "b" && existing.headlineB ? existing.headlineB : existing.title;
+    const newStatus = winner === "b" ? "completed_b" : "completed_a";
+
+    await db
+      .update(articles)
+      .set({
+        title: newTitle,
+        abTestStatus: newStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, articleId));
+
+    revalidateArticle(existing.slug);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "টেস্ট সমাপ্ত করতে ব্যর্থ" };
+  }
+}
+
+/**
+ * Reset an A/B test back to none
+ */
+export async function resetAbTest(articleId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const [existing] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
+    if (!existing) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
+
+    await db
+      .update(articles)
+      .set({
+        abTestStatus: "none",
+        abTestStartedAt: null,
+        abTestImpressionsA: 0,
+        abTestImpressionsB: 0,
+        abTestClicksA: 0,
+        abTestClicksB: 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, articleId));
+
+    revalidateArticle(existing.slug);
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "টেস্ট রিসেট করতে ব্যর্থ" };
+  }
+}
+
+/**
+ * Record an impression for variant A or B
+ */
+export async function recordAbTestImpression(articleId: string, variant: "a" | "b"): Promise<void> {
+  try {
+    if (variant === "a") {
+      await db
+        .update(articles)
+        .set({ abTestImpressionsA: sql`${articles.abTestImpressionsA} + 1` })
+        .where(eq(articles.id, articleId));
+    } else {
+      await db
+        .update(articles)
+        .set({ abTestImpressionsB: sql`${articles.abTestImpressionsB} + 1` })
+        .where(eq(articles.id, articleId));
+    }
+  } catch (e) {
+    console.warn("recordAbTestImpression failed:", e);
+  }
+}
+
+/**
+ * Record a click for variant A or B
+ */
+export async function recordAbTestClick(articleId: string, variant: "a" | "b"): Promise<void> {
+  try {
+    if (variant === "a") {
+      await db
+        .update(articles)
+        .set({ abTestClicksA: sql`${articles.abTestClicksA} + 1` })
+        .where(eq(articles.id, articleId));
+    } else {
+      await db
+        .update(articles)
+        .set({ abTestClicksB: sql`${articles.abTestClicksB} + 1` })
+        .where(eq(articles.id, articleId));
+    }
+  } catch (e) {
+    console.warn("recordAbTestClick failed:", e);
   }
 }
 
@@ -410,6 +584,15 @@ export async function getArticleBySlug(slug: string) {
         authorFacebook: authorProfiles.facebookUrl,
         categoryName: categories.name,
         categorySlug: categories.slug,
+        focusKeyword: articles.focusKeyword,
+        headlineB: articles.headlineB,
+        abTestStatus: articles.abTestStatus,
+        abTestStartedAt: articles.abTestStartedAt,
+        abTestDurationMinutes: articles.abTestDurationMinutes,
+        abTestImpressionsA: articles.abTestImpressionsA,
+        abTestImpressionsB: articles.abTestImpressionsB,
+        abTestClicksA: articles.abTestClicksA,
+        abTestClicksB: articles.abTestClicksB,
       })
       .from(articles)
       .leftJoin(mediaAssets, eq(articles.featuredImageId, mediaAssets.id))
@@ -420,7 +603,38 @@ export async function getArticleBySlug(slug: string) {
       .where(and(eq(articles.slug, slug), eq(articles.status, "published")))
       .limit(1);
 
-    if (article) return article;
+    if (article) {
+      if (article.abTestStatus === "active" && article.abTestStartedAt) {
+        const elapsedMs = Date.now() - new Date(article.abTestStartedAt).getTime();
+        const maxMs = (article.abTestDurationMinutes || 30) * 60 * 1000;
+        if (elapsedMs >= maxMs) {
+          const safeImpA = Math.max(article.abTestImpressionsA, article.abTestClicksA, 1);
+          const safeImpB = Math.max(article.abTestImpressionsB, article.abTestClicksB, 1);
+          const ctrA = article.abTestClicksA / safeImpA;
+          const ctrB = article.abTestClicksB / safeImpB;
+          const bWon = ctrB > ctrA && !!article.headlineB;
+          const newStatus = bWon ? "completed_b" : "completed_a";
+          const newTitle = bWon && article.headlineB ? article.headlineB : article.title;
+
+          try {
+            await db
+              .update(articles)
+              .set({
+                title: newTitle,
+                abTestStatus: newStatus,
+                updatedAt: new Date(),
+              })
+              .where(eq(articles.id, article.id));
+
+            article.abTestStatus = newStatus;
+            article.title = newTitle;
+          } catch (err) {
+            console.warn("Auto-finalize A/B test error:", err);
+          }
+        }
+      }
+      return article;
+    }
     return null;
   } catch (error) {
     console.error("Could not query article by slug from DB:", error);
@@ -441,6 +655,10 @@ export async function getLatestArticles(limit = 10): Promise<ArticleCard[]> {
         featuredImageAlt: articles.featuredImageAlt,
         categoryName: categories.name,
         categorySlug: categories.slug,
+        headlineB: articles.headlineB,
+        abTestStatus: articles.abTestStatus,
+        abTestStartedAt: articles.abTestStartedAt,
+        abTestDurationMinutes: articles.abTestDurationMinutes,
       })
       .from(articles)
       .leftJoin(mediaAssets, eq(articles.featuredImageId, mediaAssets.id))
@@ -463,6 +681,10 @@ export async function getLatestArticles(limit = 10): Promise<ArticleCard[]> {
       featuredImageUrl: r.featuredImageUrl,
       featuredImageAlt: r.featuredImageAlt,
       category: r.categoryName ? { name: r.categoryName, slug: r.categorySlug! } : null,
+      headlineB: r.headlineB,
+      abTestStatus: r.abTestStatus,
+      abTestStartedAt: r.abTestStartedAt,
+      abTestDurationMinutes: r.abTestDurationMinutes,
     }));
   } catch (error) {
     console.error("Could not query latest articles from DB:", error);

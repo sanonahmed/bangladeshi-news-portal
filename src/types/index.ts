@@ -46,6 +46,10 @@ export interface ArticleCard {
   publishedAt?: Date | null;
   category?: { name: string; slug: string } | null;
   author?: { name: string; slug: string } | null;
+  headlineB?: string | null;
+  abTestStatus?: string | null;
+  abTestStartedAt?: Date | null;
+  abTestDurationMinutes?: number | null;
 }
 
 export interface PaginatedResult<T> {

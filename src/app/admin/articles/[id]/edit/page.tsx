@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { articles } from "@/db/schema/articles";
+import { mediaAssets } from "@/db/schema/media";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -16,7 +17,36 @@ export default async function AdminEditArticlePage({ params }: EditArticlePagePr
 
   let article = null;
   try {
-    const [row] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
+    const [row] = await db
+      .select({
+        id: articles.id,
+        title: articles.title,
+        titleEn: articles.titleEn,
+        slug: articles.slug,
+        excerpt: articles.excerpt,
+        content: articles.content,
+        correctionNote: articles.correctionNote,
+        status: articles.status,
+        publishedAt: articles.publishedAt,
+        focusKeyword: articles.focusKeyword,
+        headlineB: articles.headlineB,
+        abTestStatus: articles.abTestStatus,
+        abTestStartedAt: articles.abTestStartedAt,
+        abTestDurationMinutes: articles.abTestDurationMinutes,
+        abTestImpressionsA: articles.abTestImpressionsA,
+        abTestImpressionsB: articles.abTestImpressionsB,
+        abTestClicksA: articles.abTestClicksA,
+        abTestClicksB: articles.abTestClicksB,
+        seoTitle: articles.seoTitle,
+        seoDescription: articles.seoDescription,
+        featuredImageAlt: articles.featuredImageAlt,
+        featuredImageUrl: mediaAssets.publicUrl,
+      })
+      .from(articles)
+      .leftJoin(mediaAssets, eq(articles.featuredImageId, mediaAssets.id))
+      .where(eq(articles.id, id))
+      .limit(1);
+
     article = row;
   } catch (error) {
     console.warn("Could not query article for edit:", error);

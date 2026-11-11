@@ -22,6 +22,8 @@ import {
   Wand2,
 } from "lucide-react";
 import { AiEditorAssistantModal } from "@/components/admin/editor/AiEditorAssistantModal";
+import { SeoQualityScorecard } from "@/components/admin/editor/SeoQualityScorecard";
+import { HeadlineAbTestingPanel } from "@/components/admin/editor/HeadlineAbTestingPanel";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 const AUTOSAVE_STORAGE_KEY = "barta_draft_article_new";
@@ -50,6 +52,12 @@ export default function NewArticlePage() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
+  const [focusKeyword, setFocusKeyword] = useState("");
+  const [headlineB, setHeadlineB] = useState("");
+  const [isAbTestingEnabled, setIsAbTestingEnabled] = useState(false);
+  const [abTestDurationMinutes, setAbTestDurationMinutes] = useState(30);
+
+  const imageAltInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -162,6 +170,10 @@ export default function NewArticlePage() {
         isFeatured,
         seoTitle,
         seoDescription,
+        focusKeyword,
+        headlineB,
+        isAbTestingEnabled,
+        abTestDurationMinutes,
         scheduledAt,
         status,
         savedAt: Date.now(),
@@ -195,6 +207,10 @@ export default function NewArticlePage() {
     if (d.isFeatured !== undefined) setIsFeatured(d.isFeatured);
     if (d.seoTitle) setSeoTitle(d.seoTitle);
     if (d.seoDescription) setSeoDescription(d.seoDescription);
+    if (d.focusKeyword) setFocusKeyword(d.focusKeyword);
+    if (d.headlineB) setHeadlineB(d.headlineB);
+    if (d.isAbTestingEnabled !== undefined) setIsAbTestingEnabled(d.isAbTestingEnabled);
+    if (d.abTestDurationMinutes) setAbTestDurationMinutes(d.abTestDurationMinutes);
     if (d.scheduledAt) setScheduledAt(d.scheduledAt);
     if (d.status) setStatus(d.status);
 
@@ -293,6 +309,10 @@ export default function NewArticlePage() {
         seoTitle: seoTitle.trim() || title.trim(),
         seoDescription: seoDescription.trim() || excerpt.trim(),
         language: "bn",
+        focusKeyword: focusKeyword.trim() || undefined,
+        headlineB: isAbTestingEnabled && headlineB.trim() ? headlineB.trim() : undefined,
+        abTestStatus: isAbTestingEnabled && headlineB.trim() ? "active" : "none",
+        abTestDurationMinutes,
       });
 
       if (!res.success) {
@@ -478,6 +498,27 @@ export default function NewArticlePage() {
             />
           </div>
 
+          {/* Headline A/B Testing Engine */}
+          <HeadlineAbTestingPanel
+            headlineA={title}
+            headlineB={headlineB}
+            onHeadlineBChange={(val) => {
+              setHeadlineB(val);
+              setHasUnsavedChanges(true);
+            }}
+            isEnabled={isAbTestingEnabled}
+            onToggleEnabled={(enabled) => {
+              setIsAbTestingEnabled(enabled);
+              setHasUnsavedChanges(true);
+            }}
+            durationMinutes={abTestDurationMinutes}
+            onDurationChange={(mins) => {
+              setAbTestDurationMinutes(mins);
+              setHasUnsavedChanges(true);
+            }}
+            status="none"
+          />
+
           <div>
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
               {isEn ? "English Title (for URL Slug)" : "ইংরেজি শিরোনাম (English Title / Slug Generator)"}
@@ -530,6 +571,28 @@ export default function NewArticlePage() {
               placeholder={isEn ? "Write your full news story here..." : "এখানে বিস্তারিত সংবাদ লিখুন..."}
             />
           </div>
+
+          {/* Real-Time SEO & Headline SERP Preview Scorecard */}
+          <SeoQualityScorecard
+            title={title}
+            seoTitle={seoTitle}
+            slug={slug}
+            excerpt={excerpt}
+            seoDescription={seoDescription}
+            content={content}
+            featuredImageUrl={featuredImageUrl}
+            featuredImageAlt={featuredImageAlt}
+            categoryName={categoriesList.find((c) => c.id === categoryId)?.name || "জাতীয়"}
+            focusKeyword={focusKeyword}
+            onFocusKeywordChange={(val) => {
+              setFocusKeyword(val);
+              setHasUnsavedChanges(true);
+            }}
+            onJumpToImageAlt={() => {
+              imageAltInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              imageAltInputRef.current?.focus();
+            }}
+          />
         </div>
 
         {/* Sidebar Settings: 4 Columns */}
@@ -722,6 +785,7 @@ export default function NewArticlePage() {
                 {isEn ? "Caption & Image Credit" : "ছবির ক্যাপশন ও ক্রেডিট"}
               </label>
               <input
+                ref={imageAltInputRef}
                 type="text"
                 value={featuredImageAlt}
                 onChange={(e) => setFeaturedImageAlt(e.target.value)}

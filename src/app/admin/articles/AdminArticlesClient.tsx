@@ -117,8 +117,30 @@ export function AdminArticlesClient({
               <tbody className="divide-y divide-[var(--color-border)]">
                 {articleList.map((art) => (
                   <tr key={art.id} className="hover:bg-[var(--color-bg-secondary)] transition-colors">
-                    <td className="p-3 font-semibold text-[var(--color-text)] max-w-xs truncate">
-                      {art.title}
+                    <td className="p-3 font-semibold text-[var(--color-text)] max-w-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate">{art.title}</span>
+                        {art.abTestStatus === "active" && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500 text-white shrink-0 animate-pulse" title="Headline A/B test active">
+                            ⚡ A/B
+                          </span>
+                        )}
+                        {art.abTestStatus === "completed_b" && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-600 text-white shrink-0" title="Variant B won test">
+                            🏆 B Won
+                          </span>
+                        )}
+                        {art.abTestStatus === "completed_a" && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-blue-600 text-white shrink-0" title="Variant A won test">
+                            🏆 A Won
+                          </span>
+                        )}
+                      </div>
+                      {art.focusKeyword && (
+                        <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                          KW: {art.focusKeyword}
+                        </div>
+                      )}
                     </td>
                     <td className="p-3 text-[var(--color-text-muted)]">
                       {art.categoryName ?? "—"}

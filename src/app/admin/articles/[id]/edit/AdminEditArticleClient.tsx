@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { TiptapEditor } from "@/components/admin/editor/TiptapEditor";
 import { AiEditorAssistantModal } from "@/components/admin/editor/AiEditorAssistantModal";
-import { updateArticle } from "@/actions/articles";
+import { SeoQualityScorecard } from "@/components/admin/editor/SeoQualityScorecard";
+import { HeadlineAbTestingPanel } from "@/components/admin/editor/HeadlineAbTestingPanel";
+import { updateArticle, finalizeAbTest, resetAbTest } from "@/actions/articles";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
 interface AdminEditArticleClientProps {
@@ -28,6 +30,20 @@ interface AdminEditArticleClientProps {
     correctionNote?: string | null;
     status: string;
     publishedAt?: Date | null;
+    focusKeyword?: string | null;
+    headlineB?: string | null;
+    abTestStatus?: string | null;
+    abTestStartedAt?: Date | string | null;
+    abTestDurationMinutes?: number | null;
+    abTestImpressionsA?: number;
+    abTestImpressionsB?: number;
+    abTestClicksA?: number;
+    abTestClicksB?: number;
+    seoTitle?: string | null;
+    seoDescription?: string | null;
+    featuredImageUrl?: string | null;
+    featuredImageAlt?: string | null;
+    categoryName?: string | null;
   };
 }
 
@@ -40,10 +56,60 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
   const [excerpt, setExcerpt] = useState(article.excerpt || "");
   const [content, setContent] = useState(article.content || "");
   const [correctionNote, setCorrectionNote] = useState(article.correctionNote || "");
+  const [focusKeyword, setFocusKeyword] = useState(article.focusKeyword || "");
+  const [headlineB, setHeadlineB] = useState(article.headlineB || "");
+  const [abTestStatus, setAbTestStatus] = useState<any>(article.abTestStatus || "none");
+  const [abTestDurationMinutes, setAbTestDurationMinutes] = useState(article.abTestDurationMinutes || 30);
+  const [seoTitle, setSeoTitle] = useState(article.seoTitle || "");
+  const [seoDescription, setSeoDescription] = useState(article.seoDescription || "");
+  const [featuredImageAlt, setFeaturedImageAlt] = useState(article.featuredImageAlt || "");
+  const [isAbTestingEnabled, setIsAbTestingEnabled] = useState(
+    !!article.headlineB || article.abTestStatus === "active"
+  );
+
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleDeclareWinner(winner: "a" | "b") {
+    try {
+      const res = await finalizeAbTest(article.id, winner);
+      if (res.success) {
+        if (winner === "b" && headlineB) {
+          setTitle(headlineB);
+        }
+        setAbTestStatus(winner === "b" ? "completed_b" : "completed_a");
+        setSuccess(
+          isEn
+            ? `Variant ${winner.toUpperCase()} declared as the permanent winner!`
+            : `ভ্যারিয়েন্ট ${winner.toUpperCase()} সফলভাবে বিজয়ী ঘোষিত হয়েছে!`
+        );
+        router.refresh();
+      } else {
+        setError(res.error || "Failed to declare winner");
+      }
+    } catch (e: any) {
+      setError(e?.message);
+    }
+  }
+
+  async function handleResetTest() {
+    try {
+      const res = await resetAbTest(article.id);
+      if (res.success) {
+        setAbTestStatus("none");
+        setIsAbTestingEnabled(false);
+        setHeadlineB("");
+        setSuccess(isEn ? "A/B test has been reset." : "এ/বি টেস্ট রিসেট করা হয়েছে।");
+        router.refresh();
+      } else {
+        setError(res.error || "Failed to reset test");
+      }
+    } catch (e: any) {
+      setError(e?.message);
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -52,12 +118,22 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
     setSuccess(null);
 
     try {
+      const isNowActive = isAbTestingEnabled && !!headlineB.trim();
+      const statusToSave = isNowActive && abTestStatus === "none" ? "active" : abTestStatus;
+
       const res = await updateArticle({
         id: article.id,
         title,
         excerpt,
         content,
         correctionNote: correctionNote || undefined,
+        focusKeyword: focusKeyword.trim() || undefined,
+        headlineB: headlineB.trim() || undefined,
+        abTestStatus: statusToSave,
+        abTestDurationMinutes,
+        seoTitle: seoTitle.trim() || undefined,
+        seoDescription: seoDescription.trim() || undefined,
+        featuredImageAlt: featuredImageAlt.trim() || undefined,
       });
 
       if (!res.success) {
@@ -162,6 +238,25 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
           />
         </div>
 
+        {/* Headline A/B Testing Engine */}
+        <HeadlineAbTestingPanel
+          headlineA={title}
+          headlineB={headlineB}
+          onHeadlineBChange={(val) => setHeadlineB(val)}
+          isEnabled={isAbTestingEnabled}
+          onToggleEnabled={(enabled) => setIsAbTestingEnabled(enabled)}
+          durationMinutes={abTestDurationMinutes}
+          onDurationChange={(mins) => setAbTestDurationMinutes(mins)}
+          status={abTestStatus}
+          startedAt={article.abTestStartedAt}
+          impressionsA={article.abTestImpressionsA || 0}
+          impressionsB={article.abTestImpressionsB || 0}
+          clicksA={article.abTestClicksA || 0}
+          clicksB={article.abTestClicksB || 0}
+          onDeclareWinner={handleDeclareWinner}
+          onResetTest={handleResetTest}
+        />
+
         {/* Excerpt */}
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -196,6 +291,49 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             onChange={(html) => setContent(html)}
             placeholder={isEn ? "Write your full news story here..." : "এখানে বিস্তারিত সংবাদ লিখুন..."}
           />
+        </div>
+
+        {/* Real-Time SEO & Headline SERP Preview Scorecard */}
+        <SeoQualityScorecard
+          title={title}
+          seoTitle={seoTitle}
+          slug={article.slug}
+          excerpt={excerpt}
+          seoDescription={seoDescription}
+          content={content}
+          featuredImageUrl={article.featuredImageUrl || undefined}
+          featuredImageAlt={featuredImageAlt}
+          categoryName={article.categoryName || "জাতীয়"}
+          focusKeyword={focusKeyword}
+          onFocusKeywordChange={(val) => setFocusKeyword(val)}
+        />
+
+        {/* SEO Meta Title & Description Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-[var(--color-border)] pt-4">
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
+              {isEn ? "SEO Meta Title (Google Search)" : "এসইও মেটা শিরোনাম (গুগল সার্চ)"}
+            </label>
+            <input
+              type="text"
+              value={seoTitle}
+              onChange={(e) => setSeoTitle(e.target.value)}
+              placeholder={title}
+              className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
+              {isEn ? "Featured Image Alt Text / Caption" : "ছবির ক্যাপশন ও ক্রেডিট (Alt Text)"}
+            </label>
+            <input
+              type="text"
+              value={featuredImageAlt}
+              onChange={(e) => setFeaturedImageAlt(e.target.value)}
+              placeholder={isEn ? "Photo credit & description" : "ছবির ক্রেডিট ও অল্টার টেক্সট"}
+              className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs rounded"
+            />
+          </div>
         </div>
 
         {/* Correction Note */}

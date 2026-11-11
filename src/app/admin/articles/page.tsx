@@ -51,6 +51,13 @@ export default async function AdminArticlesPage({ searchParams }: ArticlesPagePr
           createdAt: articles.createdAt,
           authorName: user.name,
           categoryName: categories.name,
+          headlineB: articles.headlineB,
+          abTestStatus: articles.abTestStatus,
+          abTestImpressionsA: articles.abTestImpressionsA,
+          abTestImpressionsB: articles.abTestImpressionsB,
+          abTestClicksA: articles.abTestClicksA,
+          abTestClicksB: articles.abTestClicksB,
+          focusKeyword: articles.focusKeyword,
         })
         .from(articles)
         .leftJoin(user, eq(articles.authorId, user.id))

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatRelativeBengali } from "@/lib/bengali-date";
 import type { ArticleCard } from "@/types";
+import { AbHeadlineDisplay } from "@/components/public/article/AbHeadlineDisplay";
 
 interface LeadStoryGridProps {
   lead?: ArticleCard;
@@ -44,9 +45,14 @@ export function LeadStoryGrid({ lead, supporting }: LeadStoryGridProps) {
                 {lead.category.name}
               </span>
             )}
-            <h1 className="bengali-serif-headline text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors leading-tight">
-              {lead.title}
-            </h1>
+            <AbHeadlineDisplay
+              articleId={lead.id}
+              titleA={lead.title}
+              headlineB={lead.headlineB}
+              abTestStatus={lead.abTestStatus}
+              as="h1"
+              className="bengali-serif-headline text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors leading-tight block"
+            />
             {lead.excerpt && (
               <p className="text-[var(--color-text-muted)] text-base sm:text-lg leading-relaxed line-clamp-3">
                 {lead.excerpt}
@@ -92,9 +98,14 @@ export function LeadStoryGrid({ lead, supporting }: LeadStoryGridProps) {
                     {article.category.name}
                   </span>
                 )}
-                <h3 className="bengali-headline text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-3 leading-snug">
-                  {article.title}
-                </h3>
+                <AbHeadlineDisplay
+                  articleId={article.id}
+                  titleA={article.title}
+                  headlineB={article.headlineB}
+                  abTestStatus={article.abTestStatus}
+                  as="h3"
+                  className="bengali-headline text-base font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors line-clamp-3 leading-snug block"
+                />
                 {article.publishedAt && (
                   <span className="text-[11px] text-[var(--color-text-faint)] mt-1 block">
                     {formatRelativeBengali(article.publishedAt)}
