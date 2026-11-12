@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { Camera } from "lucide-react";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const metadata: Metadata = {
   title: "ছবিঘর | বাংলা নিউজ",
@@ -53,7 +55,18 @@ const PHOTOS = [
   },
 ];
 
-export default function PhotosPage() {
+export default async function PhotosPage() {
+  const features = await getFeatureFlags();
+  if (features.photo_gallery === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="ফটো গ্যালারি ও চিত্রশালা"
+        featureNameEn="Photo Gallery"
+        categoryName="আলোকচিত্র"
+      />
+    );
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 py-6">
       <div className="border-b-2 border-[var(--color-primary)] pb-3 mb-6 flex items-center justify-between">

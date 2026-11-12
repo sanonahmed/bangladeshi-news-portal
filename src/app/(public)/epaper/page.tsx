@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getEpaperEdition } from "@/lib/epaper-data";
 import { EpaperReaderClient } from "./EpaperReaderClient";
 import { formatBengaliDate, getDhakaDate } from "@/lib/bengali-date";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 interface EpaperPageProps {
   searchParams: Promise<{
@@ -35,6 +37,17 @@ export async function generateMetadata({ searchParams }: EpaperPageProps): Promi
 export const dynamic = "force-dynamic";
 
 export default async function EpaperPage({ searchParams }: EpaperPageProps) {
+  const features = await getFeatureFlags();
+  if (features.epaper === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="ডিজিটাল ই-পেপার সংস্করণ"
+        featureNameEn="Digital E-Paper Archive"
+        categoryName="মুদ্রিত সংস্করণ"
+      />
+    );
+  }
+
   const { date, page, edition = "dhaka" } = await searchParams;
   const editionData = getEpaperEdition(date, edition);
   const pageNumber = Number(page) || 1;

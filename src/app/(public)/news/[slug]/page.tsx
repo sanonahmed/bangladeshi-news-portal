@@ -16,6 +16,7 @@ import { AuthorBioCard } from "@/components/public/author/AuthorBioCard";
 import { ArticleAudioPlayer } from "@/components/public/article/ArticleAudioPlayer";
 import { AdSlot } from "@/components/public/homepage/AdSlot";
 import { AbHeadlineDisplay } from "@/components/public/article/AbHeadlineDisplay";
+import { getFeatureFlags } from "@/actions/features";
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -75,9 +76,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   if (!article) notFound();
 
-  const [latestNews, initialComments] = await Promise.all([
+  const [latestNews, initialComments, features] = await Promise.all([
     getLatestArticles(6),
     getArticleComments(article.id),
+    getFeatureFlags(),
   ]);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -202,25 +204,29 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-3">
-                <BookmarkButton
-                  articleId={article.id}
-                  slug={article.slug}
-                  title={article.title}
-                  categoryName={article.categoryName || undefined}
-                  featuredImageUrl={article.featuredImageUrl || undefined}
-                />
+                {features.reader_bookmarks !== false && (
+                  <BookmarkButton
+                    articleId={article.id}
+                    slug={article.slug}
+                    title={article.title}
+                    categoryName={article.categoryName || undefined}
+                    featuredImageUrl={article.featuredImageUrl || undefined}
+                  />
+                )}
                 <FontSizeControl />
                 <SocialShare url={articleUrl} title={article.title} />
               </div>
             </div>
 
             {/* Audio News & TTS Voice Player */}
-            <ArticleAudioPlayer
-              title={article.title}
-              content={article.content ?? ""}
-              authorName={article.authorName}
-              newsLocation={article.newsLocation}
-            />
+            {features.audio_news !== false && (
+              <ArticleAudioPlayer
+                title={article.title}
+                content={article.content ?? ""}
+                authorName={article.authorName}
+                newsLocation={article.newsLocation}
+              />
+            )}
 
             {/* Featured Image */}
             {article.featuredImageUrl && (
@@ -262,13 +268,15 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             <div className="border-t-2 border-[var(--color-border)] pt-4 mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <SocialShare url={articleUrl} title={article.title} showLabel />
-                <BookmarkButton
-                  articleId={article.id}
-                  slug={article.slug}
-                  title={article.title}
-                  categoryName={article.categoryName || undefined}
-                  featuredImageUrl={article.featuredImageUrl || undefined}
-                />
+                {features.reader_bookmarks !== false && (
+                  <BookmarkButton
+                    articleId={article.id}
+                    slug={article.slug}
+                    title={article.title}
+                    categoryName={article.categoryName || undefined}
+                    featuredImageUrl={article.featuredImageUrl || undefined}
+                  />
+                )}
               </div>
               <Link
                 href="/latest"
@@ -293,31 +301,39 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             )}
 
             {/* Reader Comments & Reaction Section */}
-            <ArticleCommentsSection
-              articleId={article.id}
-              articleTitle={article.title}
-              initialComments={initialComments}
-            />
+            {features.article_comments !== false ? (
+              <ArticleCommentsSection
+                articleId={article.id}
+                articleTitle={article.title}
+                initialComments={initialComments}
+              />
+            ) : (
+              <div className="my-8 p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg text-center text-xs text-[var(--color-text-muted)] font-medium">
+                এই সংবাদের জন্য পাঠক মন্তব্য সুবিধা বর্তমানে বন্ধ রাখা হয়েছে।
+              </div>
+            )}
           </article>
 
           {/* Sidebar: 4 Columns */}
           <aside className="lg:col-span-4 space-y-6">
             <AdSlot placement="sidebar" />
             <RelatedArticles articles={relatedArticles} />
-            <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)]">
-              <h4 className="bengali-headline font-bold text-base border-b border-[var(--color-border)] pb-2 mb-3">
-                ই-পেপার ও ডিজিটাল সংস্করণ
-              </h4>
-              <p className="text-xs text-[var(--color-text-muted)] mb-3">
-                আজকের মুদ্রিত পত্রিকার প্রতিচ্ছবি অনলাইনে পড়তে আমাদের ডিজিটাল ই-পেপার সংস্করণে প্রবেশ করুন।
-              </p>
-              <Link
-                href="/epaper"
-                className="block text-center bg-[var(--color-primary)] text-white text-xs font-bold py-2 hover:bg-[var(--color-primary-hover)] transition-colors"
-              >
-                ই-পেপার পড়ুন &rarr;
-              </Link>
-            </div>
+            {features.epaper !== false && (
+              <div className="border border-[var(--color-border)] p-4 bg-[var(--color-bg)]">
+                <h4 className="bengali-headline font-bold text-base border-b border-[var(--color-border)] pb-2 mb-3">
+                  ই-পেপার ও ডিজিটাল সংস্করণ
+                </h4>
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">
+                  আজকের মুদ্রিত পত্রিকার প্রতিচ্ছবি অনলাইনে পড়তে আমাদের ডিজিটাল ই-পেপার সংস্করণে প্রবেশ করুন।
+                </p>
+                <Link
+                  href="/epaper"
+                  className="block text-center bg-[var(--color-primary)] text-white text-xs font-bold py-2 hover:bg-[var(--color-primary-hover)] transition-colors"
+                >
+                  ই-পেপার পড়ুন &rarr;
+                </Link>
+              </div>
+            )}
           </aside>
         </div>
       </div>

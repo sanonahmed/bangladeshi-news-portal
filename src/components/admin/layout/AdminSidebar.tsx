@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -30,6 +30,7 @@ import {
   Search,
   ExternalLink,
   Newspaper,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 
@@ -96,6 +97,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: "menu.users", href: "/admin/users", icon: Users },
       { key: "menu.roles", href: "/admin/roles", icon: Shield },
       { key: "menu.ads", href: "/admin/advertisements", icon: DollarSign },
+      { key: "menu.features", href: "/admin/features", icon: SlidersHorizontal },
       { key: "menu.settings", href: "/admin/settings", icon: Settings },
       { key: "menu.auditLogs", href: "/admin/audit-logs", icon: ScrollText },
     ],
@@ -111,15 +113,42 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { t, language } = useAdminLanguage();
   const [searchQuery, setSearchQuery] = useState("");
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
 
-  // Filter navigation items by search query
+  useEffect(() => {
+    fetch("/api/features")
+      .then((res) => res.json())
+      .then((data) => setFeatureFlags(data))
+      .catch(() => {});
+  }, [pathname]);
+
+  const ROUTE_FEATURE_MAP: Record<string, string> = useMemo(
+    () => ({
+      "/admin/ai-assistant": "admin_ai_assistant",
+      "/admin/advertisements": "admin_ads_manager",
+      "/admin/audit-logs": "admin_audit_logs",
+      "/admin/polls": "admin_polls_manager",
+      "/admin/fact-checks": "admin_fact_check_manager",
+      "/admin/comments": "admin_comments_moderation",
+    }),
+    []
+  );
+
+  // Filter navigation items by search query and active feature flags
   const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return NAV_GROUPS;
     const q = searchQuery.toLowerCase().trim();
 
     return NAV_GROUPS.map((group) => {
       const groupLabel = t(group.groupKey).toLowerCase();
       const matchedItems = group.items.filter((item) => {
+        // Feature flag filter: hide if feature flag is explicitly turned off
+        const requiredFlag = ROUTE_FEATURE_MAP[item.href];
+        if (requiredFlag && featureFlags[requiredFlag] === false) {
+          return false;
+        }
+
+        if (!q) return true;
+
         const itemLabel = t(item.key).toLowerCase();
         return (
           itemLabel.includes(q) ||
@@ -132,7 +161,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         items: matchedItems,
       };
     }).filter((group) => group.items.length > 0);
-  }, [searchQuery, t]);
+  }, [searchQuery, t, featureFlags, ROUTE_FEATURE_MAP]);
 
   return (
     <aside

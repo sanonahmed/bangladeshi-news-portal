@@ -5,6 +5,8 @@ import { eq, desc } from "drizzle-orm";
 import { ScrollText, ShieldCheck, Clock, User, Globe } from "lucide-react";
 import { formatBengaliDateTime, toBengaliDigits } from "@/lib/bengali-date";
 import { cookies } from "next/headers";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,16 @@ export const metadata = {
 };
 
 export default async function AdminAuditLogsPage() {
+  const features = await getFeatureFlags();
+  if (features.admin_audit_logs === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="সিকিউরিটি ও সিস্টেম অডিট লগ"
+        featureNameEn="Security & Audit Logs"
+        categoryName="এডমিন টুলস"
+      />
+    );
+  }
   const cookieStore = await cookies();
   const isEn = cookieStore.get("admin_lang")?.value !== "bn";
   const formatNum = (n: number | string) => (isEn ? String(n) : toBengaliDigits(n));

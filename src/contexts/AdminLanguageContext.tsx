@@ -67,6 +67,7 @@ const DICTIONARY: Record<string, { bn: string; en: string }> = {
   "menu.users": { bn: "ব্যবহারকারী ও সাংবাদিক", en: "Staff & Journalists" },
   "menu.roles": { bn: "রোল ও পারমিশন", en: "Roles & Permissions" },
   "menu.ads": { bn: "বিজ্ঞাপন ব্যবস্থাপনা", en: "Ad Management" },
+  "menu.features": { bn: "ফিচার সেটিংস ও কন্ট্রোল", en: "Feature Settings" },
   "menu.settings": { bn: "ওয়েবসাইট সেটিংস", en: "Site Settings" },
   "menu.auditLogs": { bn: "অডিট লগ", en: "Audit Logs" },
 

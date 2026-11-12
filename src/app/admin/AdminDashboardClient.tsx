@@ -20,6 +20,7 @@ import type { TrendingVelocityData } from "@/actions/articles";
 
 interface AdminDashboardClientProps {
   trendingData: TrendingVelocityData;
+  features?: Record<string, boolean>;
   stats: {
     published: number;
     drafts: number;
@@ -66,6 +67,7 @@ interface AdminDashboardClientProps {
 
 export function AdminDashboardClient({
   trendingData,
+  features,
   stats,
   recentArticles,
   pendingReviews,
@@ -209,7 +211,9 @@ export function AdminDashboardClient({
         {/* Left Column: Trending Velocity, Review Queue & Recent Stories (8 cols) */}
         <div className="lg:col-span-8 space-y-6">
           {/* Trending Stories & Real-Time Traffic Velocity Card */}
-          <TrendingVelocityCard initialData={trendingData} />
+          {features?.admin_velocity_radar !== false && (
+            <TrendingVelocityCard initialData={trendingData} />
+          )}
 
           {/* Pending Reviews Queue */}
           <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
@@ -385,71 +389,73 @@ export function AdminDashboardClient({
           </div>
 
           {/* Active Poll Overview */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Vote size={14} className="text-[var(--color-text-muted)]" />
-                <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
-                  {t("widget.activePoll")}
-                </h3>
+          {features?.admin_polls_manager !== false && (
+            <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Vote size={14} className="text-[var(--color-text-muted)]" />
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
+                    {t("widget.activePoll")}
+                  </h3>
+                </div>
+                <Link
+                  href="/admin/polls"
+                  className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
+                >
+                  {t("widget.allPolls")}
+                </Link>
               </div>
-              <Link
-                href="/admin/polls"
-                className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
-              >
-                {t("widget.allPolls")}
-              </Link>
+
+              {featuredPoll ? (
+                <div className="p-4 space-y-3">
+                  <p className="text-xs font-bold text-[var(--color-text)] leading-relaxed">
+                    {featuredPoll.question}
+                  </p>
+
+                  <div className="space-y-2 pt-1">
+                    {Array.isArray(featuredPoll.options) &&
+                      featuredPoll.options.map((opt: string, idx: number) => {
+                        const count = Array.isArray(featuredPoll?.votes)
+                          ? (featuredPoll?.votes[idx] as number) || 0
+                          : 0;
+                        const total = featuredPoll?.totalVotes || 0;
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
+                        return (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-[var(--color-text-muted)] truncate max-w-[160px]">
+                                {opt}
+                              </span>
+                              <span className="font-semibold text-[var(--color-text)]">
+                                {formatNumber(pct)}% ({formatNumber(count)})
+                              </span>
+                            </div>
+                            <div className="w-full h-1 bg-[var(--color-border)] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[var(--color-primary)]"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  <div className="pt-2 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] flex justify-between">
+                    <span>{t("widget.totalVotes")}:</span>
+                    <span className="font-semibold text-[var(--color-text)]">
+                      {formatNumber(featuredPoll.totalVotes)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-[var(--color-text-muted)]">
+                  {t("widget.noPolls")}
+                </div>
+              )}
             </div>
-
-            {featuredPoll ? (
-              <div className="p-4 space-y-3">
-                <p className="text-xs font-bold text-[var(--color-text)] leading-relaxed">
-                  {featuredPoll.question}
-                </p>
-
-                <div className="space-y-2 pt-1">
-                  {Array.isArray(featuredPoll.options) &&
-                    featuredPoll.options.map((opt: string, idx: number) => {
-                      const count = Array.isArray(featuredPoll?.votes)
-                        ? (featuredPoll?.votes[idx] as number) || 0
-                        : 0;
-                      const total = featuredPoll?.totalVotes || 0;
-                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-
-                      return (
-                        <div key={idx} className="space-y-1">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[var(--color-text-muted)] truncate max-w-[160px]">
-                              {opt}
-                            </span>
-                            <span className="font-semibold text-[var(--color-text)]">
-                              {formatNumber(pct)}% ({formatNumber(count)})
-                            </span>
-                          </div>
-                          <div className="w-full h-1 bg-[var(--color-border)] rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-[var(--color-primary)]"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-
-                <div className="pt-2 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] flex justify-between">
-                  <span>{t("widget.totalVotes")}:</span>
-                  <span className="font-semibold text-[var(--color-text)]">
-                    {formatNumber(featuredPoll.totalVotes)}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 text-center text-xs text-[var(--color-text-muted)]">
-                {t("widget.noPolls")}
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Section Distribution */}
           <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">

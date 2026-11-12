@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -71,6 +71,14 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    fetch("/api/features")
+      .then((res) => res.json())
+      .then((data) => setFeatures(data))
+      .catch(() => {});
+  }, []);
 
   async function handleDeclareWinner(winner: "a" | "b") {
     try {
@@ -220,14 +228,16 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
               {isEn ? "Story Headline *" : "শিরোনাম (বাংলা) *"}
             </label>
-            <button
-              type="button"
-              onClick={() => setAiModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-[11px] font-bold border border-purple-200 dark:border-purple-800 transition-all cursor-pointer"
-            >
-              <Sparkles size={12} className="text-purple-600 dark:text-purple-400" />
-              <span>{isEn ? "Refine with AI" : "এআই দিয়ে শিরোনাম পরিবর্তন"}</span>
-            </button>
+            {features.admin_ai_assistant !== false && (
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 text-[11px] font-bold border border-purple-200 dark:border-purple-800 transition-all cursor-pointer"
+              >
+                <Sparkles size={12} className="text-purple-600 dark:text-purple-400" />
+                <span>{isEn ? "Refine with AI" : "এআই দিয়ে শিরোনাম পরিবর্তন"}</span>
+              </button>
+            )}
           </div>
           <input
             type="text"
@@ -239,23 +249,25 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
         </div>
 
         {/* Headline A/B Testing Engine */}
-        <HeadlineAbTestingPanel
-          headlineA={title}
-          headlineB={headlineB}
-          onHeadlineBChange={(val) => setHeadlineB(val)}
-          isEnabled={isAbTestingEnabled}
-          onToggleEnabled={(enabled) => setIsAbTestingEnabled(enabled)}
-          durationMinutes={abTestDurationMinutes}
-          onDurationChange={(mins) => setAbTestDurationMinutes(mins)}
-          status={abTestStatus}
-          startedAt={article.abTestStartedAt}
-          impressionsA={article.abTestImpressionsA || 0}
-          impressionsB={article.abTestImpressionsB || 0}
-          clicksA={article.abTestClicksA || 0}
-          clicksB={article.abTestClicksB || 0}
-          onDeclareWinner={handleDeclareWinner}
-          onResetTest={handleResetTest}
-        />
+        {features.admin_ab_testing_panel !== false && (
+          <HeadlineAbTestingPanel
+            headlineA={title}
+            headlineB={headlineB}
+            onHeadlineBChange={(val) => setHeadlineB(val)}
+            isEnabled={isAbTestingEnabled}
+            onToggleEnabled={(enabled) => setIsAbTestingEnabled(enabled)}
+            durationMinutes={abTestDurationMinutes}
+            onDurationChange={(mins) => setAbTestDurationMinutes(mins)}
+            status={abTestStatus}
+            startedAt={article.abTestStartedAt}
+            impressionsA={article.abTestImpressionsA || 0}
+            impressionsB={article.abTestImpressionsB || 0}
+            clicksA={article.abTestClicksA || 0}
+            clicksB={article.abTestClicksB || 0}
+            onDeclareWinner={handleDeclareWinner}
+            onResetTest={handleResetTest}
+          />
+        )}
 
         {/* Excerpt */}
         <div>
@@ -263,14 +275,16 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
               {isEn ? "Summary (Excerpt)" : "সারসংক্ষেপ (Excerpt)"}
             </label>
-            <button
-              type="button"
-              onClick={() => setAiModalOpen(true)}
-              className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-            >
-              <Sparkles size={11} />
-              <span>{isEn ? "Generate with AI" : "এআই সারসংক্ষেপ তৈরি"}</span>
-            </button>
+            {features.admin_ai_assistant !== false && (
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(true)}
+                className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Sparkles size={11} />
+                <span>{isEn ? "Generate with AI" : "এআই সারসংক্ষেপ তৈরি"}</span>
+              </button>
+            )}
           </div>
           <textarea
             value={excerpt}
@@ -294,19 +308,21 @@ export function AdminEditArticleClient({ article }: AdminEditArticleClientProps)
         </div>
 
         {/* Real-Time SEO & Headline SERP Preview Scorecard */}
-        <SeoQualityScorecard
-          title={title}
-          seoTitle={seoTitle}
-          slug={article.slug}
-          excerpt={excerpt}
-          seoDescription={seoDescription}
-          content={content}
-          featuredImageUrl={article.featuredImageUrl || undefined}
-          featuredImageAlt={featuredImageAlt}
-          categoryName={article.categoryName || "জাতীয়"}
-          focusKeyword={focusKeyword}
-          onFocusKeywordChange={(val) => setFocusKeyword(val)}
-        />
+        {features.admin_seo_scorecard !== false && (
+          <SeoQualityScorecard
+            title={title}
+            seoTitle={seoTitle}
+            slug={article.slug}
+            excerpt={excerpt}
+            seoDescription={seoDescription}
+            content={content}
+            featuredImageUrl={article.featuredImageUrl || undefined}
+            featuredImageAlt={featuredImageAlt}
+            categoryName={article.categoryName || "জাতীয়"}
+            focusKeyword={focusKeyword}
+            onFocusKeywordChange={(val) => setFocusKeyword(val)}
+          />
+        )}
 
         {/* SEO Meta Title & Description Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-[var(--color-border)] pt-4">

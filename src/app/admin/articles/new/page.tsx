@@ -63,6 +63,14 @@ export default function NewArticlePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    fetch("/api/features")
+      .then((res) => res.json())
+      .then((data) => setFeatures(data))
+      .catch(() => {});
+  }, []);
 
   // Autosave states
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
@@ -499,25 +507,27 @@ export default function NewArticlePage() {
           </div>
 
           {/* Headline A/B Testing Engine */}
-          <HeadlineAbTestingPanel
-            headlineA={title}
-            headlineB={headlineB}
-            onHeadlineBChange={(val) => {
-              setHeadlineB(val);
-              setHasUnsavedChanges(true);
-            }}
-            isEnabled={isAbTestingEnabled}
-            onToggleEnabled={(enabled) => {
-              setIsAbTestingEnabled(enabled);
-              setHasUnsavedChanges(true);
-            }}
-            durationMinutes={abTestDurationMinutes}
-            onDurationChange={(mins) => {
-              setAbTestDurationMinutes(mins);
-              setHasUnsavedChanges(true);
-            }}
-            status="none"
-          />
+          {features.admin_ab_testing_panel !== false && (
+            <HeadlineAbTestingPanel
+              headlineA={title}
+              headlineB={headlineB}
+              onHeadlineBChange={(val) => {
+                setHeadlineB(val);
+                setHasUnsavedChanges(true);
+              }}
+              isEnabled={isAbTestingEnabled}
+              onToggleEnabled={(enabled) => {
+                setIsAbTestingEnabled(enabled);
+                setHasUnsavedChanges(true);
+              }}
+              durationMinutes={abTestDurationMinutes}
+              onDurationChange={(mins) => {
+                setAbTestDurationMinutes(mins);
+                setHasUnsavedChanges(true);
+              }}
+              status="none"
+            />
+          )}
 
           <div>
             <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
@@ -573,26 +583,28 @@ export default function NewArticlePage() {
           </div>
 
           {/* Real-Time SEO & Headline SERP Preview Scorecard */}
-          <SeoQualityScorecard
-            title={title}
-            seoTitle={seoTitle}
-            slug={slug}
-            excerpt={excerpt}
-            seoDescription={seoDescription}
-            content={content}
-            featuredImageUrl={featuredImageUrl}
-            featuredImageAlt={featuredImageAlt}
-            categoryName={categoriesList.find((c) => c.id === categoryId)?.name || "জাতীয়"}
-            focusKeyword={focusKeyword}
-            onFocusKeywordChange={(val) => {
-              setFocusKeyword(val);
-              setHasUnsavedChanges(true);
-            }}
-            onJumpToImageAlt={() => {
-              imageAltInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-              imageAltInputRef.current?.focus();
-            }}
-          />
+          {features.admin_seo_scorecard !== false && (
+            <SeoQualityScorecard
+              title={title}
+              seoTitle={seoTitle}
+              slug={slug}
+              excerpt={excerpt}
+              seoDescription={seoDescription}
+              content={content}
+              featuredImageUrl={featuredImageUrl}
+              featuredImageAlt={featuredImageAlt}
+              categoryName={categoriesList.find((c) => c.id === categoryId)?.name || "জাতীয়"}
+              focusKeyword={focusKeyword}
+              onFocusKeywordChange={(val) => {
+                setFocusKeyword(val);
+                setHasUnsavedChanges(true);
+              }}
+              onJumpToImageAlt={() => {
+                imageAltInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                imageAltInputRef.current?.focus();
+              }}
+            />
+          )}
         </div>
 
         {/* Sidebar Settings: 4 Columns */}

@@ -1,7 +1,8 @@
 import { getSiteSettings, updateSiteSettings } from "@/actions/settings";
-import { Settings, Save, CheckCircle2 } from "lucide-react";
+import { Settings, Save, CheckCircle2, SlidersHorizontal } from "lucide-react";
 import { safeRevalidateTag } from "@/lib/cache";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,21 @@ export default async function AdminSettingsPage() {
             ? "Configure publication name, logo, editorial slogan, contact details and analytics credentials"
             : "সংবাদপত্রের নাম, লোগো, স্লোগান ও যোগাযোগের সার্বিক সেটিংস"}
         </p>
+
+        {/* Setting Navigation Tabs */}
+        <div className="flex items-center gap-2 pt-3 border-t border-[var(--color-border)] mt-4">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-[var(--color-primary)] text-white shadow-xs">
+            <Settings size={14} />
+            <span>{isEn ? "General Identity Settings" : "সাধারণ সেটিংস ও পরিচয়"}</span>
+          </div>
+          <Link
+            href="/admin/features"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-secondary)] transition-colors border border-transparent hover:border-[var(--color-border)]"
+          >
+            <SlidersHorizontal size={14} />
+            <span>{isEn ? "Feature Toggles & Controls" : "ফিচার কন্ট্রোল ও সুইচ"}</span>
+          </Link>
+        </div>
       </div>
 
       <form action={handleSaveSettings} className="space-y-6">

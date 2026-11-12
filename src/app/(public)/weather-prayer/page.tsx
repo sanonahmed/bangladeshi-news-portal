@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getDivisionWeatherPrayer, getAllDivisionsWeatherSummary } from "@/actions/weather-prayer";
 import { WeatherPrayerPageClient } from "./WeatherPrayerPageClient";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const revalidate = 60; // ISR 60 seconds
 
@@ -11,6 +13,17 @@ export const metadata: Metadata = {
 };
 
 export default async function WeatherPrayerPage() {
+  const features = await getFeatureFlags();
+  if (features.weather_prayer === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="আবহাওয়া ও নামাজের সময়সূচি"
+        featureNameEn="Weather & Prayer Times Widget"
+        categoryName="দৈনন্দিন সেবা"
+      />
+    );
+  }
+
   const [initialData, allSummary] = await Promise.all([
     getDivisionWeatherPrayer("dhaka"),
     getAllDivisionsWeatherSummary(),

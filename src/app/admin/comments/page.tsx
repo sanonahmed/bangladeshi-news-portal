@@ -1,5 +1,7 @@
 import { getAllAdminComments } from "@/actions/comments";
 import { AdminCommentsClient } from "./AdminCommentsClient";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCommentsPage() {
+  const features = await getFeatureFlags();
+  if (features.admin_comments_moderation === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="পাঠক মন্তব্য ফিল্টার ও মডারেশন"
+        featureNameEn="Comments Moderation Panel"
+        categoryName="এডমিন টুলস"
+      />
+    );
+  }
+
   const initialComments = await getAllAdminComments();
 
   return <AdminCommentsClient initialComments={initialComments} />;

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getAdForPlacement } from "@/actions/advertisements";
+import { getFeatureFlags } from "@/actions/features";
 import { AdImpressionTracker } from "./AdImpressionTracker";
 
 interface AdSlotProps {
@@ -16,6 +17,11 @@ interface AdSlotProps {
 }
 
 export async function AdSlot({ placement, className = "" }: AdSlotProps) {
+  const features = await getFeatureFlags();
+  if (features.admin_ads_manager === false) {
+    return null;
+  }
+
   const ad = await getAdForPlacement(placement);
 
   // Reserved fixed dimensions preventing Cumulative Layout Shift (CLS)

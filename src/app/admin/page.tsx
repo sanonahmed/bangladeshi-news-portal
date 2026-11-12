@@ -7,6 +7,8 @@ import { comments } from "@/db/schema/comments";
 import { categories } from "@/db/schema/categories";
 import { eq, desc, count } from "drizzle-orm";
 import { getTrendingArticlesWithVelocity, type TrendingVelocityData } from "@/actions/articles";
+import { getFeatureFlags } from "@/actions/features";
+import { type FeatureFlags, getDefaultFeatureFlags } from "@/lib/features";
 import { AdminDashboardClient } from "./AdminDashboardClient";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +71,8 @@ export default async function AdminDashboardPage() {
     trendingStories: [],
   };
 
+  let features: FeatureFlags = getDefaultFeatureFlags();
+
   try {
     const [
       publishedCount,
@@ -84,6 +88,7 @@ export default async function AdminDashboardPage() {
       topPoll,
       categoriesData,
       trendingRes,
+      featuresResult,
     ] = await Promise.all([
       db.select({ count: count() }).from(articles).where(eq(articles.status, "published")),
       db.select({ count: count() }).from(articles).where(eq(articles.status, "draft")),
@@ -151,6 +156,7 @@ export default async function AdminDashboardPage() {
         .orderBy(desc(count(articleCategories.articleId)))
         .limit(6),
       getTrendingArticlesWithVelocity(),
+      getFeatureFlags(),
     ]);
 
     stats = {
@@ -174,6 +180,20 @@ export default async function AdminDashboardPage() {
       count: Number(c.count),
     }));
     trendingData = trendingRes;
+    features = featuresResult;
+
+    return (
+      <AdminDashboardClient
+        stats={stats}
+        recentArticles={recentArticles}
+        pendingReviews={pendingReviews}
+        activeBreakingList={activeBreakingList}
+        featuredPoll={featuredPoll}
+        categoryBreakdown={categoryBreakdown}
+        trendingData={trendingData}
+        features={features}
+      />
+    );
   } catch (error) {
     console.error("Could not query admin dashboard stats from DB:", error);
   }
@@ -187,6 +207,7 @@ export default async function AdminDashboardPage() {
       featuredPoll={featuredPoll}
       categoryBreakdown={categoryBreakdown}
       trendingData={trendingData}
+      features={features}
     />
   );
 }

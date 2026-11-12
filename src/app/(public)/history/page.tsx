@@ -7,6 +7,8 @@ import {
 } from "@/actions/history";
 import { HistoryHubClient } from "@/components/public/history/HistoryHubClient";
 import { getDhakaDate } from "@/lib/bengali-date";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const metadata: Metadata = {
   title: "ঐতিহাসিক এই দিনে ও স্বাধীনতা আর্কাইভ | দৈনিক বাংলাদেশ বার্তা",
@@ -17,6 +19,17 @@ export const metadata: Metadata = {
 export const revalidate = 60; // 1 min ISR
 
 export default async function HistoryPage() {
+  const features = await getFeatureFlags();
+  if (features.history_archive === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="মুক্তিযুদ্ধ ও ইতিহাস আর্কাইভ"
+        featureNameEn="1971 Liberation War & History"
+        categoryName="ইতিহাস ও ঐতিহ্য"
+      />
+    );
+  }
+
   const now = getDhakaDate();
   const currentDay = now.getDate();
   const currentMonth = now.getMonth() + 1; // 1-12

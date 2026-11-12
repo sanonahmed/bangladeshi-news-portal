@@ -12,9 +12,10 @@ import type { SiteSettings } from "@/types";
 
 interface TopBarProps {
   settings: SiteSettings;
+  features?: Record<string, boolean>;
 }
 
-export function TopBar({ settings }: TopBarProps) {
+export function TopBar({ settings, features }: TopBarProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState<Date>(getDhakaDate());
@@ -39,75 +40,111 @@ export function TopBar({ settings }: TopBarProps) {
           </span>
           <span className="text-[var(--color-border-strong)] hidden md:inline">|</span>
           <span className="hidden md:inline">বাংলাদেশ সময় {formatBengaliTime(now)}</span>
-          <WeatherPrayerTickerPill />
+          {features?.weather_prayer !== false && <WeatherPrayerTickerPill />}
         </div>
 
         {/* Right: Links + Social + Dark Mode */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Desktop Service Links (hidden on mobile and tablet) */}
           <div className="hidden lg:flex items-center gap-2 text-[11px]">
-            <Link
-              href="/fact-check"
-              className="hover:text-[var(--color-primary)] font-bold transition-colors text-emerald-700 dark:text-emerald-400 flex items-center gap-1"
-              title="ভুয়া খবর প্রতিরোধ ও সত্যসন্ধান কর্নার"
-            >
-              <span>ফ্যাক্ট-চেক</span>
-            </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
-            <Link
-              href="/live-score"
-              className="hover:text-[var(--color-primary)] font-bold transition-colors text-red-600 dark:text-red-400 flex items-center gap-1"
-              title="লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span>লাইভ স্কোর</span>
-            </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
-            <Link
-              href="/epaper"
-              className="hover:text-[var(--color-primary)] font-semibold transition-colors text-[var(--color-primary)] flex items-center gap-1"
-              title="দৈনিক বাংলাদেশ বার্তা মুদ্রিত ডিজিটাল ই-পেপার"
-            >
-              <span>ই-পেপার</span>
-            </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
-            <Link
-              href="/audio-news"
-              className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
-              title="দৈনিক অডিও নিউজ ও ধারাবাহিক প্লেলিস্ট"
-            >
-              অডিও
-            </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
-            <Link
-              href="/debates"
-              className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
-              title="সাপ্তাহিক জনমত জরিপ ও পাঠক বিতর্ক"
-            >
-              বিতর্ক
-            </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
-            <Link
-              href="/history"
-              className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
-              title="ঐতিহাসিক এই দিনে ও স্বাধীনতা আর্কাইভ"
-            >
-              ইতিহাস
-            </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
+            {features?.fact_checking !== false && (
+              <>
+                <Link
+                  href="/fact-check"
+                  className="hover:text-[var(--color-primary)] font-bold transition-colors text-emerald-700 dark:text-emerald-400 flex items-center gap-1"
+                  title="ভুয়া খবর প্রতিরোধ ও সত্যসন্ধান কর্নার"
+                >
+                  <span>ফ্যাক্ট-চেক</span>
+                </Link>
+                <span className="text-[var(--color-border-strong)]">|</span>
+              </>
+            )}
+
+            {features?.live_score !== false && (
+              <>
+                <Link
+                  href="/live-score"
+                  className="hover:text-[var(--color-primary)] font-bold transition-colors text-red-600 dark:text-red-400 flex items-center gap-1"
+                  title="লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span>লাইভ স্কোর</span>
+                </Link>
+                <span className="text-[var(--color-border-strong)]">|</span>
+              </>
+            )}
+
+            {features?.epaper !== false && (
+              <>
+                <Link
+                  href="/epaper"
+                  className="hover:text-[var(--color-primary)] font-semibold transition-colors text-[var(--color-primary)] flex items-center gap-1"
+                  title="দৈনিক বাংলাদেশ বার্তা মুদ্রিত ডিজিটাল ই-পেপার"
+                >
+                  <span>ই-পেপার</span>
+                </Link>
+                <span className="text-[var(--color-border-strong)]">|</span>
+              </>
+            )}
+
+            {features?.audio_news !== false && (
+              <>
+                <Link
+                  href="/audio-news"
+                  className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
+                  title="দৈনিক অডিও নিউজ ও ধারাবাহিক প্লেলিস্ট"
+                >
+                  অডিও
+                </Link>
+                <span className="text-[var(--color-border-strong)]">|</span>
+              </>
+            )}
+
+            {features?.public_debates !== false && (
+              <>
+                <Link
+                  href="/debates"
+                  className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
+                  title="সাপ্তাহিক জনমত জরিপ ও পাঠক বিতর্ক"
+                >
+                  বিতর্ক
+                </Link>
+                <span className="text-[var(--color-border-strong)]">|</span>
+              </>
+            )}
+
+            {features?.history_archive !== false && (
+              <>
+                <Link
+                  href="/history"
+                  className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
+                  title="ঐতিহাসিক এই দিনে ও স্বাধীনতা আর্কাইভ"
+                >
+                  ইতিহাস
+                </Link>
+                <span className="text-[var(--color-border-strong)]">|</span>
+              </>
+            )}
+
             <Link
               href="/archive"
               className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
             >
               আর্কাইভ
             </Link>
-            <span className="text-[var(--color-border-strong)]">|</span>
-            <Link
-              href="/videos"
-              className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
-            >
-              ভিডিও
-            </Link>
+
+            {features?.video_hub !== false && (
+              <>
+                <span className="text-[var(--color-border-strong)]">|</span>
+                <Link
+                  href="/videos"
+                  className="hover:text-[var(--color-primary)] transition-colors text-[var(--color-text-muted)]"
+                >
+                  ভিডিও
+                </Link>
+              </>
+            )}
+
             <span className="text-[var(--color-border-strong)]">|</span>
             <Link
               href="/admin"
@@ -156,8 +193,8 @@ export function TopBar({ settings }: TopBarProps) {
 
           {/* Essential Mobile & Desktop Tool Icons */}
           <div className="flex items-center gap-1 sm:gap-2 md:border-l md:border-[var(--color-border-strong)] md:pl-2">
-            <NotificationBellMenu />
-            <BookmarksNavBadge />
+            {features?.push_notifications !== false && <NotificationBellMenu />}
+            {features?.reader_bookmarks !== false && <BookmarksNavBadge />}
             {mounted && (
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}

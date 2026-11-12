@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import { getFactChecks } from "@/actions/fact-checks";
 import { FactCheckHubClient } from "@/components/public/fact-check/FactCheckHubClient";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const metadata: Metadata = {
   title: "ফ্যাক্ট-চেক ও ভুয়া খবর প্রতিরোধ কর্নার | দৈনিক বাংলাদেশ বার্তা",
@@ -11,6 +13,17 @@ export const metadata: Metadata = {
 export const revalidate = 60; // 1 min ISR
 
 export default async function FactCheckPage() {
+  const features = await getFeatureFlags();
+  if (features.fact_checking === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="ফ্যাক্ট-চেক সত্যতা যাচাই কর্নার"
+        featureNameEn="Fact-Check Verification Desk"
+        categoryName="সত্যসন্ধান"
+      />
+    );
+  }
+
   const items = await getFactChecks();
 
   return (

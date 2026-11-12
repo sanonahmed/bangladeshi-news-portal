@@ -1,5 +1,7 @@
 import { getFactChecks, getFactCheckSubmissions } from "@/actions/fact-checks";
 import { AdminFactChecksClient } from "./AdminFactChecksClient";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,17 @@ export const metadata = {
 };
 
 export default async function AdminFactChecksPage() {
+  const features = await getFeatureFlags();
+  if (features.admin_fact_check_manager === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="ফ্যাক্ট-চেক সাবমিশন ও রিভিউ ডেস্ক"
+        featureNameEn="Fact-Check Desk Administration"
+        categoryName="এডমিন টুলস"
+      />
+    );
+  }
+
   const [factChecks, submissions] = await Promise.all([
     getFactChecks(),
     getFactCheckSubmissions(),

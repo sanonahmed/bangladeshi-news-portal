@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getVideos } from "@/actions/videos";
 import { VideosGalleryClient } from "./VideosGalleryClient";
 import type { Video } from "@/db/schema/videos";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const revalidate = 60; // ISR 60s
 
@@ -84,6 +86,17 @@ const SAMPLE_VIDEOS: Video[] = [
 ];
 
 export default async function VideosPage() {
+  const features = await getFeatureFlags();
+  if (features.video_hub === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="ভিডিও হাব ও মাল্টিমিডিয়া"
+        featureNameEn="Video News Hub"
+        categoryName="মাল্টিমিডিয়া"
+      />
+    );
+  }
+
   let videosList: Video[] = SAMPLE_VIDEOS;
 
   try {

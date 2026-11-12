@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllPolls } from "@/actions/polls";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 import { Vote, Users, Calendar, ArrowLeft, CheckCircle2 } from "lucide-react";
 
 export const revalidate = 60; // ISR 60s
@@ -11,6 +13,17 @@ export const metadata: Metadata = {
 };
 
 export default async function PollsArchivePage() {
+  const features = await getFeatureFlags();
+  if (features.public_polls === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="অনলাইন ভোট ও জনমত জরিপ"
+        featureNameEn="Public Opinion Polls & Surveys"
+        categoryName="জরিপ ও গবেষণা"
+      />
+    );
+  }
+
   const allPolls = await getAllPolls();
 
   const barColors = [

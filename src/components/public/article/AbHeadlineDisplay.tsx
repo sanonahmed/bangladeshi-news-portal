@@ -29,34 +29,47 @@ export function AbHeadlineDisplay({
       return;
     }
 
-    // Determine variant deterministically per user device
-    let variant: "a" | "b" = "a";
-    try {
-      const storageKey = `barta_ab_${articleId}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved === "a" || saved === "b") {
-        variant = saved;
-      } else {
-        variant = Math.random() < 0.5 ? "a" : "b";
-        localStorage.setItem(storageKey, variant);
-      }
-    } catch {
-      variant = Math.random() < 0.5 ? "a" : "b";
-    }
+    // Check if A/B testing feature is active
+    fetch("/api/features")
+      .then((r) => r.json())
+      .then((flags) => {
+        if (flags && flags.ab_testing === false) {
+          setSelectedVariant("a");
+          return;
+        }
 
-    setSelectedVariant(variant);
+        // Determine variant deterministically per user device
+        let variant: "a" | "b" = "a";
+        try {
+          const storageKey = `barta_ab_${articleId}`;
+          const saved = localStorage.getItem(storageKey);
+          if (saved === "a" || saved === "b") {
+            variant = saved;
+          } else {
+            variant = Math.random() < 0.5 ? "a" : "b";
+            localStorage.setItem(storageKey, variant);
+          }
+        } catch {
+          variant = Math.random() < 0.5 ? "a" : "b";
+        }
 
-    // Record impression once
-    if (!impressionRecorded.current) {
-      impressionRecorded.current = true;
-      try {
-        fetch("/api/articles/ab-test/impression", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ articleId, variant }),
-        }).catch(() => {});
-      } catch {}
-    }
+        setSelectedVariant(variant);
+
+        // Record impression once
+        if (!impressionRecorded.current) {
+          impressionRecorded.current = true;
+          try {
+            fetch("/api/articles/ab-test/impression", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ articleId, variant }),
+            }).catch(() => {});
+          } catch {}
+        }
+      })
+      .catch(() => {
+        setSelectedVariant("a");
+      });
   }, [isAbActive, articleId]);
 
   const handleClick = () => {

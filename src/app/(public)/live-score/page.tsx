@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getLiveSportsMatches } from "@/lib/sports-data";
 import { LiveScoreHubClient } from "./LiveScoreHubClient";
+import { getFeatureFlags } from "@/actions/features";
+import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
 
 export const metadata: Metadata = {
   title: "লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড | দৈনিক বাংলাদেশ বার্তা",
@@ -15,7 +17,17 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function LiveScorePage() {
-  const matches = await getLiveSportsMatches();
+  const features = await getFeatureFlags();
+  if (features.live_score === false) {
+    return (
+      <FeatureDisabledNotice
+        featureNameBn="লাইভ ক্রিকেট ও ফুটবল স্কোরবোর্ড"
+        featureNameEn="Live Sports Scorecard"
+        categoryName="খেলাধুলা"
+      />
+    );
+  }
 
+  const matches = await getLiveSportsMatches();
   return <LiveScoreHubClient initialMatches={matches} />;
 }
