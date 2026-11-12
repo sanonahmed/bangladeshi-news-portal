@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   TrendingUp,
@@ -13,13 +13,15 @@ import {
   Flame,
   Activity,
   CheckCircle2,
-  Sparkles,
-  ArrowUpRight,
   Edit3,
-  Layers,
   RefreshCw,
+  Search,
+  Filter,
+  BarChart2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+import { formatRelativeBengali } from "@/lib/bengali-date";
 import {
   setArticleAsHomepageLead,
   sendArticleToBreakingTicker,
@@ -36,16 +38,21 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
   const isEn = language === "en";
 
   const [activeTab, setActiveTab] = useState<"velocity" | "today" | "allTime">("velocity");
-  const [data, setData] = useState(initialData);
-  const [activeReaders, setActiveReaders] = useState(initialData.activeReaders);
+  const [data, setData] = useState<TrendingVelocityData>(initialData);
+  const [activeReaders, setActiveReaders] = useState<number>(initialData.activeReaders);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+  const [secondsAgo, setSecondsAgo] = useState(0);
+
   const [featuredId, setFeaturedId] = useState<string | null>(
     initialData.trendingStories.find((s) => s.isFeatured)?.id || null
   );
 
-  // Authentic live polling from database telemetry (every 15 seconds)
+  // Background telemetry synchronization (every 15 seconds)
   const fetchRealtimeData = useCallback(async () => {
     try {
       const res = await fetch("/api/analytics/realtime", { cache: "no-store" });
@@ -53,6 +60,8 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
         const fresh = (await res.json()) as TrendingVelocityData;
         setData(fresh);
         setActiveReaders(fresh.activeReaders);
+        setLastSyncTime(new Date());
+        setSecondsAgo(0);
       }
     } catch (err) {
       console.warn("Real-time telemetry poll failed:", err);
@@ -60,18 +69,59 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
   }, []);
 
   useEffect(() => {
-    // 15-second background synchronization with database
     const interval = setInterval(fetchRealtimeData, 15000);
     return () => clearInterval(interval);
   }, [fetchRealtimeData]);
 
-  // Filter or sort stories based on active tab
-  const displayedStories = [...data.trendingStories].sort((a, b) => {
-    if (activeTab === "today" || activeTab === "allTime") {
-      return b.viewCount - a.viewCount;
+  // Seconds counter since last sync
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsAgo((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Extract unique categories from stories
+  const categoriesList = useMemo(() => {
+    const set = new Set<string>();
+    for (const story of data.trendingStories) {
+      if (story.categoryName) set.add(story.categoryName);
     }
-    return b.velocityPerHour - a.velocityPerHour;
-  });
+    return Array.from(set);
+  }, [data.trendingStories]);
+
+  // Find maximum velocity for relative momentum bar scaling
+  const maxVelocity = useMemo(() => {
+    return Math.max(1, ...data.trendingStories.map((s) => s.velocityPerHour || 0));
+  }, [data.trendingStories]);
+
+  // Filter and sort stories
+  const displayedStories = useMemo(() => {
+    let list = [...data.trendingStories];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.categoryName?.toLowerCase().includes(q)
+      );
+    }
+
+    // Filter by category
+    if (selectedCategory !== "all") {
+      list = list.filter((s) => s.categoryName === selectedCategory);
+    }
+
+    // Sort according to active tab
+    return list.sort((a, b) => {
+      if (activeTab === "today" || activeTab === "allTime") {
+        return b.viewCount - a.viewCount;
+      }
+      return (b.velocityPerHour || 0) - (a.velocityPerHour || 0);
+    });
+  }, [data.trendingStories, searchQuery, selectedCategory, activeTab]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -86,8 +136,8 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
         setFeaturedId(story.id);
         showToast(
           isEn
-            ? `"${story.title.slice(0, 30)}..." is now pinned as Homepage Lead Story!`
-            : `"${story.title.slice(0, 30)}..." সফলভাবে হোমপেজের শীর্ষে (Lead Story) পিন করা হয়েছে!`
+            ? `"${story.title.slice(0, 32)}..." pinned as Homepage Lead`
+            : `"${story.title.slice(0, 32)}..." প্রধান লিড সংবাদ হিসেবে পিন করা হয়েছে`
         );
       } else {
         showToast(res.error || "Failed to set lead story");
@@ -106,8 +156,8 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
       if (res.success) {
         showToast(
           isEn
-            ? `Pushed to live Breaking News Ticker!`
-            : `সংবাদটি সরাসরি ব্রেকিং নিউজ টিকারে যুক্ত করা হয়েছে!`
+            ? "Pushed to live Breaking News Ticker"
+            : "সংবাদটি সরাসরি ব্রেকিং নিউজ টিকারে যুক্ত করা হয়েছে"
         );
       } else {
         showToast(res.error || "Failed to push to breaking news");
@@ -120,254 +170,357 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
   }
 
   return (
-    <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-xl overflow-hidden shadow-xs space-y-0 relative">
+    <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-md shadow-2xs overflow-hidden relative font-sans">
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="absolute top-3 right-3 z-50 flex items-center gap-2 px-3.5 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-bold rounded-lg shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 size={15} className="text-emerald-400 dark:text-emerald-600 flex-shrink-0" />
+        <div className="absolute top-3 right-3 z-50 flex items-center gap-2 px-3.5 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-bold rounded shadow-lg border border-zinc-800 dark:border-zinc-200">
+          <CheckCircle2 size={14} className="text-emerald-400 dark:text-emerald-600 flex-shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Section: Real-Time Traffic Velocity Radar */}
-      <div className="p-4 sm:p-5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
-              <Flame size={18} className="animate-pulse" />
-            </span>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-[var(--color-text)] flex items-center gap-2">
-                <span>{isEn ? "Trending Stories & Real-Time Traffic Velocity" : "ট্রেন্ডিং সংবাদ ও রিয়েল-টাইম ট্র্যাফিক ভেলোসিটি"}</span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500 text-white animate-pulse">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                  LIVE RADAR
-                </span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setIsRefreshing(true);
-                    await fetchRealtimeData();
-                    setTimeout(() => setIsRefreshing(false), 500);
-                  }}
-                  disabled={isRefreshing}
-                  className="p-1 rounded-md hover:bg-[var(--color-bg)] border border-transparent hover:border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-rose-600 transition-colors cursor-pointer"
-                  title={isEn ? "Refresh live telemetry" : "লাইভ ডাটা রিফ্রেশ করুন"}
-                >
-                  <RefreshCw size={13} className={isRefreshing ? "animate-spin text-rose-600" : ""} />
-                </button>
+      {/* Terminal Masthead Header */}
+      <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Left: Terminal Identity & Live Pulse */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-2xs">
+            <Activity size={16} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[var(--color-text)] tracking-tight">
+                {isEn ? "Real-Time Traffic & Velocity Terminal" : "রিয়েল-টাইম ট্র্যাফিক ও সংবাদ ভেলোসিটি"}
               </h2>
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                {isEn
-                  ? "Chartbeat-style audience momentum radar with 1-click editorial distribution actions"
-                  : "লাইভ পাঠক স্পীড, দ্রুততম গতিতে পড়া সংবাদ ও এক-ক্লিকে হোমপেজ লিড নির্ধারণ"}
-              </p>
+              {/* Live Network Pulse */}
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                  LIVE
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-[var(--color-text-muted)] mt-0.5 font-mono">
+              <span>
+                {isEn ? "Telemetry sync:" : "টেলিমেট্রি সিঙ্ক:"} {secondsAgo}s {isEn ? "ago" : "আগে"}
+              </span>
+              <span>•</span>
+              {/* Velocity Momentum Pill */}
+              {data.trafficVelocityRating === "viral" ? (
+                <span className="text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
+                  <Flame size={12} />
+                  <span>{isEn ? "Viral Surge Active" : "উচ্চ ভাইরাল বেগ"}</span>
+                </span>
+              ) : data.trafficVelocityRating === "surging" ? (
+                <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
+                  <TrendingUp size={12} />
+                  <span>{isEn ? "Traffic Surging" : "ঊর্ধ্বমুখী গতি"}</span>
+                </span>
+              ) : (
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium">
+                  {isEn ? "Normal Baseline" : "স্বাভাবিক প্রবাহ"}
+                </span>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Timeframe Selector */}
-          <div className="flex items-center gap-1 bg-[var(--color-bg)] p-1 rounded-lg border border-[var(--color-border)] shadow-2xs self-start sm:self-auto">
+        {/* Right: Manual Refresh & Tab Sort */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Segmented Sort Controls */}
+          <div className="inline-flex items-center p-0.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded text-xs font-mono">
             <button
               type="button"
               onClick={() => setActiveTab("velocity")}
-              className={`px-2.5 py-1 text-xs font-bold rounded transition-colors ${
+              className={`px-2.5 py-1 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
                 activeTab === "velocity"
-                  ? "bg-[var(--color-primary)] text-white shadow-xs"
+                  ? "bg-[var(--color-primary)] text-white shadow-2xs font-bold"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >
-              {isEn ? "Hourly Speed" : "ঘণ্টার গতি"}
+              {isEn ? "Velocity" : "গতিবেগ"}
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("today")}
-              className={`px-2.5 py-1 text-xs font-bold rounded transition-colors ${
+              className={`px-2.5 py-1 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
                 activeTab === "today"
-                  ? "bg-[var(--color-primary)] text-white shadow-xs"
+                  ? "bg-[var(--color-primary)] text-white shadow-2xs font-bold"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >
-              {isEn ? "Today's Top" : "আজকের সেরা"}
+              {isEn ? "24h Top" : "আজকের সেরা"}
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("allTime")}
-              className={`px-2.5 py-1 text-xs font-bold rounded transition-colors ${
+              className={`px-2.5 py-1 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
                 activeTab === "allTime"
-                  ? "bg-[var(--color-primary)] text-white shadow-xs"
+                  ? "bg-[var(--color-primary)] text-white shadow-2xs font-bold"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >
-              {isEn ? "Popular" : "জনপ্রিয়"}
+              {isEn ? "Popular" : "জনপ্রিয়"}
             </button>
+          </div>
+
+          {/* Quick Refresh Button */}
+          <button
+            type="button"
+            onClick={async () => {
+              setIsRefreshing(true);
+              await fetchRealtimeData();
+              setTimeout(() => setIsRefreshing(false), 400);
+            }}
+            disabled={isRefreshing}
+            className="p-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors cursor-pointer"
+            title={isEn ? "Force refresh telemetry" : "টেলিমেট্রি রিফ্রেশ করুন"}
+          >
+            <RefreshCw size={13} className={isRefreshing ? "animate-spin text-[var(--color-primary)]" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {/* Integrated Editorial Telemetry Strip (Monospace Data Bar) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]/30 divide-x divide-[var(--color-border)]">
+        {/* 1. Concurrent Active Readers */}
+        <div className="p-3 sm:px-4 sm:py-2.5">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
+            <span>{isEn ? "Active Readers" : "অনলাইনে সক্রিয়"}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black font-mono text-[var(--color-text)] tabular-nums">
+              {formatNumber(activeReaders)}
+            </span>
+            <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+              {isEn ? "concurrent" : "জন সরাসরি"}
+            </span>
           </div>
         </div>
 
-        {/* Live Traffic Metric Gauges */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-          {/* Active Concurrent Readers */}
-          <div className="p-3 rounded-lg bg-[var(--color-bg)] border border-emerald-200 dark:border-emerald-900/60 shadow-2xs space-y-1">
-            <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-              <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block"></span>
-                {isEn ? "Live Active Readers" : "অনলাইনে সক্রিয় পাঠক"}
-              </span>
-              <Activity size={13} className="text-emerald-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-[var(--color-text)] font-mono">
-              {formatNumber(activeReaders)}
-            </div>
-            <div className="text-[10px] text-[var(--color-text-muted)]">
-              {isEn ? "Concurrent visitors right now" : "এই মুহূর্তে পোর্টাল পড়ছেন"}
-            </div>
+        {/* 2. Velocity Multiplier */}
+        <div className="p-3 sm:px-4 sm:py-2.5">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
+            <span>{isEn ? "Velocity Momentum" : "গতির সূচক"}</span>
+            <span className="text-[9px] font-mono font-bold text-rose-600 dark:text-rose-400 uppercase">
+              {data.trafficVelocityRating}
+            </span>
           </div>
-
-          {/* Traffic Velocity Surge Multiplier */}
-          <div className="p-3 rounded-lg bg-[var(--color-bg)] border border-rose-200 dark:border-rose-900/60 shadow-2xs space-y-1">
-            <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-              <span className="flex items-center gap-1 font-semibold text-rose-600 dark:text-rose-400">
-                <Flame size={13} />
-                {isEn ? "Velocity Momentum" : "গতির সূচক (Surge)"}
-              </span>
-              <span className="text-[10px] uppercase font-bold text-rose-600">
-                {data.trafficVelocityRating}
-              </span>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums">
               {data.trafficMultiplier}x
-            </div>
-            <div className="text-[10px] text-[var(--color-text-muted)]">
-              {isEn ? "Above normal baseline" : "স্বাভাবিকের চেয়ে গতি বৃদ্ধি"}
-            </div>
+            </span>
+            <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+              {isEn ? "vs baseline" : "স্বাভাবিকের তুলনায়"}
+            </span>
           </div>
+        </div>
 
-          {/* Today's Total News Views */}
-          <div className="p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] shadow-2xs space-y-1">
-            <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-              <span className="font-semibold text-[var(--color-text)]">
-                {isEn ? "24h Total Views" : "২৪ ঘণ্টার মোট ভিউ"}
-              </span>
-              <Eye size={13} className="text-blue-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-[var(--color-text)] font-mono">
+        {/* 3. Total Views Today */}
+        <div className="p-3 sm:px-4 sm:py-2.5">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
+            <span>{isEn ? "24h Impressions" : "২৪ ঘণ্টার মোট ভিউ"}</span>
+            <Eye size={12} className="text-blue-500" />
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black font-mono text-[var(--color-text)] tabular-nums">
               {formatNumber(data.todayTotalViews)}
-            </div>
-            <div className="text-[10px] text-[var(--color-text-muted)]">
-              {isEn ? "Article impressions" : "মোট পেজ প্রদর্শনী"}
-            </div>
+            </span>
+            <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+              {isEn ? "reads" : "প্রদর্শনী"}
+            </span>
           </div>
+        </div>
 
-          {/* Today's News Output Target */}
-          <div className="p-3 rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] shadow-2xs space-y-1">
-            <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-              <span className="font-semibold text-[var(--color-text)]">
-                {isEn ? "Today's Output" : "আজকের প্রকাশনা"}
-              </span>
-              <Layers size={13} className="text-purple-500" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-[var(--color-text)] font-mono">
-              {formatNumber(data.todayPublishedCount)} / {formatNumber(15)}
-            </div>
-            <div className="text-[10px] text-[var(--color-text-muted)]">
-              {isEn ? "Target: 15 stories daily" : "দৈনিক টার্গেটের অগ্রগতি"}
-            </div>
+        {/* 4. Output Target Progress */}
+        <div className="p-3 sm:px-4 sm:py-2.5">
+          <div className="text-[10px] uppercase font-mono font-bold tracking-wider text-[var(--color-text-muted)] flex items-center justify-between">
+            <span>{isEn ? "Editorial Output" : "আজকের প্রকাশনা"}</span>
+            <span className="text-[9px] font-mono text-[var(--color-text-muted)]">Target: 15</span>
+          </div>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xl sm:text-2xl font-black font-mono text-[var(--color-text)] tabular-nums">
+              {formatNumber(data.todayPublishedCount)}
+            </span>
+            <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+              / {formatNumber(15)} {isEn ? "stories" : "টি সংবাদ"}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Stories List */}
+      {/* Control Filter Bar (Search + Category Filter) */}
+      <div className="px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 text-xs">
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-sm">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isEn ? "Filter stories by headline or desk..." : "সংবাদের শিরোনাম বা বিভাগ দিয়ে ফিল্টার করুন..."}
+            className="w-full pl-8 pr-3 py-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-xs text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-hidden focus:border-[var(--color-primary)] transition-colors"
+          />
+        </div>
+
+        {/* Category Filter & Count */}
+        <div className="flex items-center gap-2 justify-between sm:justify-end">
+          {categoriesList.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Filter size={12} className="text-[var(--color-text-muted)]" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded px-2 py-1 text-xs text-[var(--color-text)] focus:outline-hidden cursor-pointer"
+              >
+                <option value="all">{isEn ? "All Desks" : "সকল বিভাগ"}</option>
+                {categoriesList.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
+            {formatNumber(displayedStories.length)} {isEn ? "stories" : "টি সংবাদ"}
+          </span>
+        </div>
+      </div>
+
+      {/* Stories Feed (High-Density Newsroom Rows) */}
       <div className="divide-y divide-[var(--color-border)]">
         {displayedStories.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[var(--color-text-muted)]">
-            {isEn ? "No trending stories recorded yet." : "বর্তমানে কোনো ট্রেন্ডিং সংবাদ নেই।"}
+          <div className="p-8 text-center text-xs text-[var(--color-text-muted)] space-y-1">
+            <p className="font-semibold">
+              {searchQuery || selectedCategory !== "all"
+                ? isEn
+                  ? "No stories matched your filter criteria."
+                  : "কোনো সংবাদ পাওয়া যায়নি। ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন।"
+                : isEn
+                ? "No trending stories recorded yet."
+                : "বর্তমানে কোনো সক্রিয় ট্রেন্ডিং সংবাদ নেই।"}
+            </p>
+            {(searchQuery || selectedCategory !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                }}
+                className="text-[var(--color-primary)] hover:underline font-mono text-xs cursor-pointer"
+              >
+                {isEn ? "Clear filters" : "সব ফিল্টার মুছে ফেলুন"}
+              </button>
+            )}
           </div>
         ) : (
           displayedStories.map((story, idx) => {
-            const isTopRank = idx === 0;
-            const rankNumber = idx + 1;
+            const rank = idx + 1;
             const isStoryLead = featuredId === story.id || story.isFeatured;
+            const velocity = story.velocityPerHour || 0;
+            const momentumPercent = Math.min(100, Math.round((velocity / maxVelocity) * 100));
 
             return (
               <div
                 key={story.id}
-                className="p-3.5 sm:p-4 hover:bg-[var(--color-bg-secondary)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 group"
+                className={`p-3 sm:px-4 sm:py-3 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 group ${
+                  isStoryLead
+                    ? "bg-amber-50/30 dark:bg-amber-950/10 hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
+                    : "hover:bg-[var(--color-bg-secondary)]/60"
+                }`}
               >
-                {/* Left: Rank & Title & Meta */}
+                {/* Left Column: Rank Index, Headline & Metadata */}
                 <div className="flex items-start gap-3 min-w-0 flex-1">
-                  {/* Rank Badge */}
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
-                      rankNumber === 1
-                        ? "bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-xs"
-                        : rankNumber === 2
-                        ? "bg-gradient-to-br from-slate-400 to-slate-600 text-white shadow-xs"
-                        : rankNumber === 3
-                        ? "bg-gradient-to-br from-amber-700 to-amber-900 text-white shadow-xs"
-                        : "bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-muted)]"
-                    }`}
-                  >
-                    {rankNumber === 1 ? <Flame size={14} /> : rankNumber}
+                  {/* Monospace Rank Index */}
+                  <div className="w-6 shrink-0 pt-0.5 text-center">
+                    <span
+                      className={`font-mono text-xs font-black tabular-nums ${
+                        rank === 1
+                          ? "text-rose-600 dark:text-rose-400"
+                          : rank <= 3
+                          ? "text-[var(--color-text)]"
+                          : "text-zinc-400 dark:text-zinc-500"
+                      }`}
+                    >
+                      #{rank < 10 ? `0${rank}` : rank}
+                    </span>
                   </div>
 
-                  <div className="space-y-1.5 min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                  {/* Story Details */}
+                  <div className="space-y-1 min-w-0 flex-1">
+                    {/* Metadata Header Line */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      {/* Desk / Category Badge */}
+                      <span className="font-semibold uppercase tracking-wider px-1.5 py-0.2 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-muted)] font-mono">
                         {story.categoryName}
                       </span>
 
+                      {/* Lead Story Status Badge */}
                       {isStoryLead && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500 text-white">
-                          <Pin size={10} />
-                          {isEn ? "Homepage Lead" : "হোমপেজ শীর্ষ খবর"}
+                        <span className="inline-flex items-center gap-1 font-bold px-1.5 py-0.2 rounded bg-amber-500 text-white shadow-2xs">
+                          <Pin size={9} />
+                          <span>{isEn ? "Lead Story" : "প্রধান লিড"}</span>
                         </span>
                       )}
 
+                      {/* Breaking Story Status Badge */}
                       {story.isBreaking && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-600 text-white">
-                          <Zap size={10} />
-                          {isEn ? "Breaking" : "ব্রেকিং"}
+                        <span className="inline-flex items-center gap-1 font-bold px-1.5 py-0.2 rounded bg-red-600 text-white shadow-2xs">
+                          <Zap size={9} />
+                          <span>{isEn ? "Breaking" : "ব্রেকিং"}</span>
                         </span>
                       )}
 
-                      {/* Velocity Badge */}
-                      <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-600 dark:text-rose-400 font-mono">
-                        <TrendingUp size={12} />
-                        {isEn
-                          ? `+${story.velocityPerHour} views/hr`
-                          : `+${formatNumber(story.velocityPerHour)} ভিউ/ঘণ্টা`}
+                      {/* Velocity Metric Badge */}
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-rose-600 dark:text-rose-400">
+                        <TrendingUp size={11} />
+                        <span>+{formatNumber(velocity)}/hr</span>
                       </span>
 
                       {/* Active Concurrent Readers on this specific Story */}
                       {story.activeReaders && story.activeReaders > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 animate-pulse">
+                        <span className="inline-flex items-center gap-1 font-mono font-semibold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          {isEn
-                            ? `${story.activeReaders} reading now`
-                            : `${formatNumber(story.activeReaders)} জন লাইভ পড়ছেন`}
+                          <span>
+                            {formatNumber(story.activeReaders)} {isEn ? "reading" : "জন সক্রিয়"}
+                          </span>
                         </span>
                       ) : null}
+
+                      {/* Published relative time */}
+                      {story.publishedAt && (
+                        <span className="text-[var(--color-text-muted)] font-mono ml-auto sm:ml-0">
+                          {formatRelativeBengali(new Date(story.publishedAt))}
+                        </span>
+                      )}
                     </div>
 
+                    {/* Headline */}
                     <Link
                       href={`/news/${story.slug}`}
                       target="_blank"
-                      className="text-xs sm:text-sm font-bold text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors line-clamp-2 block leading-snug"
+                      className="text-xs sm:text-sm font-bold text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors line-clamp-2 block leading-snug tracking-tight"
                     >
                       {story.title}
                     </Link>
 
-                    {/* Relative Momentum Bar */}
+                    {/* Precision Momentum Meter Strip */}
                     <div className="flex items-center gap-2 pt-0.5">
-                      <div className="w-32 sm:w-44 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                      <div className="w-24 sm:w-36 h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden shrink-0">
                         <div
-                          className={`h-full transition-all duration-500 rounded-full ${
-                            rankNumber === 1
-                              ? "bg-rose-500"
-                              : rankNumber === 2
+                          className={`h-full transition-all duration-300 ${
+                            rank === 1
+                              ? "bg-rose-600"
+                              : rank <= 3
                               ? "bg-amber-500"
-                              : "bg-blue-500"
+                              : "bg-[var(--color-primary)]"
                           }`}
-                          style={{ width: `${Math.max(10, story.momentumPercent)}%` }}
+                          style={{ width: `${Math.max(6, momentumPercent)}%` }}
                         />
                       </div>
                       <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
@@ -377,73 +530,76 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
                   </div>
                 </div>
 
-                {/* Right: 1-Click Editorial Action Buttons */}
-                <div className="flex items-center gap-1.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[var(--color-border)] justify-end">
-                  {/* Make Lead Story Button */}
+                {/* Right Column: Editorial Control Actions */}
+                <div className="flex items-center gap-1 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-[var(--color-border)] justify-end">
+                  {/* Pin as Lead Story Button */}
                   <button
                     type="button"
                     onClick={() => handleMakeLead(story)}
                     disabled={actionLoading !== null || isStoryLead}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold rounded transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded border transition-all cursor-pointer ${
                       isStoryLead
-                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 cursor-default"
-                        : "bg-[var(--color-bg-secondary)] border border-[var(--color-border)] hover:border-amber-500 text-[var(--color-text)] hover:text-amber-600"
+                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800 cursor-default"
+                        : "bg-[var(--color-bg)] border-[var(--color-border)] hover:border-amber-500 text-[var(--color-text)] hover:text-amber-600 hover:bg-amber-50/50 dark:hover:bg-amber-950/20"
                     }`}
-                    title={isEn ? "Promote this trending story to Homepage Lead" : "হোমপেজের প্রধান লিড সংবাদ হিসেবে পিন করুন"}
+                    title={isEn ? "Pin as Lead Story on Homepage" : "হোমপেজের প্রধান লিড সংবাদ হিসেবে পিন করুন"}
                   >
-                    <Pin size={12} className={isStoryLead ? "text-amber-600" : ""} />
+                    <Pin size={11} className={isStoryLead ? "text-amber-600 fill-amber-600" : ""} />
                     <span>
                       {actionLoading === `lead-${story.id}`
                         ? "..."
                         : isStoryLead
                         ? isEn
                           ? "Current Lead"
-                          : "বর্তমান লিড"
+                          : "শীর্ষ লিড"
                         : isEn
                         ? "Make Lead"
                         : "লিড বানান"}
                     </span>
                   </button>
 
-                  {/* Push to Breaking Ticker */}
+                  {/* Push to Breaking Ticker Button */}
                   <button
                     type="button"
                     onClick={() => handlePushBreaking(story)}
                     disabled={actionLoading !== null}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border)] hover:border-red-500 text-[var(--color-text)] hover:text-red-600 transition-colors cursor-pointer"
-                    title={isEn ? "Send headline to active Breaking News Ticker" : "ব্রেকিং নিউজ টিকারে যুক্ত করুন"}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded bg-[var(--color-bg)] border border-[var(--color-border)] hover:border-red-500 text-[var(--color-text)] hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
+                    title={isEn ? "Push headline to active Breaking Ticker" : "ব্রেকিং নিউজ টিকারে যুক্ত করুন"}
                   >
-                    <Zap size={12} className="text-red-600" />
+                    <Zap size={11} className="text-red-600" />
                     <span>{actionLoading === `breaking-${story.id}` ? "..." : isEn ? "Breaking" : "ব্রেকিং"}</span>
                   </button>
 
-                  {/* Send Push Notification shortcut */}
-                  <Link
-                    href={`/admin/notifications?title=${encodeURIComponent(story.title)}&url=${encodeURIComponent(`/news/${story.slug}`)}`}
-                    className="p-1.5 rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-blue-600 transition-colors"
-                    title={isEn ? "Compose Push Notification" : "পুশ নোটিফিকেশন পাঠান"}
-                  >
-                    <Bell size={13} />
-                  </Link>
+                  {/* Icon Buttons Group */}
+                  <div className="flex items-center border-l border-[var(--color-border)] pl-1 ml-0.5">
+                    {/* Send Notification */}
+                    <Link
+                      href={`/admin/notifications?title=${encodeURIComponent(story.title)}&url=${encodeURIComponent(`/news/${story.slug}`)}`}
+                      className="p-1.5 rounded hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-blue-600 transition-colors"
+                      title={isEn ? "Compose notification for this story" : "পুশ নোটিফিকেশন পাঠান"}
+                    >
+                      <Bell size={12} />
+                    </Link>
 
-                  {/* Edit Story */}
-                  <Link
-                    href={`/admin/articles/${story.id}/edit`}
-                    className="p-1.5 rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-                    title={isEn ? "Edit Story" : "সম্পাদনা করুন"}
-                  >
-                    <Edit3 size={13} />
-                  </Link>
+                    {/* Edit Story in CMS */}
+                    <Link
+                      href={`/admin/articles/${story.id}/edit`}
+                      className="p-1.5 rounded hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+                      title={isEn ? "Edit story in CMS" : "নিউজরুমে সম্পাদনা করুন"}
+                    >
+                      <Edit3 size={12} />
+                    </Link>
 
-                  {/* View Live */}
-                  <Link
-                    href={`/news/${story.slug}`}
-                    target="_blank"
-                    className="p-1.5 rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-                    title={isEn ? "View live article" : "লাইভ সংবাদ দেখুন"}
-                  >
-                    <ExternalLink size={13} />
-                  </Link>
+                    {/* View Live Article */}
+                    <Link
+                      href={`/news/${story.slug}`}
+                      target="_blank"
+                      className="p-1.5 rounded hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
+                      title={isEn ? "Open live article" : "লাইভ প্রতিবেদন দেখুন"}
+                    >
+                      <ExternalLink size={12} />
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
