@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Lock, Mail, AlertCircle, ArrowRight, ShieldAlert, Sparkles } from "lucide-react";
+import { Lock, Mail, AlertCircle, ArrowRight, ShieldAlert } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
@@ -123,21 +123,6 @@ function LoginForm() {
           {loading ? "যাচাই করা হচ্ছে..." : "বার্তা কক্ষে প্রবেশ করুন"}
           <ArrowRight size={16} />
         </button>
-
-        <div className="relative my-4 flex items-center justify-center">
-          <div className="border-t border-[var(--color-border)] w-full"></div>
-          <span className="bg-[var(--color-bg)] px-2 text-[11px] text-[var(--color-text-muted)] uppercase tracking-wider absolute">
-            অথবা
-          </span>
-        </div>
-
-        <Link
-          href={`/api/auth/super-admin/activate?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-          className="w-full py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white text-xs font-bold rounded flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
-        >
-          <Sparkles size={14} className="text-amber-300" />
-          <span>সুপার অ্যাডমিন তাৎক্ষণিক প্রবেশ (Sawon Ahmed)</span>
-        </Link>
       </form>
 
       {/* Security notice regarding no public registration */}

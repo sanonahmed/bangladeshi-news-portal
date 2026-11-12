@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldAlert, ArrowLeft, Lock, Shield, KeyRound, Sparkles } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Lock, Shield, KeyRound } from "lucide-react";
 import { type UserRole, getRoleLabel } from "@/lib/permissions";
 
 interface AccessDeniedNoticeProps {
@@ -75,22 +75,13 @@ export function AccessDeniedNotice({
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           {isUnauthenticated ? (
-            <>
-              <Link
-                href="/login"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity shadow-xs"
-              >
-                <KeyRound size={14} />
-                <span>লগইন পেজে যান (Sign In)</span>
-              </Link>
-              <Link
-                href="/api/auth/super-admin/activate"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors shadow-xs"
-              >
-                <Sparkles size={14} />
-                <span>সুপার অ্যাডমিন সেশন সক্রিয় করুন</span>
-              </Link>
-            </>
+            <Link
+              href="/login"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[var(--color-primary)] text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity shadow-xs"
+            >
+              <KeyRound size={14} />
+              <span>বার্তা কক্ষে লগইন করুন (Sign In to Newsroom)</span>
+            </Link>
           ) : (
             <>
               <Link
