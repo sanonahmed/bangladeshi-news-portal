@@ -11,6 +11,7 @@ import { authorProfiles } from "@/db/schema/authors";
 import { eq, desc, and, sql, count, isNotNull, lte, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
 import { revalidateArticle } from "@/lib/cache";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -64,16 +65,12 @@ const ArticleCreateSchema = z.object({
 
 export async function createArticle(formData: z.infer<typeof ArticleCreateSchema>): Promise<{ success: boolean; error?: string; slug?: string; isScheduled?: boolean; status?: string }> {
   try {
-    let userId: string;
-    let userRole = "reader";
-
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (session?.user) {
-      userId = session.user.id;
-      userRole = (session.user as { role?: string }).role ?? "reader";
-    } else {
+    const adminUser = await getCurrentAdminUser();
+    if (!adminUser) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
     }
+    const userId = adminUser.id;
+    const userRole = adminUser.role;
 
     if (!hasPermission(userRole as any, "article:create")) {
       return { success: false, error: "আপনার সংবাদ তৈরির অনুমতি নেই" };
@@ -218,12 +215,12 @@ export async function updateArticle(data: {
   featuredImageAlt?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const adminUser = await getCurrentAdminUser();
+    if (!adminUser) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
     }
-    const role = (session.user as { role?: string }).role ?? "reader";
-    const userId = session.user.id;
+    const role = adminUser.role;
+    const userId = adminUser.id;
 
     const [existing] = await db.select().from(articles).where(eq(articles.id, data.id)).limit(1);
     if (!existing) {
@@ -411,11 +408,11 @@ export async function recordAbTestClick(articleId: string, variant: "a" | "b"): 
 
 export async function deleteArticle(articleId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
+    const adminUser = await getCurrentAdminUser();
+    if (!adminUser) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
     }
-    const role = (session.user as { role?: string }).role ?? "reader";
+    const role = adminUser.role;
     const canDelete = hasPermission(role as any, "article:delete");
 
     if (!canDelete) {

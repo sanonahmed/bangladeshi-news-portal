@@ -65,7 +65,17 @@ export const auth = betterAuth({
       enabled: false,
     },
   },
-  trustedOrigins: [process.env.BETTER_AUTH_URL ?? "http://localhost:3000"],
+  advanced: {
+    useSecureCookies: false, // Ensures consistent cookie name (better-auth.session_token) in both local HTTP & production HTTPS
+  },
+  trustedOrigins: [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "https://bangladeshi-news-portal.onrender.com",
+    process.env.BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ].filter(Boolean) as string[],
 });
 
 export type Session = typeof auth.$Infer.Session;

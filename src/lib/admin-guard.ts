@@ -1,9 +1,9 @@
 import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { type UserRole, isRoleAtLeast } from "@/lib/permissions";
 import { db } from "@/db";
-import { user as usersTable } from "@/db/schema/auth";
-import { eq } from "drizzle-orm";
+import { user as usersTable, session as sessionsTable } from "@/db/schema/auth";
+import { eq, and, gt } from "drizzle-orm";
 
 export interface CurrentAdminUser {
   id: string;
@@ -15,36 +15,156 @@ export interface CurrentAdminUser {
 
 export async function getCurrentAdminUser(): Promise<CurrentAdminUser | null> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || !session.user) {
-      return null;
+    let sessionToken: string | undefined;
+
+    // 1. Try reading directly from cookies()
+    try {
+      const cookieStore = await cookies();
+      const possibleCookieNames = [
+        "better-auth.session_token",
+        "__Secure-better-auth.session_token",
+      ];
+      for (const name of possibleCookieNames) {
+        const c = cookieStore.get(name);
+        if (c?.value) {
+          sessionToken = c.value;
+          break;
+        }
+      }
+    } catch {
+      // In case cookies() is called outside request context
     }
 
-    // Always query authoritative role directly from the database
-    const dbUsers = await db
-      .select({
-        role: usersTable.role,
-        banned: usersTable.banned,
-        name: usersTable.name,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, session.user.id))
-      .limit(1);
+    // 2. Try reading from raw headers()
+    let headerList: Headers | null = null;
+    try {
+      headerList = await headers();
+      if (!sessionToken && headerList) {
+        const rawCookieHeader = headerList.get("cookie") || "";
+        for (const pair of rawCookieHeader.split(";")) {
+          const [k, ...v] = pair.trim().split("=");
+          const key = k?.trim();
+          if (
+            key === "better-auth.session_token" ||
+            key === "__Secure-better-auth.session_token"
+          ) {
+            sessionToken = decodeURIComponent(v.join("=").trim());
+            break;
+          }
+        }
 
-    const dbUser = dbUsers[0];
-    const role = (dbUser?.role as UserRole) || ((session.user as any)?.role as UserRole) || "reader";
+        // Check Bearer authorization header
+        if (!sessionToken) {
+          const authHeader = headerList.get("authorization");
+          if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+            sessionToken = authHeader.slice(7).trim();
+          }
+        }
+      }
+    } catch {
+      // In case headers() fails
+    }
 
-    return {
-      id: session.user.id,
-      name: dbUser?.name || session.user.name,
-      email: session.user.email,
-      role,
-      user: {
-        ...session.user,
-        role,
-        banned: dbUser?.banned ?? false,
-      },
-    };
+    // 3. If session token was found, query database directly
+    if (sessionToken) {
+      const tokenParts = sessionToken.split(".");
+      const rawToken = tokenParts[0]?.trim();
+
+      if (rawToken) {
+        const rows = await db
+          .select({
+            session: sessionsTable,
+            user: usersTable,
+          })
+          .from(sessionsTable)
+          .innerJoin(usersTable, eq(sessionsTable.userId, usersTable.id))
+          .where(
+            and(
+              eq(sessionsTable.token, rawToken),
+              gt(sessionsTable.expiresAt, new Date())
+            )
+          )
+          .limit(1);
+
+        const matched = rows[0];
+        if (matched) {
+          const { user } = matched;
+          if (user.banned) {
+            return null;
+          }
+
+          let effectiveRole = (user.role as UserRole) || "reader";
+
+          // Guarantee Super Admin role for designated email
+          if (user.email.toLowerCase() === "asawon800@gmail.com") {
+            effectiveRole = "super_admin";
+            if (user.role !== "super_admin") {
+              await db
+                .update(usersTable)
+                .set({ role: "super_admin" })
+                .where(eq(usersTable.id, user.id));
+            }
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: effectiveRole,
+            user: {
+              ...user,
+              role: effectiveRole,
+            },
+          };
+        }
+      }
+    }
+
+    // 4. Secondary fallback: Better Auth getSession
+    if (headerList) {
+      const session = await auth.api.getSession({ headers: headerList });
+      if (session && session.user) {
+        const dbUsers = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, session.user.id))
+          .limit(1);
+
+        const dbUser = dbUsers[0];
+        if (dbUser?.banned) {
+          return null;
+        }
+
+        let role =
+          (dbUser?.role as UserRole) ||
+          ((session.user as any)?.role as UserRole) ||
+          "reader";
+
+        if (session.user.email.toLowerCase() === "asawon800@gmail.com") {
+          role = "super_admin";
+          if (dbUser && dbUser.role !== "super_admin") {
+            await db
+              .update(usersTable)
+              .set({ role: "super_admin" })
+              .where(eq(usersTable.id, dbUser.id));
+          }
+        }
+
+        return {
+          id: session.user.id,
+          name: dbUser?.name || session.user.name,
+          email: session.user.email,
+          role,
+          user: {
+            ...session.user,
+            role,
+            banned: dbUser?.banned ?? false,
+          },
+        };
+      }
+    }
+
+    return null;
   } catch (error) {
     console.error("getCurrentAdminUser error:", error);
     return null;
