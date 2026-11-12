@@ -32,6 +32,7 @@ import {
   Newspaper,
   SlidersHorizontal,
   BookOpen,
+  LogOut,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 import { authClient } from "@/lib/auth-client";
@@ -138,6 +139,16 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   }, [pathname]);
 
   const userRole: UserRole = dbRole || ((session?.user as any)?.role as UserRole) || "super_admin";
+
+  async function handleSignOut() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    try {
+      await authClient.signOut();
+    } catch {}
+    window.location.href = "/login";
+  }
 
   const ROUTE_ROLE_MAP: Record<string, UserRole> = useMemo(
     () => ({
@@ -318,8 +329,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         )}
       </nav>
 
-      {/* Portal Link */}
-      <div className="p-3 border-t border-zinc-800/80 bg-[#0d0f12]">
+      {/* Portal & Sign Out Footer */}
+      <div className="p-3 border-t border-zinc-800/80 bg-[#0d0f12] space-y-1">
         <Link
           href="/"
           target="_blank"
@@ -331,6 +342,16 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </span>
           <ExternalLink size={12} className="text-zinc-400" />
         </Link>
+
+        <button
+          onClick={handleSignOut}
+          className="w-full flex items-center justify-between text-xs text-red-400 hover:text-red-300 py-1.5 px-2.5 rounded hover:bg-red-950/40 transition-colors cursor-pointer text-left"
+        >
+          <span className="flex items-center gap-2">
+            <LogOut size={14} className="text-red-400" />
+            <span>{language === "bn" ? "বার্তা কক্ষ থেকে প্রস্থান" : "Sign Out"}</span>
+          </span>
+        </button>
       </div>
     </aside>
   );

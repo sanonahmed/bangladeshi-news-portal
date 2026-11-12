@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Lock, Mail, AlertCircle, ArrowRight, ShieldAlert } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,8 +33,7 @@ function LoginForm() {
       if (res.error) {
         setError(res.error.message || "ইমেইল বা পাসওয়ার্ড সঠিক নয়");
       } else {
-        router.push(callbackUrl);
-        router.refresh();
+        window.location.href = callbackUrl || "/admin";
       }
     } catch (err: any) {
       setError(err?.message || "লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");

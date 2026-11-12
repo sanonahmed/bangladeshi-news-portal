@@ -43,9 +43,13 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
   }, []);
 
   async function handleSignOut() {
-    await authClient.signOut();
-    router.push("/login");
-    router.refresh();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    try {
+      await authClient.signOut();
+    } catch {}
+    window.location.href = "/login";
   }
 
   const userName = dbUser?.name ?? session?.user?.name ?? (language === "bn" ? "সুপার অ্যাডমিন" : "Super Admin");
