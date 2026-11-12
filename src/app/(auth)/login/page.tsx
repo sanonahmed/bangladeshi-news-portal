@@ -66,6 +66,13 @@ function LoginForm() {
         </div>
       )}
 
+      {noticeParam === "staff_only" && (
+        <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-600 flex items-start gap-2 text-xs text-red-800 dark:text-red-300 rounded-r">
+          <ShieldAlert size={16} className="flex-shrink-0 mt-0.5" />
+          <span>অ্যাডমিন প্যানেলে প্রবেশাধিকার শুধুমাত্র অনুমোদিত সাংবাদিক ও স্টাফদের জন্য সংরক্ষিত।</span>
+        </div>
+      )}
+
       {error && (
         <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-600 flex items-center gap-2 text-xs text-red-700 dark:text-red-300 rounded-r">
           <AlertCircle size={16} className="flex-shrink-0" />

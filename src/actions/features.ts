@@ -6,6 +6,8 @@ import { sql } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
 import { revalidatePath } from "next/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import {
   getDefaultFeatureFlags,
   type FeatureFlags,
@@ -60,6 +62,12 @@ export async function updateFeatureFlag(
   userId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "super_admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সুপার অ্যাডমিন ফিচার ফ্ল্যাগ পরিবর্তন করতে পারেন।" };
+    }
+
+    const effectiveUserId = actor.id || userId;
     const key = `feature:${featureId}`;
     const value = enabled ? "true" : "false";
 
@@ -71,7 +79,7 @@ export async function updateFeatureFlag(
         value,
         description: `Feature toggle: ${featureId}`,
         isPublic: true,
-        updatedBy: userId,
+        updatedBy: effectiveUserId,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -79,7 +87,7 @@ export async function updateFeatureFlag(
         set: {
           value,
           updatedAt: new Date(),
-          updatedBy: userId,
+          updatedBy: effectiveUserId,
         },
       });
 
@@ -105,6 +113,13 @@ export async function updateAllFeatureFlags(
   userId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "super_admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সুপার অ্যাডমিন ফিচার ফ্ল্যাগ পরিবর্তন করতে পারেন।" };
+    }
+
+    const effectiveUserId = actor.id || userId;
+
     for (const [featureId, enabled] of Object.entries(updates)) {
       const key = `feature:${featureId}`;
       const value = enabled ? "true" : "false";
@@ -117,7 +132,7 @@ export async function updateAllFeatureFlags(
           value,
           description: `Feature toggle: ${featureId}`,
           isPublic: true,
-          updatedBy: userId,
+          updatedBy: effectiveUserId,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -125,7 +140,7 @@ export async function updateAllFeatureFlags(
           set: {
             value,
             updatedAt: new Date(),
-            updatedBy: userId,
+            updatedBy: effectiveUserId,
           },
         });
     }
@@ -151,8 +166,13 @@ export async function resetFeatureFlagsToDefault(
   userId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "super_admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    }
+
     const defaults = getDefaultFeatureFlags();
-    return await updateAllFeatureFlags(defaults, userId);
+    return await updateAllFeatureFlags(defaults, actor.id || userId);
   } catch (error) {
     console.error("Failed to reset feature flags:", error);
     return { success: false, error: "ডিফল্ট রিস্টোর ব্যর্থ হয়েছে।" };

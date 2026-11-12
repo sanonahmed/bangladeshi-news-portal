@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import DOMPurify from "isomorphic-dompurify";
 import { getAdForPlacement } from "@/actions/advertisements";
 import { getFeatureFlags } from "@/actions/features";
 import { AdImpressionTracker } from "./AdImpressionTracker";
@@ -75,7 +76,15 @@ export async function AdSlot({ placement, className = "" }: AdSlotProps) {
             </div>
           </Link>
         ) : ad?.type === "adsense" && ad.adCode ? (
-          <div dangerouslySetInnerHTML={{ __html: ad.adCode }} />
+          <div
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(ad.adCode, {
+                ALLOWED_TAGS: ["ins", "div", "iframe", "script"],
+                ALLOWED_ATTR: ["class", "style", "id", "data-ad-client", "data-ad-slot", "data-ad-format", "data-full-width-responsive", "src", "async", "width", "height"],
+                ALLOW_DATA_ATTR: true,
+              }),
+            }}
+          />
         ) : (
           <div className="text-xs text-[var(--color-text-muted)] py-4 text-center px-4">
             বিজ্ঞাপনের জন্য যোগাযোগ করুন: ads@bangladeshi-news.com

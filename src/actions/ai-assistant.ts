@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
 
 export interface AiHeadlineOption {
   id: string;
@@ -170,6 +171,11 @@ export async function generateAiArticleAssistance(params: {
   content: string;
   notes?: string;
 }): Promise<AiAssistanceResult> {
+  const actor = await getCurrentAdminUser();
+  if (!actor) {
+    throw new Error("অননুমোদিত প্রবেশাধিকার: কেবলমাত্র লগইনকৃত স্টাফ এআই সহকারী ব্যবহার করতে পারেন।");
+  }
+
   const rawText = stripHtml(params.content || "");
   const currentTitle = (params.title || "").trim();
   const notes = (params.notes || "").trim();

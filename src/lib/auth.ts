@@ -66,7 +66,7 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    useSecureCookies: false, // Ensures consistent cookie name (better-auth.session_token) in both local HTTP & production HTTPS
+    useSecureCookies: process.env.NODE_ENV === "production",
   },
   trustedOrigins: [
     "http://localhost:3000",

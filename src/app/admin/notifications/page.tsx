@@ -4,6 +4,8 @@ import {
   getAdminPushSubscribers,
 } from "@/actions/notifications";
 import { AdminNotificationsClient } from "./AdminNotificationsClient";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +17,18 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminNotificationsPage() {
+  const { granted, currentUser } = await checkRoleAccess("editor");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="editor"
+        currentRole={currentUser?.role}
+        pageTitleBn="ওয়েব পুশ নোটিফিকেশন কন্ট্রোল"
+        pageTitleEn="Push Notification Management"
+      />
+    );
+  }
+
   const [alerts, stats, subscribers] = await Promise.all([
     getAllAdminAlerts(),
     getAdminNotificationStats(),

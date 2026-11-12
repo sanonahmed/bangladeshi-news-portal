@@ -6,6 +6,8 @@ import { eq, desc, asc, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import { z } from "zod";
 import {
   detectVideoPlatform,
@@ -73,12 +75,9 @@ const VideoSchema = z.object({
 
 export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ success: boolean; error?: string; video?: Video }> {
   try {
-    // Auth check
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ভিডিও যোগ করতে পারেন।" };
     }
 
     const parsed = VideoSchema.safeParse(data);
@@ -166,11 +165,9 @@ export async function createVideo(data: z.infer<typeof VideoSchema>): Promise<{ 
 
 export async function deleteVideo(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ভিডিও মুছতে পারেন।" };
     }
 
     await db.delete(videos).where(eq(videos.id, id));
@@ -188,6 +185,11 @@ export async function deleteVideo(id: string): Promise<{ success: boolean; error
 
 export async function toggleVideoFeatured(id: string, isFeatured: boolean): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    }
+
     if (isFeatured) {
       // Un-feature all first
       await db.update(videos).set({ isFeatured: false });

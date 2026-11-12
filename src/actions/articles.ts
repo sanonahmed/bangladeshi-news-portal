@@ -912,6 +912,11 @@ export async function getTrendingArticlesWithVelocity(): Promise<TrendingVelocit
  */
 export async function setArticleAsHomepageLead(articleId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !hasPermission(actor.role as any, "article:publish")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন শীর্ষ সংবাদ নির্বাচন করতে পারেন।" };
+    }
+
     const [target] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
     if (!target) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
 
@@ -946,6 +951,11 @@ export async function setArticleAsHomepageLead(articleId: string): Promise<{ suc
  */
 export async function sendArticleToBreakingTicker(articleId: string): Promise<{ success: boolean; headline?: string; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !hasPermission(actor.role as any, "article:publish")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ব্রেকিং টিকারে সংবাদ পাঠাতে পারেন।" };
+    }
+
     const [target] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
     if (!target) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
 

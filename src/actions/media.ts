@@ -7,6 +7,8 @@ import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import { formatBengaliDate } from "@/lib/bengali-date";
 
 export interface MediaItem {
@@ -71,15 +73,12 @@ export async function recordMediaAsset(data: {
   photographerCredit?: string;
 }): Promise<{ success: boolean; error?: string; media?: MediaItem }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "journalist")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সাংবাদিক বা স্টাফ মিডিয়া আপলোড করতে পারেন।" };
     }
 
-    const userId = session?.user?.id || "0cd6ba57-6bab-432d-a6e3-0e9c898ba141";
+    const userId = actor.id;
 
     const [inserted] = await db
       .insert(mediaAssets)
@@ -124,12 +123,9 @@ export async function deleteAdminMedia(
   mediaId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন মিডিয়া মুছতে পারেন।" };
     }
 
     await db.delete(mediaAssets).where(eq(mediaAssets.id, mediaId));

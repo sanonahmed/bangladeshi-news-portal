@@ -2,6 +2,8 @@ import { getFactChecks, getFactCheckSubmissions } from "@/actions/fact-checks";
 import { AdminFactChecksClient } from "./AdminFactChecksClient";
 import { getFeatureFlags } from "@/actions/features";
 import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,18 @@ export const metadata = {
 };
 
 export default async function AdminFactChecksPage() {
+  const { granted, currentUser } = await checkRoleAccess("editor");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="editor"
+        currentRole={currentUser?.role}
+        pageTitleBn="ফ্যাক্ট-চেক ও অনুসন্ধান ডেস্ক"
+        pageTitleEn="Fact-Check Desk Management"
+      />
+    );
+  }
+
   const features = await getFeatureFlags();
   if (features.admin_fact_check_manager === false) {
     return (

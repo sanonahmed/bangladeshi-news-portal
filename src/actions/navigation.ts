@@ -6,6 +6,8 @@ import { eq, asc } from "drizzle-orm";
 import type { NavigationItem } from "@/types";
 import { unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 
 const DEFAULT_NAVIGATION: NavigationItem[] = [
   { id: "nav-1", label: "প্রচ্ছদ", href: "/", sortOrder: 1, isActive: true, openInNewTab: false },
@@ -63,6 +65,11 @@ export async function upsertNavigationItem(
   data: Partial<NavigationItem> & { id?: string }
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র অ্যাডমিন নেভিগেশন পরিবর্তন করতে পারেন।" };
+    }
+
     if (data.id) {
       await db
         .update(navigationItems)
@@ -103,6 +110,11 @@ export async function upsertNavigationItem(
 
 export async function deleteNavigationItem(id: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    }
+
     await db.delete(navigationItems).where(eq(navigationItems.id, id));
     safeRevalidateTag("navigation");
     return { success: true };

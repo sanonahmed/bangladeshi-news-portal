@@ -5,6 +5,8 @@ import { siteSettings } from "@/db/schema/settings";
 import type { SiteSettings } from "@/types";
 import { unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 
 const DEFAULT_SETTINGS: SiteSettings = {
   siteName: process.env.NEXT_PUBLIC_SITE_NAME ?? "দৈনিক বাংলাদেশ বার্তা",
@@ -62,6 +64,13 @@ export async function updateSiteSettings(
   userId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "super_admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সুপার অ্যাডমিন সাইট সেটিংস পরিবর্তন করতে পারেন।" };
+    }
+
+    const effectiveUserId = actor.id || userId;
+
     for (const [key, value] of Object.entries(updates)) {
       await db
         .insert(siteSettings)
@@ -69,7 +78,7 @@ export async function updateSiteSettings(
           id: crypto.randomUUID(),
           key,
           value,
-          updatedBy: userId,
+          updatedBy: effectiveUserId,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -77,7 +86,7 @@ export async function updateSiteSettings(
           set: {
             value,
             updatedAt: new Date(),
-            updatedBy: userId,
+            updatedBy: effectiveUserId,
           },
         });
     }

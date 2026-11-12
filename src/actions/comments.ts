@@ -8,6 +8,8 @@ import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import { z } from "zod";
 
 export interface ArticleCommentWithArticle extends Comment {
@@ -57,8 +59,11 @@ export async function submitComment(data: z.infer<typeof SubmitCommentSchema>): 
     const finalUserName = session?.user?.name || userName.trim();
     const finalUserEmail = session?.user?.email || userEmail?.trim() || null;
 
-    // Basic profanity / spam check
-    const spamKeywords = ["viagra", "casino", "free crypto", "telegram.me", "whatsapp me for money"];
+    // Enhanced profanity / spam and malicious link check
+    const spamKeywords = [
+      "viagra", "casino", "free crypto", "telegram.me", "whatsapp me for money",
+      "bit.ly", "t.me", "tinyurl.com", "crypto giveaway", "http://", "https://"
+    ];
     const isSpam = spamKeywords.some((word) => content.toLowerCase().includes(word));
     const initialStatus = isSpam ? "spam" : "approved";
 
@@ -165,20 +170,12 @@ export async function updateCommentStatus(
   status: "approved" | "rejected" | "spam" | "pending"
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন মন্তব্য মডারেশন করতে পারেন।" };
     }
 
-    // Resolve moderator id
-    let modId = session?.user?.id || null;
-    if (!modId) {
-      const [firstUser] = await db.select({ id: user.id }).from(user).limit(1);
-      modId = firstUser?.id || null;
-    }
+    const modId = actor.id;
 
     await db
       .update(comments)
@@ -202,11 +199,8 @@ export async function updateCommentStatus(
 
 export async function deleteComment(commentId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 
@@ -231,22 +225,15 @@ export async function bulkUpdateCommentStatus(
       return { success: false, error: "কোনো মন্তব্য নির্বাচন করা হয়নি" };
     }
 
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 
     if (action === "delete") {
       await db.delete(comments).where(inArray(comments.id, commentIds));
     } else {
-      let modId = session?.user?.id || null;
-      if (!modId) {
-        const [firstUser] = await db.select({ id: user.id }).from(user).limit(1);
-        modId = firstUser?.id || null;
-      }
+      const modId = actor.id;
 
       await db
         .update(comments)

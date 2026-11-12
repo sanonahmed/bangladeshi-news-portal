@@ -5,6 +5,8 @@ import { categories } from "@/db/schema/categories";
 import { eq, asc } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 
 export interface CategoryItem {
   id: string;
@@ -74,6 +76,11 @@ export async function createCategory(data: {
   sortOrder?: number;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র অ্যাডমিন নতুন ক্যাটাগরি তৈরি করতে পারেন।" };
+    }
+
     await db.insert(categories).values({
       id: crypto.randomUUID(),
       name: data.name,

@@ -2,6 +2,8 @@ import { getAllAdminComments } from "@/actions/comments";
 import { AdminCommentsClient } from "./AdminCommentsClient";
 import { getFeatureFlags } from "@/actions/features";
 import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,18 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminCommentsPage() {
+  const { granted, currentUser } = await checkRoleAccess("editor");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="editor"
+        currentRole={currentUser?.role}
+        pageTitleBn="পাঠক মন্তব্য ও মডারেশন"
+        pageTitleEn="Comments Moderation"
+      />
+    );
+  }
+
   const features = await getFeatureFlags();
   if (features.admin_comments_moderation === false) {
     return (

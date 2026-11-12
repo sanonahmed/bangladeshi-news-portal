@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { breakingAlerts, pushSubscriptions } from "@/db/schema/notifications";
 import { desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import type {
   AlertItem,
   AdminSubscriberItem,
@@ -72,6 +74,11 @@ export async function getRecentAlerts(limit: number = 10): Promise<AlertItem[]> 
  */
 export async function getAllAdminAlerts(): Promise<AlertItem[]> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return [];
+    }
+
     const records = await db
       .select()
       .from(breakingAlerts)
@@ -179,6 +186,11 @@ export async function getAdminNotificationStats(): Promise<AdminNotificationStat
  */
 export async function getAdminPushSubscribers(): Promise<AdminSubscriberItem[]> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return [];
+    }
+
     const records = await db
       .select()
       .from(pushSubscriptions)
@@ -267,6 +279,11 @@ export async function broadcastBreakingAlertAction(data: {
   soundAlert?: boolean;
 }): Promise<{ success: boolean; alert?: AlertItem; message: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, message: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন পুশ অ্যালার্ট পাঠাতে পারেন।" };
+    }
+
     if (!data.title || !data.message) {
       return { success: false, message: "শিরোনাম এবং বিবরণ বাধ্যতামূলক" };
     }
@@ -318,6 +335,11 @@ export async function broadcastBreakingAlertAction(data: {
  */
 export async function deleteAlertAction(id: string): Promise<{ success: boolean; message: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, message: "অননুমোদিত প্রবেশাধিকার" };
+    }
+
     await db.delete(breakingAlerts).where(eq(breakingAlerts.id, id));
     revalidatePath("/notifications");
     revalidatePath("/admin/notifications");

@@ -7,6 +7,9 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
+import crypto from "crypto";
 import { z } from "zod";
 
 export async function getActivePoll(): Promise<Poll | null> {
@@ -104,11 +107,12 @@ export async function castVote(
       .returning();
 
     // Insert vote record
+    const hashedIp = crypto.createHash("sha256").update(ip).digest("hex");
     await db.insert(pollVotes).values({
       id: crypto.randomUUID(),
       pollId,
       optionIndex,
-      ipHash: ip,
+      ipHash: hashedIp,
       userId,
     });
 
@@ -142,12 +146,9 @@ export async function createPoll(
   data: z.infer<typeof CreatePollSchema>
 ): Promise<{ success: boolean; error?: string; poll?: Poll }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন জরিপ তৈরি করতে পারেন।" };
     }
 
     const parsed = CreatePollSchema.safeParse(data);
@@ -156,12 +157,7 @@ export async function createPoll(
     }
 
     const { question, description, category, options, isFeatured } = parsed.data;
-
-    let userId = session?.user?.id || null;
-    if (!userId) {
-      const [firstUser] = await db.select({ id: user.id }).from(user).limit(1);
-      userId = firstUser?.id || null;
-    }
+    const userId = actor.id;
 
     // If marked featured, un-feature others
     if (isFeatured) {
@@ -202,11 +198,8 @@ export async function togglePollFeatured(
   isFeatured: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 
@@ -232,11 +225,8 @@ export async function togglePollStatus(
   isActive: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 
@@ -255,11 +245,8 @@ export async function togglePollStatus(
 
 export async function deletePoll(pollId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 

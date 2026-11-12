@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { factChecks, factCheckSubmissions, type FactCheck } from "@/db/schema/fact-checks";
 import { desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import type { FactCheckItem, FactCheckSubmissionItem } from "@/types/fact-check";
 
 export async function getFactChecks(): Promise<FactCheckItem[]> {
@@ -149,6 +151,11 @@ export async function createFactCheck(
   data: FactCheckInput
 ): Promise<{ success: boolean; error?: string; slug?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ফ্যাক্ট-চেক তৈরি করতে পারেন।" };
+    }
+
     const rawSlug =
       data.slug?.trim() ||
       data.title
@@ -196,6 +203,11 @@ export async function updateFactCheck(
   data: Partial<FactCheckInput>
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ফ্যাক্ট-চেক সম্পাদনা করতে পারেন।" };
+    }
+
     const [existing] = await db.select().from(factChecks).where(eq(factChecks.id, id)).limit(1);
     if (!existing) {
       return { success: false, error: "ফ্যাক্ট-চেক রেকর্ড পাওয়া যায়নি" };
@@ -239,6 +251,11 @@ export async function updateFactCheck(
 
 export async function deleteFactCheck(id: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ফ্যাক্ট-চেক মুছতে পারেন।" };
+    }
+
     const [existing] = await db.select().from(factChecks).where(eq(factChecks.id, id)).limit(1);
     await db.delete(factChecks).where(eq(factChecks.id, id));
 
@@ -255,6 +272,11 @@ export async function deleteFactCheck(id: string): Promise<{ success: boolean; e
 
 export async function toggleFactCheckFeatured(id: string, isFeatured: boolean): Promise<{ success: boolean }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false };
+    }
+
     await db.update(factChecks).set({ isFeatured }).where(eq(factChecks.id, id));
     revalidatePath("/fact-check");
     revalidatePath("/admin/fact-checks");
@@ -266,6 +288,11 @@ export async function toggleFactCheckFeatured(id: string, isFeatured: boolean): 
 
 export async function getFactCheckSubmissions(): Promise<FactCheckSubmissionItem[]> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return [];
+    }
+
     const records = await db
       .select()
       .from(factCheckSubmissions)
@@ -296,6 +323,11 @@ export async function updateSubmissionStatus(
   status: "pending" | "reviewing" | "published" | "dismissed"
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    }
+
     await db
       .update(factCheckSubmissions)
       .set({ status })
@@ -311,6 +343,11 @@ export async function updateSubmissionStatus(
 
 export async function deleteSubmission(id: string): Promise<{ success: boolean }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false };
+    }
+
     await db.delete(factCheckSubmissions).where(eq(factCheckSubmissions.id, id));
     revalidatePath("/admin/fact-checks");
     return { success: true };

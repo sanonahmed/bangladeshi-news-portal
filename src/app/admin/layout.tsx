@@ -1,42 +1,26 @@
-"use client";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
+import { redirect } from "next/navigation";
+import { AdminShell } from "@/components/admin/layout/AdminShell";
 
-import { useState } from "react";
-import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
-import { AdminTopNav } from "@/components/admin/layout/AdminTopNav";
-import { AdminLanguageProvider } from "@/contexts/AdminLanguageContext";
+export const dynamic = "force-dynamic";
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const currentUser = await getCurrentAdminUser();
 
-  return (
-    <AdminLanguageProvider>
-      <div className="min-h-screen bg-[var(--color-bg-secondary)] text-[var(--color-text)] flex">
-        {/* Sidebar */}
-        <AdminSidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
+  // If not signed in, redirect to login
+  if (!currentUser) {
+    redirect("/login?callbackUrl=/admin");
+  }
 
-        {/* Main Content Area */}
-        <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
-          <AdminTopNav onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-          <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
-            {children}
-          </main>
-        </div>
+  // Readers are strictly prohibited from the staff newsroom admin panel
+  if (!isRoleAtLeast(currentUser.role, "journalist")) {
+    redirect("/login?notice=staff_only");
+  }
 
-        {/* Mobile Backdrop */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </div>
-    </AdminLanguageProvider>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }

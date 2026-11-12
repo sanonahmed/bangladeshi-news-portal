@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { authorProfiles, user as usersTable, articles, auditLogs, account as accountTable } from "@/db/schema";
+import { authorProfiles, user as usersTable, articles, auditLogs, account as accountTable, session as sessionTable } from "@/db/schema";
 import { eq, and, count, ne } from "drizzle-orm";
 import { getCurrentAdminUser } from "@/lib/admin-guard";
 import { revalidatePath } from "next/cache";
@@ -283,8 +283,8 @@ export async function changeMyPassword(data: {
       return { success: false, error: "বর্তমান ও নতুন উভয় পাসওয়ার্ড আবশ্যক।" };
     }
 
-    if (newPassword.length < 8) {
-      return { success: false, error: "নতুন পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।" };
+    if (newPassword.length < 10) {
+      return { success: false, error: "নতুন পাসওয়ার্ড কমপক্ষে ১০ অক্ষরের হতে হবে।" };
     }
 
     // Find account row
@@ -320,6 +320,15 @@ export async function changeMyPassword(data: {
         updatedAt: new Date(),
       })
       .where(eq(accountTable.id, account.id));
+
+    // Security Hardening: Revoke other existing sessions upon password change
+    try {
+      await db
+        .delete(sessionTable)
+        .where(eq(sessionTable.userId, currentUser.id));
+    } catch (revokeErr) {
+      console.warn("Failed to purge legacy sessions after password update:", revokeErr);
+    }
 
     await recordAudit(currentUser.id, "PASSWORD_CHANGED", currentUser.id, {
       email: currentUser.email,

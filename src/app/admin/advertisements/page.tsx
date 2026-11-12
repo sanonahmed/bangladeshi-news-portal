@@ -2,6 +2,8 @@ import { getAllAdminAds } from "@/actions/advertisements";
 import { AdminAdsClient } from "./AdminAdsClient";
 import { getFeatureFlags } from "@/actions/features";
 import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,18 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminAdvertisementsPage() {
+  const { granted, currentUser } = await checkRoleAccess("admin");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="admin"
+        currentRole={currentUser?.role}
+        pageTitleBn="বিজ্ঞাপন ব্যানার ও স্লট পরিচালনা"
+        pageTitleEn="Advertisement Management"
+      />
+    );
+  }
+
   const features = await getFeatureFlags();
   if (features.admin_ads_manager === false) {
     return (

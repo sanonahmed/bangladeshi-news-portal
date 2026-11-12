@@ -389,8 +389,8 @@ export async function createStaffMember(data: {
       return { success: false, error: "Name, email, and password are required" };
     }
 
-    if (password.length < 8) {
-      return { success: false, error: "Password must be at least 8 characters long" };
+    if (password.length < 10) {
+      return { success: false, error: "পাসওয়ার্ড কমপক্ষে ১০ অক্ষরের হতে হবে (Password must be at least 10 characters)" };
     }
 
     // Check if user already exists

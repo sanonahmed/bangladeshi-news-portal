@@ -6,6 +6,8 @@ import { desc, eq, sql, count } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import { z } from "zod";
 
 export interface TagWithArticleCount {
@@ -57,12 +59,9 @@ export async function createAdminTag(
   data: z.infer<typeof CreateTagSchema>
 ): Promise<{ success: boolean; error?: string; tag?: Tag }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "journalist")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সাংবাদিক বা স্টাফ ট্যাগ তৈরি করতে পারেন।" };
     }
 
     const parsed = CreateTagSchema.safeParse(data);
@@ -112,12 +111,9 @@ export async function deleteAdminTag(
   tagId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ট্যাগ মুছতে পারেন।" };
     }
 
     await db.delete(tags).where(eq(tags.id, tagId));

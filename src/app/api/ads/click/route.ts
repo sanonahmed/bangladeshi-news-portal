@@ -29,7 +29,14 @@ export async function GET(request: NextRequest) {
         .where(eq(advertisements.id, id));
 
       if (ad.destinationUrl) {
-        return NextResponse.redirect(ad.destinationUrl);
+        try {
+          const dest = new URL(ad.destinationUrl, request.url);
+          if (dest.protocol === "http:" || dest.protocol === "https:") {
+            return NextResponse.redirect(dest.toString());
+          }
+        } catch {
+          // In case destination URL is malformed
+        }
       }
     }
   } catch (error) {

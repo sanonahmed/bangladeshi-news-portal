@@ -8,6 +8,9 @@ import { revalidatePath, unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
+import DOMPurify from "isomorphic-dompurify";
 import { z } from "zod";
 
 export interface AdData {
@@ -105,12 +108,9 @@ export async function createOrUpdateAd(
   data: z.infer<typeof AdSchema>
 ): Promise<{ success: boolean; error?: string; ad?: Advertisement }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "admin")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র অ্যাডমিন বিজ্ঞাপন পরিচালনা করতে পারেন।" };
     }
 
     const parsed = AdSchema.safeParse(data);
@@ -118,11 +118,16 @@ export async function createOrUpdateAd(
       return { success: false, error: parsed.error.errors[0]?.message };
     }
 
-    let userId = session?.user?.id || null;
-    if (!userId) {
-      const [firstUser] = await db.select({ id: user.id }).from(user).limit(1);
-      userId = firstUser?.id || "admin-system";
-    }
+    const userId = actor.id;
+
+    // Sanitize adCode to prevent Stored XSS
+    const sanitizedAdCode = parsed.data.adCode
+      ? DOMPurify.sanitize(parsed.data.adCode.trim(), {
+          ALLOWED_TAGS: ["script", "ins", "div", "iframe", "a", "img"],
+          ALLOWED_ATTR: ["src", "href", "target", "rel", "class", "style", "id", "data-ad-client", "data-ad-slot", "data-ad-format", "data-full-width-responsive", "width", "height", "frameborder", "async"],
+          ALLOW_DATA_ATTR: true,
+        })
+      : null;
 
     if (parsed.data.id) {
       // Update existing
@@ -134,7 +139,7 @@ export async function createOrUpdateAd(
           type: parsed.data.type,
           imageUrl: parsed.data.imageUrl?.trim() || null,
           destinationUrl: parsed.data.destinationUrl?.trim() || null,
-          adCode: parsed.data.adCode?.trim() || null,
+          adCode: sanitizedAdCode,
           altText: parsed.data.altText?.trim() || null,
           deviceTarget: parsed.data.deviceTarget,
           isActive: parsed.data.isActive,
@@ -159,7 +164,7 @@ export async function createOrUpdateAd(
           type: parsed.data.type,
           imageUrl: parsed.data.imageUrl?.trim() || null,
           destinationUrl: parsed.data.destinationUrl?.trim() || null,
-          adCode: parsed.data.adCode?.trim() || null,
+          adCode: sanitizedAdCode,
           altText: parsed.data.altText?.trim() || null,
           deviceTarget: parsed.data.deviceTarget,
           isActive: parsed.data.isActive,
@@ -186,11 +191,8 @@ export async function toggleAdStatus(
   isActive: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "admin")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 
@@ -212,11 +214,8 @@ export async function toggleAdStatus(
 
 export async function deleteAd(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "admin")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 

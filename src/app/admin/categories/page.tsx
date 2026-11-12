@@ -3,10 +3,24 @@ import { FolderTree, Plus, Trash2, Edit2 } from "lucide-react";
 import { safeRevalidateTag } from "@/lib/cache";
 import { cookies } from "next/headers";
 import { toBengaliDigits } from "@/lib/bengali-date";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCategoriesPage() {
+  const { granted, currentUser } = await checkRoleAccess("admin");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="admin"
+        currentRole={currentUser?.role}
+        pageTitleBn="বিভাগ ও ক্যাটাগরি ব্যবস্থাপনা"
+        pageTitleEn="Categories Management"
+      />
+    );
+  }
+
   const cookieStore = await cookies();
   const isEn = cookieStore.get("admin_lang")?.value !== "bn";
   const formatNum = (n: number | string) => (isEn ? String(n) : toBengaliDigits(n));

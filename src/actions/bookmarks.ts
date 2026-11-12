@@ -24,17 +24,6 @@ export async function toggleArticleBookmark(articleId: string): Promise<{
     const session = await auth.api.getSession({ headers: await headers() });
     if (session?.user) {
       userId = session.user.id;
-    } else {
-      const cookieStore = await cookies();
-      const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-      if (isDemo) {
-        const adminInDb = await db
-          .select({ id: user.id })
-          .from(user)
-          .where(eq(user.role, "super_admin"))
-          .limit(1);
-        userId = adminInDb[0]?.id || null;
-      }
     }
 
     if (!userId) {

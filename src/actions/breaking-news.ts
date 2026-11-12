@@ -8,6 +8,8 @@ import type { BreakingNewsItem } from "@/types";
 import { revalidatePath, unstable_cache } from "next/cache";
 import { safeRevalidateTag } from "@/lib/cache";
 import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 
@@ -82,12 +84,9 @@ export async function createBreakingNews(
   data: z.infer<typeof CreateBreakingSchema>
 ): Promise<{ success: boolean; error?: string; item?: BreakingNews }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ব্রেকিং নিউজ যোগ করতে পারেন।" };
     }
 
     const parsed = CreateBreakingSchema.safeParse(data);
@@ -95,16 +94,7 @@ export async function createBreakingNews(
       return { success: false, error: parsed.error.errors[0]?.message };
     }
 
-    // Resolve a valid user ID for foreign key
-    let userId = session?.user?.id;
-    if (!userId) {
-      const [firstUser] = await db.select({ id: user.id }).from(user).limit(1);
-      userId = firstUser?.id;
-    }
-
-    if (!userId) {
-      return { success: false, error: "কোনো বৈধ অ্যাডমিন ইউজার পাওয়া যায়নি" };
-    }
+    const userId = actor.id;
 
     let expiresAt: Date | null = null;
     if (parsed.data.expiresHours && parsed.data.expiresHours > 0) {
@@ -140,12 +130,9 @@ export async function createBreakingNews(
 
 export async function deleteBreakingNews(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
-      return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন ব্রেকিং নিউজ মুছতে পারেন।" };
     }
 
     await db.delete(breakingNews).where(eq(breakingNews.id, id));
@@ -164,11 +151,8 @@ export async function deleteBreakingNews(id: string): Promise<{ success: boolean
 
 export async function toggleBreakingNews(id: string, isActive: boolean): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 
@@ -191,11 +175,8 @@ export async function updateBreakingNewsPriority(
   priority: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const cookieStore = await cookies();
-    const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-
-    if (!session && !isDemo) {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
       return { success: false, error: "অননুমোদিত প্রবেশাধিকার" };
     }
 

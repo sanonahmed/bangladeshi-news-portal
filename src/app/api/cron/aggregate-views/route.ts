@@ -9,8 +9,13 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || cronSecret.trim().length === 0) {
+    return NextResponse.json({ error: "Cron authorization not configured on server" }, { status: 503 });
+  }
+
   const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

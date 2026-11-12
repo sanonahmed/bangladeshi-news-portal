@@ -2,10 +2,24 @@ import { getNavigation } from "@/actions/navigation";
 import { Compass, Plus } from "lucide-react";
 import { cookies } from "next/headers";
 import { toBengaliDigits } from "@/lib/bengali-date";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminNavigationPage() {
+  const { granted, currentUser } = await checkRoleAccess("admin");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="admin"
+        currentRole={currentUser?.role}
+        pageTitleBn="নেভিগেশন ও মেনু ব্যবস্থাপনা"
+        pageTitleEn="Navigation & Menu Management"
+      />
+    );
+  }
+
   const cookieStore = await cookies();
   const isEn = cookieStore.get("admin_lang")?.value !== "bn";
   const formatNum = (n: number | string) => (isEn ? String(n) : toBengaliDigits(n));
