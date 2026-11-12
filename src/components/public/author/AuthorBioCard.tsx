@@ -36,6 +36,7 @@ export function AuthorBioCard({
               src={avatarUrl}
               alt={name}
               fill
+              unoptimized
               className="object-cover"
               sizes="80px"
             />

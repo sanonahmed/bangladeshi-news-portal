@@ -484,8 +484,19 @@ export function AdminUsersClient({
                       {/* Name & Avatar */}
                       <td className="p-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold flex items-center justify-center shrink-0 border border-[var(--color-primary)]/20">
-                            {u.name.charAt(0).toUpperCase()}
+                          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-bold flex items-center justify-center shrink-0 border border-[var(--color-primary)]/20">
+                            <span className="select-none text-xs">{u.name.charAt(0).toUpperCase()}</span>
+                            {(u.avatarUrl || u.image) && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={u.avatarUrl || u.image || ""}
+                                alt={u.name}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            )}
                           </div>
                           <div>
                             <div className="font-bold text-[var(--color-text)] flex items-center gap-1.5">

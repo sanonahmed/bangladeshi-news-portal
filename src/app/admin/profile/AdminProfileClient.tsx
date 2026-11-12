@@ -168,6 +168,13 @@ export function AdminProfileClient({ initialProfile }: AdminProfileClientProps) 
           email: contactEmail || null,
           phone: phone || null,
         }));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("profile-updated", {
+              detail: { name: nameBangla, image: avatarUrl || null },
+            })
+          );
+        }
       }
     } catch (err: any) {
       setNotification({ type: "error", message: err?.message || "সার্ভার যোগাযোগে ত্রুটি ঘটেছে।" });

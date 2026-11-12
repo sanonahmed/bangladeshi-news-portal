@@ -16,6 +16,8 @@ export interface AdminUserItem {
   name: string;
   email: string;
   role: string;
+  image?: string | null;
+  avatarUrl?: string | null;
   banned: boolean;
   banReason?: string | null;
   createdAt: string;
@@ -66,6 +68,8 @@ export async function getAdminUsersList(): Promise<AdminUserItem[]> {
         name: usersTable.name,
         email: usersTable.email,
         role: usersTable.role,
+        image: usersTable.image,
+        avatarUrl: authorProfiles.avatarUrl,
         banned: usersTable.banned,
         banReason: usersTable.banReason,
         createdAt: usersTable.createdAt,

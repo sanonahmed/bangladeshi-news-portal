@@ -20,7 +20,7 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: session } = authClient.useSession();
-  const [dbUser, setDbUser] = useState<{ name: string; role: string } | null>(null);
+  const [dbUser, setDbUser] = useState<{ name: string; role: string; image?: string | null } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -30,6 +30,18 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
         if (data?.user) setDbUser(data.user);
       })
       .catch(() => {});
+
+    function refreshUser() {
+      fetch("/api/auth/me")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.user) setDbUser(data.user);
+        })
+        .catch(() => {});
+    }
+
+    window.addEventListener("profile-updated", refreshUser);
+    return () => window.removeEventListener("profile-updated", refreshUser);
   }, []);
 
   // Close dropdown when clicking outside
@@ -55,6 +67,7 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
 
   const userName = dbUser?.name ?? session?.user?.name ?? (language === "bn" ? "সুপার অ্যাডমিন" : "Super Admin");
   const userRole = dbUser?.role ?? (session?.user as any)?.role ?? "super_admin";
+  const userAvatar = dbUser?.image ?? (session?.user as any)?.image ?? null;
 
   return (
     <header className="h-16 bg-[var(--color-bg)] border-b border-[var(--color-border)] flex items-center justify-between px-4 lg:px-8 z-40 sticky top-0">
@@ -146,8 +159,21 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
             title={language === "bn" ? "আমার প্রোফাইল ও পরিচিতি সম্পাদনা করুন" : "Edit My Profile"}
             className="flex items-center gap-2 group hover:opacity-90 transition-opacity"
           >
-            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center font-bold text-xs select-none group-hover:ring-2 group-hover:ring-purple-500 transition-all">
-              {userName.charAt(0)}
+            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[var(--color-primary)] text-white flex items-center justify-center font-bold text-xs select-none group-hover:ring-2 group-hover:ring-purple-500 transition-all shrink-0">
+              <span className="select-none font-bold text-xs">
+                {userName.charAt(0)}
+              </span>
+              {userAvatar && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
             </div>
             <div className="hidden md:block text-left">
               <p className="text-xs font-bold text-[var(--color-text)] group-hover:text-purple-600 transition-colors">

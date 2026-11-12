@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getAuthorsList } from "@/actions/authors";
 import { AuthorsDirectoryClient } from "./AuthorsDirectoryClient";
 
-export const revalidate = 60; // ISR 60 seconds
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "আমাদের সাংবাদিক ও বার্তা দল | দৈনিক বাংলাদেশ বার্তা",

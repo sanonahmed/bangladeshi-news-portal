@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { FacebookIcon, TwitterXIcon, LinkedinIcon } from "@/components/ui/icons";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface AuthorPageProps {
   params: Promise<{ slug: string }>;
@@ -73,6 +74,7 @@ export default async function AuthorProfilePage({ params, searchParams }: Author
                 alt={author.nameBangla}
                 fill
                 priority
+                unoptimized
                 className="object-cover"
                 sizes="(max-width: 768px) 112px, 144px"
               />

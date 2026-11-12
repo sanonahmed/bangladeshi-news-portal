@@ -21,6 +21,30 @@ interface AuthorsDirectoryClientProps {
   authors: AuthorDirectoryItem[];
 }
 
+function DirectoryAuthorAvatar({ src, name }: { src?: string | null; name: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-[var(--color-bg-secondary)] text-[var(--color-primary)] font-bold text-xl select-none">
+        {name.charAt(0)}
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={name}
+      fill
+      unoptimized
+      className="object-cover"
+      sizes="64px"
+      onError={() => setHasError(true)}
+    />
+  );
+}
+
 export function AuthorsDirectoryClient({ authors }: AuthorsDirectoryClientProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
@@ -144,19 +168,7 @@ export function AuthorsDirectoryClient({ authors }: AuthorsDirectoryClientProps)
                   href={`/author/${author.slug}`}
                   className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden border-2 border-[var(--color-primary)] bg-[var(--color-bg-secondary)] block group-hover:scale-105 transition-transform"
                 >
-                  {author.avatarUrl ? (
-                    <Image
-                      src={author.avatarUrl}
-                      alt={author.nameBangla}
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[var(--color-text-faint)]">
-                      <User className="w-8 h-8" />
-                    </div>
-                  )}
+                  <DirectoryAuthorAvatar src={author.avatarUrl} name={author.nameBangla} />
                 </Link>
 
                 <div className="flex-1 min-w-0">
