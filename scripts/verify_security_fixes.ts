@@ -5,6 +5,8 @@ import { upsertNavigationItem } from "@/actions/navigation";
 import { broadcastBreakingAlertAction } from "@/actions/notifications";
 import { createOrUpdateAd } from "@/actions/advertisements";
 import { createBreakingNews } from "@/actions/breaking-news";
+import { startAbTest, finalizeAbTest } from "@/actions/articles";
+import { assignArticleLocation } from "@/actions/geography";
 
 async function runTests() {
   console.log("=== SECURITY VERIFICATION REGRESSION TESTS ===\n");
@@ -65,6 +67,24 @@ async function runTests() {
   // Test 7: createBreakingNews unauthenticated
   await test("createBreakingNews rejects unauthenticated call", async () => {
     const res = await createBreakingNews({ headline: "Unauthenticated Breaking News", isExternal: false, priority: 1 });
+    return res.success === false && Boolean(res.error?.includes("অননুমোদিত"));
+  });
+
+  // Test 8: startAbTest unauthenticated
+  await test("startAbTest rejects unauthenticated call", async () => {
+    const res = await startAbTest("fake-article-id", "Fake Headline B");
+    return res.success === false && Boolean(res.error?.includes("অননুমোদিত"));
+  });
+
+  // Test 9: finalizeAbTest unauthenticated
+  await test("finalizeAbTest rejects unauthenticated call", async () => {
+    const res = await finalizeAbTest("fake-article-id", "b");
+    return res.success === false && Boolean(res.error?.includes("অননুমোদিত"));
+  });
+
+  // Test 10: assignArticleLocation unauthenticated
+  await test("assignArticleLocation rejects unauthenticated call", async () => {
+    const res = await assignArticleLocation("fake-article-id", "fake-division", "fake-district");
     return res.success === false && Boolean(res.error?.includes("অননুমোদিত"));
   });
 

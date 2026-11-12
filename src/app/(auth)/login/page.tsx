@@ -8,10 +8,19 @@ import { Lock, Mail, AlertCircle, ArrowRight, ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+function getSafeCallbackUrl(raw: string | null): string {
+  if (!raw) return "/admin";
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.startsWith("/\\")) {
+    return trimmed;
+  }
+  return "/admin";
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/admin";
+  const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
   const noticeParam = searchParams.get("notice");
 
   const [email, setEmail] = useState("");

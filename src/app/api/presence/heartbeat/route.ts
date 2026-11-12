@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { activeVisitors } from "@/db/schema/engagement";
 import { sql } from "drizzle-orm";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,13 @@ export async function POST(request: NextRequest) {
       articleId?: string;
     };
 
+    const rawIp = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+    const hashedIp = crypto.createHash("sha256").update(rawIp).digest("hex").slice(0, 16);
+
     const sessionId =
       body.sessionId && typeof body.sessionId === "string" && body.sessionId.length <= 64
         ? body.sessionId
-        : `anon-${request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown"}`;
+        : `anon-${hashedIp}`;
 
     const pathname =
       typeof body.pathname === "string" ? body.pathname.slice(0, 200) : "/";

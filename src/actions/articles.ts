@@ -10,7 +10,7 @@ import { articleLocations } from "@/db/schema/geography";
 import { authorProfiles } from "@/db/schema/authors";
 import { eq, desc, and, sql, count, isNotNull, lte, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isRoleAtLeast } from "@/lib/permissions";
 import { getCurrentAdminUser } from "@/lib/admin-guard";
 import { revalidateArticle } from "@/lib/cache";
 import { revalidatePath } from "next/cache";
@@ -284,8 +284,17 @@ export async function updateArticle(data: {
  */
 export async function startAbTest(articleId: string, headlineB: string, durationMinutes = 30): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন এ/বি টেস্ট চালু করতে পারেন।" };
+    }
+
     const [existing] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
     if (!existing) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
+
+    if (!headlineB || headlineB.trim().length < 3) {
+      return { success: false, error: "অনুগ্রহ করে একটি বৈধ বিকল্প শিরোনাম (Headline B) প্রদান করুন।" };
+    }
 
     await db
       .update(articles)
@@ -314,6 +323,11 @@ export async function startAbTest(articleId: string, headlineB: string, duration
  */
 export async function finalizeAbTest(articleId: string, winner: "a" | "b"): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন এ/বি টেস্ট সমাপ্ত করতে পারেন।" };
+    }
+
     const [existing] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
     if (!existing) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
 
@@ -341,6 +355,11 @@ export async function finalizeAbTest(articleId: string, winner: "a" | "b"): Prom
  */
 export async function resetAbTest(articleId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "editor")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সম্পাদক বা অ্যাডমিন এ/বি টেস্ট রিসেট করতে পারেন।" };
+    }
+
     const [existing] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
     if (!existing) return { success: false, error: "সংবাদ পাওয়া যায়নি" };
 

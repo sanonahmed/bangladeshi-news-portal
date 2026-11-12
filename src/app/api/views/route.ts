@@ -3,6 +3,7 @@ import { incrementArticleView, apiRatelimit } from "@/lib/redis";
 import { db } from "@/db";
 import { articles, articleViewAggregates, activeVisitors } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid articleId" }, { status: 400 });
   }
 
+  const hashedIp = crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
   const effectiveSessionId =
     sessionId && typeof sessionId === "string" && sessionId.length <= 64
       ? sessionId
-      : `anon-${ip}`;
+      : `anon-${hashedIp}`;
 
   try {
     // 1. Increment authentic view count directly in Postgres articles table

@@ -14,6 +14,8 @@ import {
 import { eq, desc, and, sql, count, or, ilike } from "drizzle-orm";
 import { safeRevalidateTag } from "@/lib/cache";
 import { revalidatePath } from "next/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
+import { isRoleAtLeast } from "@/lib/permissions";
 
 export interface DistrictSummary {
   id: string;
@@ -388,7 +390,7 @@ export async function getDistrictBySlug(slug: string): Promise<{
 }
 
 /**
- * Assign or update division and district for an article (Admin / Editor)
+ * Assign or update division and district for an article (Admin / Editor / Journalist)
  */
 export async function assignArticleLocation(
   articleId: string,
@@ -396,6 +398,11 @@ export async function assignArticleLocation(
   districtId: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !isRoleAtLeast(actor.role, "journalist")) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার: কেবলমাত্র সাংবাদিক বা স্টাফ অবস্থান নির্ধারণ করতে পারেন।" };
+    }
+
     if (!articleId) {
       return { success: false, error: "সংবাদের আইডি আবশ্যক" };
     }
