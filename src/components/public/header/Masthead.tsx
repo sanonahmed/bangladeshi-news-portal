@@ -84,8 +84,8 @@ export function Masthead({ settings }: MastheadProps) {
           </Link>
         </div>
 
-        {/* Right Side: E-Paper & Header Banner */}
-        <div className="flex items-center gap-3 justify-end w-full md:w-auto lg:w-64">
+        {/* Right Side: E-Paper & Latest News (Desktop only, hidden on mobile view) */}
+        <div className="hidden md:flex items-center gap-3 justify-end md:w-auto lg:w-64">
           <Link
             href="/epaper"
             className="flex items-center gap-2 px-3 py-2 bg-[#FEE2E2] hover:bg-[#FCA5A5] text-[#C8102E] font-bold text-xs rounded border border-[#FECACA] transition-all shadow-xs"
@@ -95,7 +95,7 @@ export function Masthead({ settings }: MastheadProps) {
           </Link>
           <Link
             href="/latest"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text)] font-medium text-xs rounded border border-[var(--color-border)] transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text)] font-medium text-xs rounded border border-[var(--color-border)] transition-all"
           >
             <CalendarDays size={14} className="text-[#C8102E]" />
             <span>সর্বশেষ খবর</span>
