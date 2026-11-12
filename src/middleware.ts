@@ -7,10 +7,14 @@ const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check session cookie (lightweight — no DB call in middleware)
+  // Block /register completely and redirect to login with notice
+  if (pathname.startsWith("/register")) {
+    return NextResponse.redirect(new URL("/login?notice=registration_disabled", request.url));
+  }
+
+  // Check authentic session cookie (lightweight — no DB call in middleware)
   const sessionCookie = getSessionCookie(request);
-  const isDemoSession = request.cookies.get("demo_admin_session")?.value === "true";
-  const isAuthenticated = !!sessionCookie || isDemoSession;
+  const isAuthenticated = !!sessionCookie;
 
   // Redirect authenticated users away from auth pages
   if (isAuthenticated && AUTH_ROUTES.some((r) => pathname.startsWith(r))) {

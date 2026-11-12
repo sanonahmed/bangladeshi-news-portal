@@ -2,6 +2,8 @@ import { db } from "@/db";
 import { user as usersTable } from "@/db/schema/auth";
 import { count } from "drizzle-orm";
 import { AdminRolesClient } from "./AdminRolesClient";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,18 @@ export const metadata = {
 };
 
 export default async function AdminRolesPage() {
+  const { granted, currentUser } = await checkRoleAccess("super_admin");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="super_admin"
+        currentRole={currentUser?.role}
+        pageTitleBn="ইউজার রোল ও পারমিশন ম্যাট্রিক্স"
+        pageTitleEn="Role-Based Access Control"
+      />
+    );
+  }
+
   const counts = await db
     .select({
       role: usersTable.role,

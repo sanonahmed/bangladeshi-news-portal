@@ -33,6 +33,7 @@ import {
   toggleUserBan,
   updateStaffProfile,
   createStaffMember,
+  deleteStaffMember,
 } from "@/actions/users";
 
 interface AdminUsersClientProps {
@@ -83,6 +84,7 @@ export function AdminUsersClient({
 
   const [banModalUser, setBanModalUser] = useState<AdminUserItem | null>(null);
   const [banReasonInput, setBanReasonInput] = useState("");
+  const [deleteModalUser, setDeleteModalUser] = useState<AdminUserItem | null>(null);
 
   const [profileModalUser, setProfileModalUser] = useState<AdminUserItem | null>(null);
   const [editDesignation, setEditDesignation] = useState("");
@@ -613,6 +615,33 @@ export function AdminUsersClient({
                             }
                           >
                             {u.banned ? <UserCheck size={14} /> : <UserX size={14} />}
+                          </button>
+
+                          {/* Delete Staff Button */}
+                          <button
+                            type="button"
+                            disabled={Boolean(isCurrent || u.role === "super_admin")}
+                            onClick={() => setDeleteModalUser(u)}
+                            className={`p-1.5 rounded transition-colors cursor-pointer ${
+                              isCurrent || u.role === "super_admin"
+                                ? "opacity-30 cursor-not-allowed text-zinc-400"
+                                : "text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-950/40"
+                            }`}
+                            title={
+                              isCurrent
+                                ? isEn
+                                  ? "Cannot delete yourself"
+                                  : "নিজের অ্যাকাউন্ট মোছা যাবে না"
+                                : u.role === "super_admin"
+                                ? isEn
+                                  ? "Cannot delete Super Admin"
+                                  : "সুপার অ্যাডমিন মোছা যাবে না"
+                                : isEn
+                                ? "Delete Staff Account"
+                                : "অ্যাকাউন্ট মুছে ফেলুন"
+                            }
+                          >
+                            <Trash2 size={14} />
                           </button>
 
                           {/* Public Bio Page Link */}

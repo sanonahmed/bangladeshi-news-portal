@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { user as usersTable } from "@/db/schema/auth";
+import { user as usersTable, account, session as sessionTable } from "@/db/schema/auth";
 import { authorProfiles } from "@/db/schema/authors";
 import { auditLogs } from "@/db/schema/security";
 import { articles } from "@/db/schema/articles";
@@ -467,5 +467,75 @@ export async function createStaffMember(data: {
   } catch (error: any) {
     console.error("createStaffMember error:", error);
     return { success: false, error: error?.message || "Failed to create staff member" };
+  }
+}
+
+/**
+ * Delete a newsroom staff member / user
+ * Only super_admin can perform this action
+ */
+export async function deleteStaffMember(
+  targetUserId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session || !session.user) {
+      return { success: false, error: "Unauthorized: Please sign in" };
+    }
+
+    const actor = session.user as any;
+    if (actor.role !== "super_admin") {
+      return { success: false, error: "Permission denied: Only Super Admin can delete staff accounts" };
+    }
+
+    if (actor.id === targetUserId) {
+      return { success: false, error: "You cannot delete your own account" };
+    }
+
+    const targetUser = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, targetUserId))
+      .limit(1);
+
+    const target = targetUser[0];
+    if (!target) {
+      return { success: false, error: "User not found" };
+    }
+
+    if (target.role === "super_admin") {
+      const superAdmins = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.role, "super_admin"));
+
+      if (superAdmins.length <= 1) {
+        return { success: false, error: "Cannot delete the only Super Admin" };
+      }
+    }
+
+    // Reassign authored articles to actor so foreign keys don't block
+    await db.update(articles).set({ authorId: actor.id }).where(eq(articles.authorId, targetUserId));
+    await db.delete(authorProfiles).where(eq(authorProfiles.userId, targetUserId));
+    await db.delete(account).where(eq(account.userId, targetUserId));
+    await db.delete(sessionTable).where(eq(sessionTable.userId, targetUserId));
+    await db.delete(usersTable).where(eq(usersTable.id, targetUserId));
+
+    await recordAudit(actor.id, "STAFF_ACCOUNT_DELETED", targetUserId, {
+      targetEmail: target.email,
+      targetName: target.name,
+      targetRole: target.role,
+      actorName: actor.name,
+    });
+
+    revalidatePath("/admin/users");
+    revalidatePath("/admin/roles");
+    revalidatePath("/admin/audit-logs");
+    revalidatePath("/authors");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("deleteStaffMember error:", error);
+    return { success: false, error: error?.message || "Failed to delete staff member" };
   }
 }

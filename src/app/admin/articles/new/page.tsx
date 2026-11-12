@@ -25,6 +25,8 @@ import { AiEditorAssistantModal } from "@/components/admin/editor/AiEditorAssist
 import { SeoQualityScorecard } from "@/components/admin/editor/SeoQualityScorecard";
 import { HeadlineAbTestingPanel } from "@/components/admin/editor/HeadlineAbTestingPanel";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+import { authClient } from "@/lib/auth-client";
+import { hasPermission } from "@/lib/permissions";
 
 const AUTOSAVE_STORAGE_KEY = "barta_draft_article_new";
 
@@ -32,6 +34,10 @@ export default function NewArticlePage() {
   const router = useRouter();
   const { language, formatNumber, formatDateString } = useAdminLanguage();
   const isEn = language === "en";
+
+  const { data: session } = authClient.useSession();
+  const userRole = ((session?.user as any)?.role as string) || "admin";
+  const canPublishDirectly = hasPermission(userRole as any, "article:publish");
 
   const [title, setTitle] = useState("");
   const [titleEn, setTitleEn] = useState("");
@@ -629,10 +635,14 @@ export default function NewArticlePage() {
                 onChange={(e) => setStatus(e.target.value as any)}
                 className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] font-medium"
               >
-                <option value="published">{isEn ? "🚀 Publish Now" : "🚀 সরাসরি প্রকাশ (Publish Now)"}</option>
-                <option value="scheduled">{isEn ? "⏱️ Schedule for Later" : "⏱️ শিডিউল প্রকাশ (Schedule for Later)"}</option>
-                <option value="draft">{isEn ? "📝 Save as Draft" : "📝 খসড়া হিসেবে রাখুন (Save Draft)"}</option>
+                {canPublishDirectly && (
+                  <>
+                    <option value="published">{isEn ? "🚀 Publish Now" : "🚀 সরাসরি প্রকাশ (Publish Now)"}</option>
+                    <option value="scheduled">{isEn ? "⏱️ Schedule for Later" : "⏱️ শিডিউল প্রকাশ (Schedule for Later)"}</option>
+                  </>
+                )}
                 <option value="pending_review">{isEn ? "🔍 Submit for Review" : "🔍 অনুমোদনের জন্য জমা (Submit for Review)"}</option>
+                <option value="draft">{isEn ? "📝 Save as Draft" : "📝 খসড়া হিসেবে রাখুন (Save Draft)"}</option>
               </select>
             </div>
 

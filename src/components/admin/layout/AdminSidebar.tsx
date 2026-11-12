@@ -31,8 +31,11 @@ import {
   ExternalLink,
   Newspaper,
   SlidersHorizontal,
+  BookOpen,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+import { authClient } from "@/lib/auth-client";
+import { type UserRole, isRoleAtLeast } from "@/lib/permissions";
 
 interface NavItemDef {
   key: string;
@@ -60,6 +63,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { key: "menu.articles", href: "/admin/articles", icon: FileText, exact: true },
       { key: "menu.newArticle", href: "/admin/articles/new", icon: PlusCircle, exact: true },
+      { key: "menu.guidelines", href: "/admin/guidelines", icon: BookOpen },
       { key: "menu.reviews", href: "/admin/reviews", icon: CheckSquare },
       { key: "menu.aiAssistant", href: "/admin/ai-assistant", icon: Sparkles },
     ],
@@ -112,6 +116,8 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { t, language } = useAdminLanguage();
+  const { data: session } = authClient.useSession();
+  const userRole: UserRole = ((session?.user as any)?.role as UserRole) || "admin";
   const [searchQuery, setSearchQuery] = useState("");
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
 
@@ -121,6 +127,29 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       .then((data) => setFeatureFlags(data))
       .catch(() => {});
   }, [pathname]);
+
+  const ROUTE_ROLE_MAP: Record<string, UserRole> = useMemo(
+    () => ({
+      "/admin/settings": "super_admin",
+      "/admin/features": "super_admin",
+      "/admin/roles": "super_admin",
+      "/admin/users": "admin",
+      "/admin/audit-logs": "admin",
+      "/admin/homepage": "admin",
+      "/admin/categories": "admin",
+      "/admin/tags": "admin",
+      "/admin/navigation": "admin",
+      "/admin/advertisements": "admin",
+      "/admin/reviews": "editor",
+      "/admin/breaking-news": "editor",
+      "/admin/notifications": "editor",
+      "/admin/social-preview": "editor",
+      "/admin/fact-checks": "editor",
+      "/admin/polls": "editor",
+      "/admin/comments": "editor",
+    }),
+    []
+  );
 
   const ROUTE_FEATURE_MAP: Record<string, string> = useMemo(
     () => ({
@@ -134,13 +163,19 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     []
   );
 
-  // Filter navigation items by search query and active feature flags
+  // Filter navigation items by search query, active feature flags, and role permissions
   const filteredGroups = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
     return NAV_GROUPS.map((group) => {
       const groupLabel = t(group.groupKey).toLowerCase();
       const matchedItems = group.items.filter((item) => {
+        // Role permission filter: hide items beyond user privilege level
+        const requiredRole = ROUTE_ROLE_MAP[item.href];
+        if (requiredRole && !isRoleAtLeast(userRole, requiredRole)) {
+          return false;
+        }
+
         // Feature flag filter: hide if feature flag is explicitly turned off
         const requiredFlag = ROUTE_FEATURE_MAP[item.href];
         if (requiredFlag && featureFlags[requiredFlag] === false) {
@@ -161,7 +196,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         items: matchedItems,
       };
     }).filter((group) => group.items.length > 0);
-  }, [searchQuery, t, featureFlags, ROUTE_FEATURE_MAP]);
+  }, [searchQuery, t, featureFlags, ROUTE_FEATURE_MAP, ROUTE_ROLE_MAP, userRole]);
 
   return (
     <aside

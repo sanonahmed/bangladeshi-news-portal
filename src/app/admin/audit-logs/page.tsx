@@ -7,6 +7,8 @@ import { formatBengaliDateTime, toBengaliDigits } from "@/lib/bengali-date";
 import { cookies } from "next/headers";
 import { getFeatureFlags } from "@/actions/features";
 import { FeatureDisabledNotice } from "@/components/public/FeatureDisabledNotice";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,18 @@ export const metadata = {
 };
 
 export default async function AdminAuditLogsPage() {
+  const { granted, currentUser } = await checkRoleAccess("admin");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="admin"
+        currentRole={currentUser?.role}
+        pageTitleBn="সিকিউরিটি অডিট লগ"
+        pageTitleEn="Security Audit Logs"
+      />
+    );
+  }
+
   const features = await getFeatureFlags();
   if (features.admin_audit_logs === false) {
     return (

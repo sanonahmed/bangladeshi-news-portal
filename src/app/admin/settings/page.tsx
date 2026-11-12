@@ -3,10 +3,24 @@ import { Settings, Save, CheckCircle2, SlidersHorizontal } from "lucide-react";
 import { safeRevalidateTag } from "@/lib/cache";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { checkRoleAccess } from "@/lib/admin-guard";
+import { AccessDeniedNotice } from "@/components/admin/AccessDeniedNotice";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
+  const { granted, currentUser } = await checkRoleAccess("super_admin");
+  if (!granted) {
+    return (
+      <AccessDeniedNotice
+        requiredRole="super_admin"
+        currentRole={currentUser?.role}
+        pageTitleBn="সিস্টেম ও পোর্টাল সেটিংস"
+        pageTitleEn="Portal Settings"
+      />
+    );
+  }
+
   const cookieStore = await cookies();
   const isEn = cookieStore.get("admin_lang")?.value !== "bn";
 

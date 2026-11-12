@@ -1,142 +1,60 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
-import { Lock, Mail, User, AlertCircle, ArrowRight } from "lucide-react";
+import { Lock, ArrowLeft, ShieldAlert } from "lucide-react";
 
-export default function RegisterPage() {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+export const metadata = {
+  title: "নিবন্ধন সংরক্ষিত • Registration Closed | দৈনিক বাংলাদেশ বার্তা",
+  description: "বার্তা কক্ষ ও অ্যাডমিন প্যানেলে পাবলিক নিবন্ধন বন্ধ আছে",
+};
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (password.length < 8) {
-      setError("পাসওয়ার্ড ন্যূনতম ৮ অক্ষরের হতে হবে");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await authClient.signUp.email({
-        name,
-        email,
-        password,
-      });
-
-      if (res.error) {
-        setError(res.error.message || "নিবন্ধন সম্পন্ন করা যায়নি");
-      } else {
-        router.push("/admin");
-        router.refresh();
-      }
-    } catch (err: any) {
-      setError(err?.message || "নিবন্ধনে ত্রুটি হয়েছে");
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export default function RegisterClosedPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-secondary)] px-4 py-12">
-      <div className="max-w-md w-full bg-[var(--color-bg)] border border-[var(--color-border)] p-8 shadow-sm">
-        <div className="text-center mb-8 border-b border-[var(--color-border)] pb-6">
-          <Link href="/" className="inline-block">
-            <span
-              className="text-3xl font-extrabold text-[var(--color-primary)]"
-              style={{ fontFamily: "var(--font-noto-bengali, sans-serif)" }}
-            >
-              বাংলা নিউজ
-            </span>
-          </Link>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            নতুন পাঠক অ্যাকাউন্ট তৈরি করুন
+      <div className="max-w-md w-full bg-[var(--color-bg)] border border-[var(--color-border)] p-8 shadow-sm rounded-xl text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-900/80 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center shadow-xs">
+          <Lock size={28} />
+        </div>
+
+        <div>
+          <span
+            className="text-2xl font-extrabold text-[var(--color-primary)] block mb-1"
+            style={{ fontFamily: "var(--font-noto-bengali, sans-serif)" }}
+          >
+            দৈনিক বাংলাদেশ বার্তা
+          </span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-semibold mt-2 border border-amber-200 dark:border-amber-900/60">
+            <ShieldAlert size={13} />
+            <span>উন্মুক্ত নিবন্ধন বন্ধ আছে (Registration Closed)</span>
+          </div>
+        </div>
+
+        <div className="bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-border)] text-xs text-[var(--color-text-muted)] leading-relaxed text-left space-y-2">
+          <p>
+            আমাদের ডিজিটাল বার্তাকক্ষ ও প্রকাশনা প্যানেলে কোনো উন্মুক্ত বা সাধারণ পাবলিক নিবন্ধনের সুবিধা নেই।
+          </p>
+          <p>
+            সকল বিভাগীয় সম্পাদক, বিশেষ প্রতিনিধি, জেলা সংবাদদাতা ও স্টাফ সাংবাদিকদের অ্যাকাউন্ট শুধুমাত্র <strong>প্রধান বার্তা সম্পাদক (সুপার অ্যাডমিন)</strong> কর্তৃক অভ্যন্তরীণভাবে সুরক্ষিত উপায়ে তৈরি ও প্রদান করা হয়।
           </p>
         </div>
 
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-600 flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
-            <AlertCircle size={16} className="flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              আপনার পূর্ণ নাম
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="যেমন: মুহাম্মদ আরিফুল ইসলাম"
-                className="w-full pl-9 pr-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm focus:outline-none focus:border-[var(--color-primary)]"
-              />
-              <User size={16} className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              ইমেইল ঠিকানা
-            </label>
-            <div className="relative">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="reader@example.com"
-                className="w-full pl-9 pr-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm focus:outline-none focus:border-[var(--color-primary)]"
-              />
-              <Mail size={16} className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-              পাসওয়ার্ড (কমপক্ষে ৮ অক্ষর)
-            </label>
-            <div className="relative">
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full pl-9 pr-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm focus:outline-none focus:border-[var(--color-primary)]"
-              />
-              <Lock size={16} className="absolute left-3 top-2.5 text-[var(--color-text-muted)]" />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-6"
+        <div className="space-y-2 pt-2">
+          <Link
+            href="/login"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
           >
-            {loading ? "অ্যাকাউন্ট তৈরি হচ্ছে..." : "নিবন্ধন করুন"}
-            <ArrowRight size={16} />
-          </button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-[var(--color-border)] text-center text-xs text-[var(--color-text-muted)]">
-          ইতিমধ্যে অ্যাকাউন্ট আছে?{" "}
-          <Link href="/login" className="text-[var(--color-primary)] font-bold hover:underline">
-            লগইন করুন
+            <span>লগইন পেজে যান</span>
+          </Link>
+          <Link
+            href="/"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text)] text-xs font-semibold rounded-lg hover:bg-[var(--color-bg)] transition-colors"
+          >
+            <ArrowLeft size={14} />
+            <span>পত্রিকার মূল পাতায় ফিরুন</span>
           </Link>
         </div>
+
+        <p className="text-[11px] text-[var(--color-text-faint)] border-t border-[var(--color-border)] pt-4">
+          আপনার যদি কোনো অ্যাকাউন্টের প্রয়োজন হয়, তবে সেন্ট্রাল বার্তা ডেস্কে যোগাযোগ করুন।
+        </p>
       </div>
     </div>
   );

@@ -72,18 +72,7 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
       userId = session.user.id;
       userRole = (session.user as { role?: string }).role ?? "reader";
     } else {
-      const cookieStore = await cookies();
-      const isDemo = cookieStore.get("demo_admin_session")?.value === "true";
-      if (!isDemo) {
-        return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
-      }
-      const adminInDb = await db.select({ id: user.id }).from(user).where(eq(user.role, "super_admin")).limit(1);
-      if (adminInDb.length > 0 && adminInDb[0]?.id) {
-        userId = adminInDb[0].id;
-        userRole = "super_admin";
-      } else {
-        return { success: false, error: "কোনো অ্যাডমিন ইউজার পাওয়া যায়নি" };
-      }
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
     }
 
     if (!hasPermission(userRole as any, "article:create")) {
@@ -135,7 +124,11 @@ export async function createArticle(formData: z.infer<typeof ArticleCreateSchema
     let finalStatus = data.status;
     let finalPublishedAt: Date | undefined = undefined;
 
-    if (isScheduledForFuture) {
+    // Enforce publication restriction: journalists cannot publish directly without review
+    if ((finalStatus === "published" || isScheduledForFuture) && !hasPermission(userRole as any, "article:publish")) {
+      finalStatus = "pending_review";
+      finalPublishedAt = undefined;
+    } else if (isScheduledForFuture) {
       finalStatus = "approved";
       finalPublishedAt = undefined;
     } else if (data.status === "published") {
@@ -225,9 +218,20 @@ export async function updateArticle(data: {
   featuredImageAlt?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
+    }
+    const role = (session.user as { role?: string }).role ?? "reader";
+    const userId = session.user.id;
+
     const [existing] = await db.select().from(articles).where(eq(articles.id, data.id)).limit(1);
     if (!existing) {
       return { success: false, error: "সংবাদটি খুঁজে পাওয়া যায়নি" };
+    }
+
+    if (existing.authorId !== userId && !hasPermission(role as any, "article:edit_any")) {
+      return { success: false, error: "আপনার অন্যের রচিত সংবাদ সম্পাদনা করার অনুমতি নেই।" };
     }
 
     const updates: Record<string, any> = {
@@ -408,14 +412,11 @@ export async function recordAbTestClick(articleId: string, variant: "a" | "b"): 
 export async function deleteArticle(articleId: string): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
-    let canDelete = false;
-    if (session?.user) {
-      const role = (session.user as { role?: string }).role ?? "reader";
-      canDelete = hasPermission(role as any, "article:delete");
-    } else {
-      const cookieStore = await cookies();
-      canDelete = cookieStore.get("demo_admin_session")?.value === "true";
+    if (!session?.user) {
+      return { success: false, error: "অননুমোদিত প্রবেশাধিকার। অনুগ্রহ করে লগইন করুন।" };
     }
+    const role = (session.user as { role?: string }).role ?? "reader";
+    const canDelete = hasPermission(role as any, "article:delete");
 
     if (!canDelete) {
       return { success: false, error: "সংবাদ মুছে ফেলার অনুমতি নেই" };
