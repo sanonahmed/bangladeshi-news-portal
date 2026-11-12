@@ -21,8 +21,8 @@ interface AdminLanguageContextType {
 const DICTIONARY: Record<string, { bn: string; en: string }> = {
   // Top Nav
   "nav.systemTitle": {
-    bn: "বাংলা নিউজ ডিজিটাল পাবলিশিং ম্যানেজমেন্ট সিস্টেম",
-    en: "Bangla News Digital Publishing Management System",
+    bn: "Yes News 24 • ডিজিটাল পাবলিশিং ম্যানেজমেন্ট সিস্টেম",
+    en: "Yes News 24 • Digital Publishing Management System",
   },
   "nav.theme": { bn: "থিম পরিবর্তন", en: "Switch Theme" },
   "nav.logout": { bn: "লগআউট", en: "Sign out" },
@@ -31,7 +31,7 @@ const DICTIONARY: Record<string, { bn: string; en: string }> = {
   "nav.lang.en": { bn: "English (EN)", en: "English (EN)" },
 
   // Sidebar Masthead & Footer
-  "brand.title": { bn: "দৈনিক বাংলাদেশ বার্তা", en: "Daily Bangladesh Barta" },
+  "brand.title": { bn: "Yes News 24", en: "Yes News 24" },
   "brand.subtitle": { bn: "সম্পাদকীয় ডেস্ক", en: "Editorial Desk" },
   "brand.viewSite": { bn: "পত্রিকার মূল পাতা", en: "View Public Website" },
   "search.menu": { bn: "মেনু খুঁজুন...", en: "Search menu..." },

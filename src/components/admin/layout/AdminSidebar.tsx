@@ -232,14 +232,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       {/* Editorial Masthead */}
       <div className="h-16 flex items-center justify-between px-5 border-b border-zinc-800/80 bg-[#0d0f12]">
         <Link href="/admin" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white font-serif font-black flex items-center justify-center text-sm shadow-xs select-none">
-            {language === "bn" ? "বা" : "BB"}
+          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white font-mono font-black flex items-center justify-center text-xs tracking-wider shadow-xs select-none">
+            YN
           </div>
           <div className="leading-tight">
-            <span
-              className="text-sm font-bold tracking-tight text-white block truncate max-w-[150px]"
-              style={language === "bn" ? { fontFamily: "var(--font-noto-bengali, sans-serif)" } : undefined}
-            >
+            <span className="text-sm font-bold tracking-tight text-white block truncate max-w-[180px]">
               {t("brand.title")}
             </span>
             <span className="text-[11px] text-zinc-400 block">

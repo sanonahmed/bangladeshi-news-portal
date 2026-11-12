@@ -63,8 +63,8 @@ export function SeoQualityScorecard({
   const displayTitle = (seoTitle || title || "").trim();
   const displayDesc = (seoDescription || excerpt || "").trim();
   const displaySlug = (slug || "").trim() || "news-slug";
-  const siteDomain = "barta24.com";
-  const siteName = isEn ? "Daily Bangladesh Barta" : "দৈনিক বাংলাদেশ বার্তা";
+  const siteDomain = "yesnews24.com";
+  const siteName = "Yes News 24";
 
   // Strip HTML from content for word counting & keyword search
   const plainTextContent = useMemo(() => {

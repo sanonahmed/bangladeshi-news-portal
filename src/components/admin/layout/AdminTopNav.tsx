@@ -72,7 +72,7 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
   return (
     <header className="h-16 bg-[var(--color-bg)] border-b border-[var(--color-border)] flex items-center justify-between px-4 lg:px-8 z-40 sticky top-0">
       {/* Left: Mobile Toggle & System Masthead */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <button
           onClick={onToggleSidebar}
           className="lg:hidden p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text)] rounded hover:bg-[var(--color-bg-secondary)]"
@@ -80,6 +80,12 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
         >
           <Menu size={20} />
         </button>
+        <Link href="/admin" className="lg:hidden flex items-center gap-1.5 font-bold text-xs text-[var(--color-text)]">
+          <span className="w-5 h-5 rounded bg-[var(--color-primary)] text-white text-[9px] font-mono font-black flex items-center justify-center">
+            YN
+          </span>
+          <span className="font-bold tracking-tight">Yes News 24</span>
+        </Link>
         <div className="hidden sm:block text-xs font-semibold text-[var(--color-text-muted)]">
           {t("nav.systemTitle")}
         </div>

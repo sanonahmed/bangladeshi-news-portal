@@ -283,7 +283,7 @@ export function AdminNotificationsClient({
         }
         await showNativeBrowserNotification(
           formTitle.trim(),
-          formMessage.trim() || (isEn ? "Daily Bangladesh Barta Push Notification Preview" : "দৈনিক বাংলাদেশ বার্তা পুশ নোটিফিকেশন প্রিভিউ"),
+          formMessage.trim() || (isEn ? "Yes News 24 Push Notification Preview" : "Yes News 24 পুশ নোটিফিকেশন প্রিভিউ"),
           formUrl.trim() || "/"
         );
       }
@@ -822,11 +822,11 @@ export function AdminNotificationsClient({
                   {/* Card Header */}
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded bg-red-600 flex items-center justify-center text-white text-[9px] font-bold">
-                        {isEn ? "DB" : "বা"}
+                      <div className="w-4 h-4 rounded bg-red-600 flex items-center justify-center text-white text-[8px] font-mono font-black">
+                        YN
                       </div>
                       <span className="text-[11px] font-bold text-zinc-200">
-                        {isEn ? "Daily Bangladesh Barta" : "দৈনিক বাংলাদেশ বার্তা"}
+                        Yes News 24
                       </span>
                     </div>
                     <span className="text-[10px] text-zinc-400">{isEn ? "Just now" : "এইমাত্র"}</span>

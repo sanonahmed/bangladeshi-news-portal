@@ -620,7 +620,7 @@ export function AiEditorAssistantModal({
 
         {/* Footer */}
         <div className="p-3 sm:p-4 border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)] shrink-0 flex items-center justify-between text-xs text-[var(--color-text-muted)]">
-          <span>{isEn ? "Bangladesh Barta • AI Newsroom Intelligence" : "দৈনিক বাংলাদেশ বার্তা • এআই নিউজরুম ইন্টেলিজেন্স"}</span>
+          <span>{isEn ? "Yes News 24 • AI Newsroom Intelligence" : "Yes News 24 • এআই নিউজরুম ইন্টেলিজেন্স"}</span>
           <button
             type="button"
             onClick={onClose}

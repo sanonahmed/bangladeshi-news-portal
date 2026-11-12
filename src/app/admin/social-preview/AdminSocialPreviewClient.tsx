@@ -263,11 +263,11 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
               {/* FB Post Header */}
               <div className="p-3.5 flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-full bg-[#C8102E] text-white flex items-center justify-center font-bold text-sm">
-                  {isEn ? "DB" : "বা"}
+                  YN
                 </div>
                 <div>
                   <div className="flex items-center gap-1 font-bold text-sm leading-tight">
-                    <span>{isEn ? "Daily Bangladesh Barta" : "দৈনিক বাংলাদেশ বার্তা"}</span>
+                    <span>Yes News 24</span>
                     <span className="w-3.5 h-3.5 bg-blue-500 rounded-full text-white text-[9px] flex items-center justify-center">
                       ✓
                     </span>
@@ -301,7 +301,7 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
                   {title}
                 </h4>
                 <p className="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-1 mt-0.5">
-                  {category} • {isEn ? "Daily Bangladesh Barta Digital Edition" : "দৈনিক বাংলাদেশ বার্তা অনলাইন সংস্করণ"}
+                  {category} • Yes News 24
                 </p>
               </div>
             </div>
@@ -312,12 +312,12 @@ export function AdminSocialPreviewClient({ articles }: AdminSocialPreviewClientP
             <div className="bg-black text-white border border-zinc-800 rounded-2xl overflow-hidden shadow-md max-w-xl mx-auto p-4 space-y-3 font-sans">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-[#C8102E] text-white flex items-center justify-center font-bold text-sm">
-                  {isEn ? "DB" : "বা"}
+                  YN
                 </div>
                 <div>
                   <div className="flex items-center gap-1 font-bold text-sm">
-                    <span>{isEn ? "Daily Bangladesh Barta" : "দৈনিক বাংলাদেশ বার্তা"}</span>
-                    <span className="text-zinc-400 font-normal text-xs">{isEn ? "@BangladeshBarta • 1m" : "@BangladeshBarta • ১ মি."}</span>
+                    <span>Yes News 24</span>
+                    <span className="text-zinc-400 font-normal text-xs">@YesNews24 • 1m</span>
                   </div>
                 </div>
               </div>
