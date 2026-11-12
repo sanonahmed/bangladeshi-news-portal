@@ -26,13 +26,12 @@ export default async function AdminUsersPage() {
   }
 
   const users = await getAdminUsersList();
-  const session = await auth.api.getSession({ headers: await headers() });
 
   return (
     <AdminUsersClient
       initialUsers={users}
-      currentUserEmail={session?.user?.email}
-      currentUserRole={(session?.user as any)?.role}
+      currentUserEmail={currentUser?.email}
+      currentUserRole={currentUser?.role}
     />
   );
 }

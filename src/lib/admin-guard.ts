@@ -1,6 +1,9 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { type UserRole, isRoleAtLeast } from "@/lib/permissions";
+import { db } from "@/db";
+import { user as usersTable } from "@/db/schema/auth";
+import { eq } from "drizzle-orm";
 
 export interface CurrentAdminUser {
   id: string;
@@ -16,13 +19,31 @@ export async function getCurrentAdminUser(): Promise<CurrentAdminUser | null> {
     if (!session || !session.user) {
       return null;
     }
-    const role = ((session.user as any)?.role as UserRole) || "reader";
+
+    // Always query authoritative role directly from the database
+    const dbUsers = await db
+      .select({
+        role: usersTable.role,
+        banned: usersTable.banned,
+        name: usersTable.name,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, session.user.id))
+      .limit(1);
+
+    const dbUser = dbUsers[0];
+    const role = (dbUser?.role as UserRole) || ((session.user as any)?.role as UserRole) || "reader";
+
     return {
       id: session.user.id,
-      name: session.user.name,
+      name: dbUser?.name || session.user.name,
       email: session.user.email,
       role,
-      user: session.user,
+      user: {
+        ...session.user,
+        role,
+        banned: dbUser?.banned ?? false,
+      },
     };
   } catch (error) {
     console.error("getCurrentAdminUser error:", error);

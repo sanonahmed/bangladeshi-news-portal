@@ -117,7 +117,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { t, language } = useAdminLanguage();
   const { data: session } = authClient.useSession();
-  const userRole: UserRole = ((session?.user as any)?.role as UserRole) || "admin";
+  const [dbRole, setDbRole] = useState<UserRole | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
 
@@ -126,7 +126,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       .then((res) => res.json())
       .then((data) => setFeatureFlags(data))
       .catch(() => {});
+
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.user?.role) {
+          setDbRole(data.user.role as UserRole);
+        }
+      })
+      .catch(() => {});
   }, [pathname]);
+
+  const userRole: UserRole = dbRole || ((session?.user as any)?.role as UserRole) || "super_admin";
 
   const ROUTE_ROLE_MAP: Record<string, UserRole> = useMemo(
     () => ({

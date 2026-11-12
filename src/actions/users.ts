@@ -9,6 +9,7 @@ import { eq, desc, and, sql, count } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
 
 export interface AdminUserItem {
   id: string;
@@ -114,13 +115,12 @@ export async function updateUserRole(
   newRole: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || !session.user) {
+    const actor = await getCurrentAdminUser();
+    if (!actor) {
       return { success: false, error: "Unauthorized: Please sign in" };
     }
 
-    const actor = session.user as any;
-    const actorRole = actor.role || "reader";
+    const actorRole = actor.role;
 
     // Only super_admin or admin can change roles
     if (actorRole !== "super_admin" && actorRole !== "admin") {
@@ -194,13 +194,12 @@ export async function toggleUserBan(
   banReason?: string
 ): Promise<{ success: boolean; error?: string; isBanned?: boolean }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || !session.user) {
+    const actor = await getCurrentAdminUser();
+    if (!actor) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const actor = session.user as any;
-    const actorRole = actor.role || "reader";
+    const actorRole = actor.role;
 
     if (actorRole !== "super_admin" && actorRole !== "admin") {
       return { success: false, error: "Permission denied: Only administrators can ban/unban users" };
@@ -276,12 +275,11 @@ export async function updateStaffProfile(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || !session.user) {
+    const actor = await getCurrentAdminUser();
+    if (!actor) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const actor = session.user as any;
     if (actor.role !== "super_admin" && actor.role !== "admin" && actor.role !== "editor") {
       return { success: false, error: "Permission denied" };
     }
@@ -370,12 +368,11 @@ export async function createStaffMember(data: {
   isBureauChief: boolean;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || !session.user) {
+    const actor = await getCurrentAdminUser();
+    if (!actor) {
       return { success: false, error: "Unauthorized" };
     }
 
-    const actor = session.user as any;
     if (actor.role !== "super_admin" && actor.role !== "admin") {
       return { success: false, error: "Permission denied: Only administrators can create staff accounts" };
     }
@@ -478,12 +475,11 @@ export async function deleteStaffMember(
   targetUserId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session || !session.user) {
+    const actor = await getCurrentAdminUser();
+    if (!actor) {
       return { success: false, error: "Unauthorized: Please sign in" };
     }
 
-    const actor = session.user as any;
     if (actor.role !== "super_admin") {
       return { success: false, error: "Permission denied: Only Super Admin can delete staff accounts" };
     }

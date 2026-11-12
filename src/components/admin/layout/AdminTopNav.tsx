@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
-import { Menu, LogOut, Sun, Moon, Globe, Check, ChevronDown } from "lucide-react";
+import { Menu, LogOut, Sun, Moon, Globe, Check, ChevronDown, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState, useRef } from "react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
@@ -19,9 +19,16 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: session } = authClient.useSession();
+  const [dbUser, setDbUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user) setDbUser(data.user);
+      })
+      .catch(() => {});
   }, []);
 
   // Close dropdown when clicking outside
@@ -41,8 +48,8 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
     router.refresh();
   }
 
-  const userName = session?.user?.name ?? (language === "bn" ? "সম্পাদক" : "Editor");
-  const userRole = (session?.user as any)?.role ?? "admin";
+  const userName = dbUser?.name ?? session?.user?.name ?? (language === "bn" ? "সুপার অ্যাডমিন" : "Super Admin");
+  const userRole = dbUser?.role ?? (session?.user as any)?.role ?? "super_admin";
 
   return (
     <header className="h-16 bg-[var(--color-bg)] border-b border-[var(--color-border)] flex items-center justify-between px-4 lg:px-8 z-40 sticky top-0">
@@ -135,8 +142,19 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
             </div>
             <div className="hidden md:block text-left">
               <p className="text-xs font-bold text-[var(--color-text)]">{userName}</p>
-              <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider font-mono">
-                {userRole}
+              <p className="text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider font-mono flex items-center gap-1">
+                <Shield size={10} />
+                <span>
+                  {userRole === "super_admin"
+                    ? (language === "bn" ? "সুপার অ্যাডমিন" : "SUPER ADMIN")
+                    : userRole === "admin"
+                    ? (language === "bn" ? "অ্যাডমিন" : "ADMIN")
+                    : userRole === "editor"
+                    ? (language === "bn" ? "সম্পাদক" : "EDITOR")
+                    : userRole === "journalist"
+                    ? (language === "bn" ? "প্রতিবেদক" : "JOURNALIST")
+                    : userRole}
+                </span>
               </p>
             </div>
           </div>
