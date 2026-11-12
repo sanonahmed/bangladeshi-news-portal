@@ -33,6 +33,7 @@ import {
   SlidersHorizontal,
   BookOpen,
   LogOut,
+  UserCircle,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 import { authClient } from "@/lib/auth-client";
@@ -64,6 +65,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { key: "menu.articles", href: "/admin/articles", icon: FileText, exact: true },
       { key: "menu.newArticle", href: "/admin/articles/new", icon: PlusCircle, exact: true },
+      { key: "menu.profile", href: "/admin/profile", icon: UserCircle, exact: true },
       { key: "menu.guidelines", href: "/admin/guidelines", icon: BookOpen },
       { key: "menu.reviews", href: "/admin/reviews", icon: CheckSquare },
       { key: "menu.aiAssistant", href: "/admin/ai-assistant", icon: Sparkles },
@@ -169,6 +171,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       "/admin/fact-checks": "editor",
       "/admin/polls": "editor",
       "/admin/comments": "editor",
+      "/admin/profile": "journalist",
     }),
     []
   );

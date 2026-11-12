@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentAdminUser } from "@/lib/admin-guard";
 import { createPresignedUpload, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from "@/lib/r2";
 import { hasPermission } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
   // Auth check
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session) {
+  const currentUser = await getCurrentAdminUser();
+  if (!currentUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = (session.user as { role?: string }).role ?? "reader";
+  const role = currentUser.role;
   if (!hasPermission(role as any, "media:upload")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

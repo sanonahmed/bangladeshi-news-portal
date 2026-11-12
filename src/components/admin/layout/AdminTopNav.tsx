@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Menu, LogOut, Sun, Moon, Globe, Check, ChevronDown, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -140,12 +141,18 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
 
         {/* User Identity & Logout */}
         <div className="flex items-center gap-3 border-l border-[var(--color-border)] pl-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center font-bold text-xs select-none">
+          <Link
+            href="/admin/profile"
+            title={language === "bn" ? "আমার প্রোফাইল ও পরিচিতি সম্পাদনা করুন" : "Edit My Profile"}
+            className="flex items-center gap-2 group hover:opacity-90 transition-opacity"
+          >
+            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center font-bold text-xs select-none group-hover:ring-2 group-hover:ring-purple-500 transition-all">
               {userName.charAt(0)}
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-xs font-bold text-[var(--color-text)]">{userName}</p>
+              <p className="text-xs font-bold text-[var(--color-text)] group-hover:text-purple-600 transition-colors">
+                {userName}
+              </p>
               <p className="text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider font-mono flex items-center gap-1">
                 <Shield size={10} />
                 <span>
@@ -161,7 +168,7 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
                 </span>
               </p>
             </div>
-          </div>
+          </Link>
 
           <button
             onClick={handleSignOut}

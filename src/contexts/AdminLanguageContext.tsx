@@ -50,6 +50,7 @@ const DICTIONARY: Record<string, { bn: string; en: string }> = {
   "menu.analytics": { bn: "পাঠক বিশ্লেষণ ও মেট্রিক্স", en: "Reader Analytics & Metrics" },
   "menu.articles": { bn: "সংবাদ ব্যবস্থাপনা", en: "Article Management" },
   "menu.newArticle": { bn: "নতুন সংবাদ রচনা", en: "Create New Story" },
+  "menu.profile": { bn: "আমার লেখক প্রোফাইল", en: "My Author Profile" },
   "menu.guidelines": { bn: "সাংবাদিক নির্দেশিকা ও নীতিমালা", en: "Journalist Guidelines & SOP" },
   "menu.reviews": { bn: "পর্যালোচনা ও অনুমোদন", en: "Review & Approval" },
   "menu.aiAssistant": { bn: "এআই সহকারী", en: "AI News Assistant" },
