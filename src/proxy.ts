@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { getSessionCookie } from "better-auth/cookies";
 import { enforceRateLimit, rejectPublicRegistration } from "@/lib/request-security";
 import { searchRatelimit } from "@/lib/redis";
-
-const AUTH_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -25,10 +24,8 @@ export async function proxy(request: NextRequest) {
 
   const sessionCookie = getSessionCookie(request);
 
-  if (sessionCookie && AUTH_ROUTES.some((route) => pathname === route)) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
+  // Cookie presence is not session validity. The login form always validates
+  // a session through Better Auth, including expired, revoked, and stale cookies.
   if ((pathname === "/admin" || pathname.startsWith("/admin/")) && !sessionCookie) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
