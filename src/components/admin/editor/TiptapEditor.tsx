@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -90,9 +91,12 @@ export function TiptapEditor({
   placeholder,
 }: TiptapEditorProps) {
   const { isEn } = useAdminLanguage();
-  const defaultPlaceholder = isEn ? "Write detailed article content here..." : "এখানে বিস্তারিত সংবাদ লিখুন...";
+  const defaultPlaceholder = isEn
+    ? "Write detailed article content here..."
+    : "এখানে বিস্তারিত সংবাদ লিখুন...";
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {
@@ -124,6 +128,9 @@ export function TiptapEditor({
     content,
     editorProps: {
       attributes: {
+        role: "textbox",
+        "aria-label": isEn ? "Story body" : "সংবাদের বিস্তারিত",
+        "aria-multiline": "true",
         class:
           "article-body min-h-[300px] p-4 focus:outline-none focus:ring-0 text-base leading-relaxed",
       },
@@ -133,11 +140,21 @@ export function TiptapEditor({
     },
   });
 
+  // Draft recovery and AI proofreading update the controlled content externally.
+  useEffect(() => {
+    if (editor && editor.getHTML() !== content) {
+      editor.commands.setContent(content, false);
+    }
+  }, [content, editor]);
+
   if (!editor) return null;
 
   const setLink = () => {
     const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt(isEn ? "Enter link URL:" : "লিঙ্কের URL লিখুন:", previousUrl);
+    const url = window.prompt(
+      isEn ? "Enter link URL:" : "লিঙ্কের URL লিখুন:",
+      previousUrl,
+    );
     if (url === null) return;
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -147,7 +164,9 @@ export function TiptapEditor({
   };
 
   const addImage = () => {
-    const url = window.prompt(isEn ? "Enter image URL:" : "ছবির সরাসরি URL লিখুন:");
+    const url = window.prompt(
+      isEn ? "Enter image URL:" : "ছবির সরাসরি URL লিখুন:",
+    );
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
@@ -158,7 +177,7 @@ export function TiptapEditor({
     const url = window.prompt(
       isEn
         ? "Enter YouTube or Facebook video URL:\n(e.g., https://youtube.com/watch?v=... or https://facebook.com/.../videos/... or https://fb.watch/...)"
-        : "ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন:\n(যেমন: https://youtube.com/... বা https://facebook.com/... বা https://fb.watch/...)"
+        : "ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন:\n(যেমন: https://youtube.com/... বা https://facebook.com/... বা https://fb.watch/...)",
     );
     if (!url || !url.trim()) return;
 
@@ -169,7 +188,9 @@ export function TiptapEditor({
       editor.commands.setYoutubeVideo({ src: trimmed });
     } else if (platform === "facebook") {
       const embedSrc = getFacebookEmbedUrl(trimmed, false);
-      editor.chain().focus()
+      editor
+        .chain()
+        .focus()
         .insertContent({
           type: "iframe",
           attrs: {
@@ -178,7 +199,8 @@ export function TiptapEditor({
             allowfullscreen: "true",
             style: "border:none;overflow:hidden",
             scrolling: "no",
-            allow: "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share",
+            allow:
+              "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share",
           },
         })
         .run();
@@ -186,7 +208,7 @@ export function TiptapEditor({
       window.alert(
         isEn
           ? "Please provide a valid YouTube or Facebook video URL."
-          : "অনুগ্রহ করে একটি বৈধ ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন।"
+          : "অনুগ্রহ করে একটি বৈধ ইউটিউব বা ফেসবুক ভিডিওর লিংক দিন।",
       );
     }
   };
@@ -196,12 +218,14 @@ export function TiptapEditor({
     const url = window.prompt(
       isEn
         ? "Enter Facebook video URL (e.g. https://facebook.com/.../videos/... or https://fb.watch/...):"
-        : "ফেসবুক ভিডিওর লিংক লিখুন (যেমন: https://facebook.com/.../videos/... বা https://fb.watch/...):"
+        : "ফেসবুক ভিডিওর লিংক লিখুন (যেমন: https://facebook.com/.../videos/... বা https://fb.watch/...):",
     );
     if (!url || !url.trim()) return;
 
     const embedSrc = getFacebookEmbedUrl(url.trim(), false);
-    editor.chain().focus()
+    editor
+      .chain()
+      .focus()
       .insertContent({
         type: "iframe",
         attrs: {
@@ -210,7 +234,8 @@ export function TiptapEditor({
           allowfullscreen: "true",
           style: "border:none;overflow:hidden",
           scrolling: "no",
-          allow: "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share",
+          allow:
+            "autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share",
         },
       })
       .run();
@@ -223,20 +248,32 @@ export function TiptapEditor({
         {/* Headings */}
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("heading", { level: 2 }) ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("heading", { level: 2 })
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
+          aria-label={isEn ? "Heading 2" : "শিরোনাম ২"}
+          aria-pressed={editor.isActive("heading", { level: 2 })}
           title={isEn ? "Heading 2" : "শিরোনাম ২"}
         >
           <Heading2 size={16} />
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("heading", { level: 3 }) ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("heading", { level: 3 })
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
+          aria-label={isEn ? "Heading 3" : "শিরোনাম ৩"}
+          aria-pressed={editor.isActive("heading", { level: 3 })}
           title={isEn ? "Heading 3" : "শিরোনাম ৩"}
         >
           <Heading3 size={16} />
@@ -249,8 +286,12 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("bold") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("bold")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
+          aria-label={isEn ? "Bold" : "বোল্ড"}
+          aria-pressed={editor.isActive("bold")}
           title={isEn ? "Bold" : "বোল্ড"}
         >
           <Bold size={16} />
@@ -259,8 +300,12 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("italic") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("italic")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
+          aria-label={isEn ? "Italic" : "ইটালিক"}
+          aria-pressed={editor.isActive("italic")}
           title={isEn ? "Italic" : "ইটালিক"}
         >
           <Italic size={16} />
@@ -269,8 +314,12 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("underline") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("underline")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
+          aria-label={isEn ? "Underline" : "আন্ডারলাইন"}
+          aria-pressed={editor.isActive("underline")}
           title={isEn ? "Underline" : "আন্ডারলাইন"}
         >
           <UnderlineIcon size={16} />
@@ -283,7 +332,9 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive({ textAlign: "left" }) ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive({ textAlign: "left" })
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Align Left" : "বামে সাজান"}
         >
@@ -293,7 +344,9 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive({ textAlign: "center" }) ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive({ textAlign: "center" })
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Align Center" : "মাঝে সাজান"}
         >
@@ -303,7 +356,9 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive({ textAlign: "right" }) ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive({ textAlign: "right" })
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Align Right" : "ডানে সাজান"}
         >
@@ -317,7 +372,9 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("bulletList") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("bulletList")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Bullet List" : "বুলেট তালিকা"}
         >
@@ -327,7 +384,9 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("orderedList") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("orderedList")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Numbered List" : "সংখ্যাতালিকা"}
         >
@@ -337,7 +396,9 @@ export function TiptapEditor({
           type="button"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("blockquote") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("blockquote")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Blockquote" : "উদ্ধৃতি (Blockquote)"}
         >
@@ -351,7 +412,9 @@ export function TiptapEditor({
           type="button"
           onClick={setLink}
           className={`p-1.5 rounded hover:bg-[var(--color-border)] ${
-            editor.isActive("link") ? "bg-[var(--color-primary)] text-white" : ""
+            editor.isActive("link")
+              ? "bg-[var(--color-primary)] text-white"
+              : ""
           }`}
           title={isEn ? "Add Link" : "লিঙ্ক যোগ করুন"}
         >
@@ -371,7 +434,11 @@ export function TiptapEditor({
           type="button"
           onClick={embedVideo}
           className="p-1.5 rounded hover:bg-[var(--color-border)] text-[var(--color-text)] hover:text-[var(--color-primary)] flex items-center gap-1"
-          title={isEn ? "Embed Video (YouTube & Facebook)" : "ভিডিও এম্বেড (ইউটিউব ও ফেসবুক)"}
+          title={
+            isEn
+              ? "Embed Video (YouTube & Facebook)"
+              : "ভিডিও এম্বেড (ইউটিউব ও ফেসবুক)"
+          }
         >
           <Video size={16} />
         </button>
