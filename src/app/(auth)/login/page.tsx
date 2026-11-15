@@ -2,8 +2,9 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { getLoginErrorMessage } from "@/lib/login-errors";
 import { Lock, Mail, AlertCircle, ArrowRight, ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,6 @@ function getSafeCallbackUrl(raw: string | null): string {
 }
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
   const noticeParam = searchParams.get("notice");
@@ -35,17 +35,17 @@ function LoginForm() {
 
     try {
       const res = await authClient.signIn.email({
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
       if (res.error) {
-        setError(res.error.message || "ইমেইল বা পাসওয়ার্ড সঠিক নয়");
+        setError(getLoginErrorMessage(res.error));
       } else {
         window.location.href = callbackUrl || "/admin";
       }
-    } catch (err: any) {
-      setError(err?.message || "লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    } catch {
+      setError(getLoginErrorMessage());
     } finally {
       setLoading(false);
     }

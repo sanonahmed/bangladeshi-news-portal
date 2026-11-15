@@ -66,6 +66,19 @@ export const auth = betterAuth({
           },
         }
       : undefined,
+  // Keep login independent of optional Redis configuration. Better Auth applies
+  // these limits before password verification, atomically within each process.
+  // Counters reset on restart and are not shared across server instances.
+  rateLimit: {
+    enabled: true,
+    storage: "memory",
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/*": { window: 15 * 60, max: 10 },
+      "/request-password-reset": { window: 15 * 60, max: 3 },
+    },
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,

@@ -25,16 +25,7 @@ export const redis = new Redis({
 // Rate limiters
 // ---------------------------------------------------------------------------
 
-/**
- * Login rate limiter: 10 attempts per 15 minutes per identifier (IP or email).
- * Use with loginRatelimit.limit(ip).
- */
-export const loginRatelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(10, "15 m"),
-  analytics: false,
-  prefix: "rl:login",
-});
+// Authentication uses Better Auth's built-in limiter; see auth.ts.
 
 /**
  * General API rate limiter: 100 requests per minute per identifier (IP).

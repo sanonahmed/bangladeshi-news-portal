@@ -69,8 +69,8 @@ The `render.yaml` Blueprint configures the Next.js web service in Singapore and 
 6. Render will prompt you to enter the required secret environment variables:
    - `DATABASE_URL`: Paste your pooled Neon connection string from Step 1.
    - `BETTER_AUTH_URL`: Your Render service URL (e.g., `https://bangladeshi-news-portal.onrender.com` or custom domain).
-   - `UPSTASH_REDIS_REST_URL`: (Required in production) Upstash Redis endpoint for caching and rate limiting.
-   - `UPSTASH_REDIS_REST_TOKEN`: (Required in production) Upstash Redis token.
+   - `UPSTASH_REDIS_REST_URL`: Required for production search/view protection, **not login**.
+   - `UPSTASH_REDIS_REST_TOKEN`: Upstash Redis token for search/view protection; login uses Better Auth's built-in memory limiter.
    - `RESEND_API_KEY`: (Optional) Resend API key for email delivery.
    - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`: Cloudflare R2 credentials for media uploads.
    - `R2_PUBLIC_URL`: Full HTTPS media URL (e.g., `https://media.yourdomain.com`).
@@ -100,7 +100,7 @@ If you prefer to configure the Web Service manually through the Render Dashboard
    - `BETTER_AUTH_URL`: `https://your-service-name.onrender.com`
    - `ADMIN_BOOTSTRAP_SECRET`: *(Secret for initial admin account creation)*
    - `CRON_SECRET`: *(Secret protecting background cron tasks)*
-   - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: Required for production login, search, and view throttling.
+   - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: Required for production search and view throttling only. Login needs neither setting nor a new database migration. Its memory-based limits reset on restart and are not shared across instances.
    - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`: Required for media uploads.
    - `NEXT_PUBLIC_SITE_NAME`: `দৈনিক বাংলাদেশ বার্তা`
    - `NEXT_PUBLIC_SITE_URL`: `https://your-service-name.onrender.com`
