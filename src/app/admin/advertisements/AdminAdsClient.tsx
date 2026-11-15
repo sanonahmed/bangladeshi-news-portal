@@ -1,651 +1,1246 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   createOrUpdateAd,
-  toggleAdStatus,
   deleteAd,
+  toggleAdStatus,
 } from "@/actions/advertisements";
-import type { Advertisement } from "@/db/schema/advertisements";
+import type {
+  Advertisement,
+  AdDeviceTarget,
+  AdPlacement,
+  AdType,
+} from "@/db/schema/advertisements";
 import {
-  DollarSign,
-  PlusCircle,
-  Trash2,
-  Edit2,
-  ExternalLink,
-  Eye,
-  MousePointerClick,
-  Percent,
-  CheckCircle2,
   AlertCircle,
-  RefreshCw,
+  ArrowDownRight,
+  ArrowUpRight,
+  Check,
+  CheckCircle2,
+  Code2,
+  ExternalLink,
   Image as ImageIcon,
-  Smartphone,
+  Layers2,
   Monitor,
-  Globe,
+  MousePointer2,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  Search,
+  Smartphone,
+  Trash2,
+  X,
+  LoaderCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+import styles from "./advertisements.module.css";
 
-interface AdminAdsClientProps {
-  initialAds: Advertisement[];
-}
-
-const STANDARD_SLOTS = [
-  { id: "homepage_leaderboard", nameEn: "Homepage Leaderboard", nameBn: "হোমপেজ লিডারবোর্ড", size: "970 × 90", sizeBn: "৯৭০ × ৯০", width: 970, height: 90 },
-  { id: "header_banner", nameEn: "Header Banner", nameBn: "হেডার ব্যানার", size: "728 × 90", sizeBn: "৭২৮ × ৯০", width: 728, height: 90 },
-  { id: "sidebar", nameEn: "Article Sidebar", nameBn: "সংবাদ পার্শ্ববার", size: "300 × 250", sizeBn: "৩০০ × ২৫০", width: 300, height: 250 },
-  { id: "between_sections", nameEn: "Between Sections Banner", nameBn: "সেকশন মধ্যবর্তী ব্যানার", size: "728 × 90", sizeBn: "৭২৮ × ৯০", width: 728, height: 90 },
-  { id: "article_inline", nameEn: "Article Inline Ad", nameBn: "সংবাদের অভ্যন্তরস্থ বিজ্ঞাপন", size: "336 × 280", sizeBn: "৩৩৬ × ২৮০", width: 336, height: 280 },
-  { id: "footer", nameEn: "Footer Banner", nameBn: "ফুটার ব্যানার", size: "728 × 90", sizeBn: "৭২৮ × ৯০", width: 728, height: 90 },
-  { id: "mobile_slot", nameEn: "Mobile Banner", nameBn: "মোবাইল ব্যানার", size: "320 × 100", sizeBn: "৩২০ × ১০০", width: 320, height: 100 },
+const STANDARD_SLOTS: {
+  id: AdPlacement;
+  nameEn: string;
+  nameBn: string;
+  width: number;
+  height: number;
+}[] = [
+  {
+    id: "homepage_leaderboard",
+    nameEn: "Homepage leaderboard",
+    nameBn: "হোমপেজ লিডারবোর্ড",
+    width: 970,
+    height: 90,
+  },
+  {
+    id: "header_banner",
+    nameEn: "Header banner",
+    nameBn: "হেডার ব্যানার",
+    width: 728,
+    height: 90,
+  },
+  {
+    id: "sidebar",
+    nameEn: "Article sidebar",
+    nameBn: "সংবাদ পার্শ্ববার",
+    width: 300,
+    height: 250,
+  },
+  {
+    id: "between_sections",
+    nameEn: "Between sections",
+    nameBn: "সেকশন মধ্যবর্তী ব্যানার",
+    width: 728,
+    height: 90,
+  },
+  {
+    id: "article_inline",
+    nameEn: "Article inline",
+    nameBn: "সংবাদের অভ্যন্তরস্থ বিজ্ঞাপন",
+    width: 336,
+    height: 280,
+  },
+  {
+    id: "footer",
+    nameEn: "Footer banner",
+    nameBn: "ফুটার ব্যানার",
+    width: 728,
+    height: 90,
+  },
+  {
+    id: "mobile_slot",
+    nameEn: "Mobile banner",
+    nameBn: "মোবাইল ব্যানার",
+    width: 320,
+    height: 100,
+  },
 ];
 
-export function AdminAdsClient({ initialAds }: AdminAdsClientProps) {
+function BannerPreview({
+  src,
+  alt,
+  codeLabel,
+}: {
+  src: string | null;
+  alt: string;
+  codeLabel: string;
+}) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  let validSrc = false;
+  try {
+    validSrc = !!src && ["http:", "https:"].includes(new URL(src).protocol);
+  } catch {
+    /* Incomplete image URLs are expected while typing. */
+  }
+  return validSrc && src && failedSrc !== src ? (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      unoptimized
+      sizes="(max-width: 640px) 100vw, 400px"
+      className={styles.bannerImage}
+      onError={() => setFailedSrc(src)}
+    />
+  ) : (
+    <div className={styles.previewPlaceholder}>
+      {src ? (
+        <ImageIcon size={24} strokeWidth={1.4} />
+      ) : (
+        <Code2 size={24} strokeWidth={1.4} />
+      )}
+      <span>{codeLabel}</span>
+    </div>
+  );
+}
+
+export function AdminAdsClient({
+  initialAds,
+}: {
+  initialAds: Advertisement[];
+}) {
   const { language, formatNumber } = useAdminLanguage();
   const isEn = language === "en";
-
-  const [adsList, setAdsList] = useState<Advertisement[]>(initialAds);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const text = (en: string, bn: string) => (isEn ? en : bn);
+  const [adsList, setAdsList] = useState(initialAds);
+  const [showEditor, setShowEditor] = useState(false);
   const [editingAdId, setEditingAdId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  // Form states
+  const [view, setView] = useState<"campaigns" | "placements">("campaigns");
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [placementFilter, setPlacementFilter] = useState("all");
+  const editorRef = useRef<HTMLElement>(null);
+  const newButtonRef = useRef<HTMLButtonElement>(null);
   const [name, setName] = useState("");
-  const [placement, setPlacement] = useState<string>("homepage_leaderboard");
-  const [type, setType] = useState<"direct_image" | "adsense" | "sponsored">("direct_image");
+  const [placement, setPlacement] = useState<AdPlacement>(
+    "homepage_leaderboard",
+  );
+  const [type, setType] = useState<AdType>("direct_image");
   const [imageUrl, setImageUrl] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
   const [adCode, setAdCode] = useState("");
   const [altText, setAltText] = useState("");
-  const [deviceTarget, setDeviceTarget] = useState<"all" | "desktop" | "mobile">("all");
+  const [deviceTarget, setDeviceTarget] = useState<AdDeviceTarget>("all");
   const [isActive, setIsActive] = useState(true);
 
-  // Overall metrics calculation
-  const totalImpressions = adsList.reduce((acc, ad) => acc + (ad.impressions || 0), 0);
-  const totalClicks = adsList.reduce((acc, ad) => acc + (ad.clicks || 0), 0);
-  const overallCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0.00";
+  const activeCount = adsList.filter((ad) => ad.isActive).length;
+  const occupiedCount = STANDARD_SLOTS.filter((slot) =>
+    adsList.some((ad) => ad.placement === slot.id && ad.isActive),
+  ).length;
+  const totalImpressions = adsList.reduce((sum, ad) => sum + ad.impressions, 0);
+  const totalClicks = adsList.reduce((sum, ad) => sum + ad.clicks, 0);
+  const ctr = (impressions: number, clicks: number) =>
+    formatNumber(
+      impressions ? ((clicks / impressions) * 100).toFixed(2) : "0.00",
+    );
+  const selectedSlot = STANDARD_SLOTS.find((slot) => slot.id === placement)!;
+  const slotName = (slot: typeof selectedSlot) =>
+    isEn ? slot.nameEn : slot.nameBn;
+  const slotSize = (slot: typeof selectedSlot) =>
+    `${formatNumber(slot.width)} × ${formatNumber(slot.height)}`;
+  const typeName = (adType: AdType) =>
+    adType === "adsense"
+      ? text("AdSense / HTML", "অ্যাডসেন্স / HTML")
+      : adType === "sponsored"
+        ? text("Sponsored", "স্পন্সরড")
+        : text("Image banner", "ইমেজ ব্যানার");
+  const filteredAds = adsList.filter((ad) => {
+    const slot = STANDARD_SLOTS.find((item) => item.id === ad.placement)!;
+    return (
+      `${ad.name} ${slot.nameEn} ${slot.nameBn}`
+        .toLocaleLowerCase()
+        .includes(query.trim().toLocaleLowerCase()) &&
+      (statusFilter === "all" || ad.isActive === (statusFilter === "active")) &&
+      (placementFilter === "all" || ad.placement === placementFilter)
+    );
+  });
 
-  function handleEdit(ad: Advertisement) {
-    setEditingAdId(ad.id);
-    setName(ad.name);
-    setPlacement(ad.placement);
-    setType(ad.type as any);
-    setImageUrl(ad.imageUrl || "");
-    setDestinationUrl(ad.destinationUrl || "");
-    setAdCode(ad.adCode || "");
-    setAltText(ad.altText || "");
-    setDeviceTarget(ad.deviceTarget as any);
-    setIsActive(ad.isActive);
-    setShowAddForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  function clearFeedback() {
+    setError("");
+    setSuccess("");
   }
-
   function resetForm() {
     setEditingAdId(null);
     setName("");
+    setPlacement("homepage_leaderboard");
+    setType("direct_image");
     setImageUrl("");
     setDestinationUrl("");
     setAdCode("");
     setAltText("");
+    setDeviceTarget("all");
     setIsActive(true);
-    setShowAddForm(false);
   }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!name.trim()) {
-      setError(isEn ? "Ad name is required" : "বিজ্ঞাপনের নাম আবশ্যক");
-      return;
-    }
-
+  function openEditor(ad?: Advertisement, slot?: AdPlacement) {
+    resetForm();
+    clearFeedback();
+    if (ad) {
+      setEditingAdId(ad.id);
+      setName(ad.name);
+      setPlacement(ad.placement);
+      setType(ad.type);
+      setImageUrl(ad.imageUrl || "");
+      setDestinationUrl(ad.destinationUrl || "");
+      setAdCode(ad.adCode || "");
+      setAltText(ad.altText || "");
+      setDeviceTarget(ad.deviceTarget);
+      setIsActive(ad.isActive);
+    } else if (slot) setPlacement(slot);
+    setShowEditor(true);
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
+      editorRef.current
+        ?.querySelector<HTMLInputElement>("input")
+        ?.focus({ preventScroll: true });
+    });
+  }
+  function closeEditor() {
+    setShowEditor(false);
+    resetForm();
+    newButtonRef.current?.focus({ preventScroll: true });
+  }
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    clearFeedback();
     setIsSubmitting(true);
     try {
-      const res = await createOrUpdateAd({
+      const result = await createOrUpdateAd({
         id: editingAdId || undefined,
         name: name.trim(),
-        placement: placement as any,
+        placement,
         type,
-        imageUrl: imageUrl.trim() || undefined,
+        imageUrl: type !== "adsense" ? imageUrl.trim() || undefined : undefined,
         destinationUrl: destinationUrl.trim() || undefined,
-        adCode: adCode.trim() || undefined,
+        adCode: type === "adsense" ? adCode.trim() || undefined : undefined,
         altText: altText.trim() || undefined,
         deviceTarget,
         isActive,
       });
-
-      if (!res.success || !res.ad) {
-        setError(res.error || (isEn ? "Failed to save ad" : "সংরক্ষণ ব্যর্থ হয়েছে"));
-      } else {
-        setSuccess(
-          editingAdId
-            ? (isEn ? "Ad updated successfully!" : "বিজ্ঞাপন সফলভাবে আপডেট হয়েছে!")
-            : (isEn ? "New ad created successfully!" : "নতুন বিজ্ঞাপন সফলভাবে যুক্ত হয়েছে!")
+      const savedAd = result.ad;
+      if (!result.success || !savedAd) {
+        setError(
+          result.error ||
+            text(
+              "Unable to save advertisement.",
+              "বিজ্ঞাপন সংরক্ষণ করা যায়নি।",
+            ),
         );
-        if (editingAdId) {
-          setAdsList(adsList.map((a) => (a.id === editingAdId ? res.ad! : a)));
-        } else {
-          setAdsList([res.ad, ...adsList]);
-        }
-        resetForm();
+        return;
       }
-    } catch (err: any) {
-      setError(err?.message || (isEn ? "Server error occurred" : "সার্ভার এরর ঘটেছে"));
+      setAdsList((current) => [
+        savedAd,
+        ...current.filter((ad) => ad.id !== savedAd.id),
+      ]);
+      setSuccess(
+        text(
+          "Advertisement saved successfully.",
+          "বিজ্ঞাপন সফলভাবে সংরক্ষণ হয়েছে।",
+        ),
+      );
+      closeEditor();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : text(
+              "Unable to save advertisement.",
+              "বিজ্ঞাপন সংরক্ষণ করা যায়নি।",
+            ),
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
-
-  async function handleToggleStatus(id: string, currentStatus: boolean) {
-    setActionLoadingId(id);
+  async function handleToggle(ad: Advertisement) {
+    clearFeedback();
+    setActionLoadingId(ad.id);
     try {
-      const res = await toggleAdStatus(id, !currentStatus);
-      if (res.success) {
-        setAdsList(adsList.map((a) => (a.id === id ? { ...a, isActive: !currentStatus } : a)));
-        setSuccess(isEn ? "Ad status updated" : "বিজ্ঞাপন স্ট্যাটাস পরিবর্তন হয়েছে");
-      } else {
-        setError(res.error || (isEn ? "Failed to change status" : "স্ট্যাটাস পরিবর্তন ব্যর্থ হয়েছে"));
+      const result = await toggleAdStatus(ad.id, !ad.isActive);
+      if (!result.success) {
+        setError(
+          result.error ||
+            text("Unable to update status.", "স্ট্যাটাস পরিবর্তন করা যায়নি।"),
+        );
+        return;
       }
-    } catch (err: any) {
-      setError(err?.message || (isEn ? "Server error" : "সার্ভার এরর"));
+      setAdsList((current) =>
+        current.map((item) =>
+          item.id === ad.id ? { ...item, isActive: !ad.isActive } : item,
+        ),
+      );
+      setSuccess(
+        text(
+          "Advertisement status updated.",
+          "বিজ্ঞাপনের স্ট্যাটাস পরিবর্তন হয়েছে।",
+        ),
+      );
+    } catch {
+      setError(
+        text(
+          "Unable to update status. Please try again.",
+          "স্ট্যাটাস পরিবর্তন করা যায়নি। আবার চেষ্টা করুন।",
+        ),
+      );
     } finally {
       setActionLoadingId(null);
     }
   }
-
-  async function handleDelete(id: string) {
-    if (!confirm(isEn ? "Are you sure you want to delete this ad?" : "আপনি কি নিশ্চিতভাবে এই বিজ্ঞাপনটি মুছে ফেলতে চান?"))
+  async function handleDelete(ad: Advertisement) {
+    if (
+      !window.confirm(
+        text(
+          `Delete "${ad.name}"? This cannot be undone.`,
+          `"${ad.name}" মুছে ফেলবেন? এটি আর ফিরিয়ে আনা যাবে না।`,
+        ),
+      )
+    )
       return;
-    setActionLoadingId(id);
+    clearFeedback();
+    setActionLoadingId(ad.id);
     try {
-      const res = await deleteAd(id);
-      if (res.success) {
-        setAdsList(adsList.filter((a) => a.id !== id));
-        setSuccess(isEn ? "Ad deleted successfully" : "বিজ্ঞাপন মুছে ফেলা হয়েছে");
-      } else {
-        setError(res.error || (isEn ? "Failed to delete ad" : "মুছে ফেলা ব্যর্থ হয়েছে"));
+      const result = await deleteAd(ad.id);
+      if (!result.success) {
+        setError(
+          result.error ||
+            text(
+              "Unable to delete advertisement.",
+              "বিজ্ঞাপন মুছে ফেলা যায়নি।",
+            ),
+        );
+        return;
       }
-    } catch (err: any) {
-      setError(err?.message || (isEn ? "Server error" : "সার্ভার এরর"));
+      setAdsList((current) => current.filter((item) => item.id !== ad.id));
+      if (editingAdId === ad.id) closeEditor();
+      setSuccess(text("Advertisement deleted.", "বিজ্ঞাপন মুছে ফেলা হয়েছে।"));
+    } catch {
+      setError(
+        text(
+          "Unable to delete advertisement. Please try again.",
+          "বিজ্ঞাপন মুছে ফেলা যায়নি। আবার চেষ্টা করুন।",
+        ),
+      );
     } finally {
       setActionLoadingId(null);
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="border-b border-[var(--color-border)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className={styles.workspace}>
+      <header className={styles.header}>
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)] flex items-center gap-2 tracking-tight">
-            <DollarSign size={26} className="text-[var(--color-primary)]" />
-            <span>{isEn ? "Advertisements & Sponsorship Slots Manager" : "বিজ্ঞাপন ব্যানার ও স্পন্সরশিপ স্লট ম্যানেজার"}</span>
-          </h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            {isEn
-              ? "Manage display banners, Google AdSense slots, direct sponsorships, impressions and link tracking"
-              : "হোমপেজ ও সংবাদের ভিতরের বাণিজ্যিক ব্যানার, গুগল অ্যাডসেন্স, ইম্প্রেশন ও লিংক ট্র্যাকিং নিয়ন্ত্রণ করুন"}
+          <div className={styles.eyebrow}>
+            {text("Commercial desk", "বাণিজ্যিক ডেস্ক")}
+            <span>/</span>
+            {text("Advertising", "বিজ্ঞাপন")}
+          </div>
+          <h1>{text("Ad management", "বিজ্ঞাপন ব্যবস্থাপনা")}</h1>
+          <p>
+            {text(
+              "Your campaigns, placements and performance. One workspace.",
+              "ক্যাম্পেইন, বিজ্ঞাপন স্লট ও পারফরম্যান্স পরিচালনা করুন এক জায়গায়।",
+            )}
           </p>
         </div>
-
         <button
+          ref={newButtonRef}
           type="button"
-          onClick={() => {
-            if (showAddForm) resetForm();
-            else setShowAddForm(true);
-          }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors rounded shadow-xs cursor-pointer"
+          className={styles.primaryButton}
+          onClick={() => openEditor()}
+          disabled={isSubmitting}
         >
-          <PlusCircle size={15} />
-          <span>{showAddForm ? (isEn ? "Close Form" : "ফর্ম বন্ধ করুন") : (isEn ? "Add New Advertisement" : "নতুন বিজ্ঞাপন যুক্ত করুন")}</span>
+          <Plus size={17} />
+          {text("New advertisement", "নতুন বিজ্ঞাপন")}
         </button>
-      </div>
-
-      {/* KPI Metrics Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-bg)]">
-          <div className="flex items-center justify-between text-xs font-bold text-[var(--color-text-muted)]">
-            <span>{isEn ? "Active Ads" : "সক্রিয় বিজ্ঞাপন"}</span>
-            <Globe size={15} className="text-blue-500" />
+      </header>
+      <section
+        className={styles.metrics}
+        aria-label={text("Advertising overview", "বিজ্ঞাপনের সারসংক্ষেপ")}
+      >
+        {[
+          {
+            label: text("Active advertisements", "সক্রিয় বিজ্ঞাপন"),
+            value: formatNumber(activeCount),
+            note: `${formatNumber(adsList.length)} ${text("total campaigns", "মোট ক্যাম্পেইন")}`,
+            icon: <span className={styles.liveDot} />,
+          },
+          {
+            label: text("Total impressions", "মোট ইম্প্রেশন"),
+            value: formatNumber(totalImpressions),
+            note: text("Across all advertisements", "সকল বিজ্ঞাপন মিলিয়ে"),
+            icon: <Layers2 size={16} />,
+          },
+          {
+            label: text("Total clicks", "মোট ক্লিক"),
+            value: formatNumber(totalClicks),
+            note: text("Tracked link interactions", "ট্র্যাক করা লিংক ক্লিক"),
+            icon: <MousePointer2 size={16} />,
+          },
+          {
+            label: text("Click-through rate", "ক্লিক-থ্রু রেট"),
+            value: `${ctr(totalImpressions, totalClicks)}%`,
+            note: text("Clicks ÷ impressions", "ক্লিক ÷ ইম্প্রেশন"),
+            icon: <ArrowUpRight size={17} />,
+          },
+        ].map((metric) => (
+          <div className={styles.metric} key={metric.label}>
+            <div className={styles.metricLabel}>
+              {metric.label}
+              {metric.icon}
+            </div>
+            <div className={styles.metricValue}>{metric.value}</div>
+            <p>{metric.note}</p>
           </div>
-          <div className="text-2xl font-extrabold text-[var(--color-text)] mt-1">
-            {formatNumber(adsList.filter((a) => a.isActive).length)} / {formatNumber(adsList.length)}
-          </div>
-        </div>
-
-        <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-bg)]">
-          <div className="flex items-center justify-between text-xs font-bold text-[var(--color-text-muted)]">
-            <span>{isEn ? "Total Impressions" : "মোট ইম্প্রেশন (ভিউ)"}</span>
-            <Eye size={15} className="text-emerald-500" />
-          </div>
-          <div className="text-2xl font-extrabold text-emerald-600 mt-1 font-mono">
-            {formatNumber(totalImpressions)}
-          </div>
-        </div>
-
-        <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-bg)]">
-          <div className="flex items-center justify-between text-xs font-bold text-[var(--color-text-muted)]">
-            <span>{isEn ? "Total Clicks" : "মোট ক্লিক"}</span>
-            <MousePointerClick size={15} className="text-[var(--color-primary)]" />
-          </div>
-          <div className="text-2xl font-extrabold text-[var(--color-primary)] mt-1 font-mono">
-            {formatNumber(totalClicks)}
-          </div>
-        </div>
-
-        <div className="p-4 border border-[var(--color-border)] rounded bg-[var(--color-bg)]">
-          <div className="flex items-center justify-between text-xs font-bold text-[var(--color-text-muted)]">
-            <span>{isEn ? "Avg CTR" : "গড় সিটিআর (CTR)"}</span>
-            <Percent size={15} className="text-purple-500" />
-          </div>
-          <div className="text-2xl font-extrabold text-purple-600 mt-1 font-mono">
-            {formatNumber(overallCtr)}%
-          </div>
-        </div>
-      </div>
-
-      {/* Alerts */}
-      {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-600 flex items-center gap-2 text-xs text-red-700 dark:text-red-300">
-          <AlertCircle size={16} className="flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-600 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
-          <CheckCircle2 size={16} className="flex-shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
-
-      {/* Add / Edit Form */}
-      {showAddForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="border border-[var(--color-border)] p-6 bg-[var(--color-bg)] rounded space-y-4 shadow-sm"
+        ))}
+      </section>
+      {(error || success) && (
+        <div
+          role={error ? "alert" : "status"}
+          className={`${styles.notice} ${error ? styles.error : styles.success}`}
         >
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-            <h3 className="text-base font-bold text-[var(--color-text)] flex items-center gap-2">
-              <PlusCircle size={18} className="text-[var(--color-primary)]" />
-              <span>{editingAdId ? (isEn ? "Edit Advertisement" : "বিজ্ঞাপন তথ্য সম্পাদনা করুন") : (isEn ? "New Advertisement" : "নতুন বিজ্ঞাপন তথ্য")}</span>
-            </h3>
-            <span className="text-xs text-[var(--color-text-muted)]">
-              {isEn ? "Set banner image, destination URL and placement slot" : "ব্যানার ছবি, গন্তব্য লিংক ও স্লট নির্ধারণ করুন"}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8 space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                  {isEn ? "Campaign / Ad Name *" : "বিজ্ঞাপন বা ক্যাম্পেইনের নাম *"}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={isEn ? "e.g. Bkash Special Cashback Campaign" : "যেমন: বিকাশ স্পেশাল ক্যাশব্যাক ক্যাম্পেইন"}
-                  className="w-full p-2.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-sm font-bold focus:outline-none focus:border-[var(--color-primary)] rounded"
-                />
+          {error ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+          <span>{error || success}</span>
+          <button
+            type="button"
+            onClick={clearFeedback}
+            aria-label={text("Dismiss notification", "বার্তা বন্ধ করুন")}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {showEditor && (
+        <section
+          ref={editorRef}
+          className={styles.editor}
+          aria-labelledby="ad-editor-title"
+        >
+          <div className={styles.sectionHeader}>
+            <div>
+              <div className={styles.eyebrow}>
+                {text("Campaign studio", "ক্যাম্পেইন স্টুডিও")}
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                    {isEn ? "Placement Slot *" : "বিজ্ঞাপন স্লট (Placement Slot) *"}
-                  </label>
-                  <select
-                    value={placement}
-                    onChange={(e) => setPlacement(e.target.value)}
-                    className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded font-semibold"
-                  >
-                    {STANDARD_SLOTS.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {isEn ? s.nameEn : s.nameBn} ({isEn ? s.size : s.sizeBn})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                    {isEn ? "Ad Type" : "বিজ্ঞাপনের ধরন (Ad Type)"}
-                  </label>
-                  <select
-                    value={type}
-                    onChange={(e) => setType(e.target.value as any)}
-                    className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded font-semibold"
-                  >
-                    <option value="direct_image">{isEn ? "Direct Image Banner" : "ডিরেক্ট ইমেজ ব্যানার (Direct Banner)"}</option>
-                    <option value="sponsored">{isEn ? "Sponsored Content Banner" : "স্পন্সরড কন্টেন্ট ব্যানার (Sponsored)"}</option>
-                    <option value="adsense">{isEn ? "Google AdSense / Custom HTML" : "গুগল অ্যাডসেন্স / এইচটিএমএল কোড"}</option>
-                  </select>
-                </div>
-              </div>
-
-              {type !== "adsense" ? (
-                <>
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-bold text-[var(--color-text-muted)]">
-                        {isEn ? "Banner Image URL *" : "ব্যানার ইমেজ লিংক (Image URL) *"}
-                      </label>
-                    </div>
-                    <input
-                      type="url"
-                      required
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="https://.../banner.png"
-                      className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)] rounded"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                        {isEn ? "Destination URL" : "গন্তব্য লিংক (Destination URL - ক্লিকে যেখানে যাবে)"}
-                      </label>
-                      <input
-                        type="url"
-                        value={destinationUrl}
-                        onChange={(e) => setDestinationUrl(e.target.value)}
-                        placeholder="https://www.example.com"
-                        className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)] rounded"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                        {isEn ? "Alt Text" : "অল্টারনেটিভ টেক্সট (Alt Text)"}
-                      </label>
-                      <input
-                        type="text"
-                        value={altText}
-                        onChange={(e) => setAltText(e.target.value)}
-                        placeholder={isEn ? "Short description of banner" : "ব্যানারের সংক্ষিপ্ত বর্ণনা"}
-                        className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div>
-                  <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                    {isEn ? "AdSense Script / HTML Code" : "অ্যাডসেন্স স্ক্রিপ্ট / এইচটিএমএল কোড (AdSense Code)"}
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={adCode}
-                    onChange={(e) => setAdCode(e.target.value)}
-                    placeholder="<script async src='https://pagead2.googlesyndication.com/...'>...</script>"
-                    className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs font-mono focus:outline-none focus:border-[var(--color-primary)] rounded"
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-bold text-[var(--color-text-muted)] mb-1">
-                    {isEn ? "Device Target" : "ডিভাইস টার্গেটিং (Device Target)"}
-                  </label>
-                  <select
-                    value={deviceTarget}
-                    onChange={(e) => setDeviceTarget(e.target.value as any)}
-                    className="w-full p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-xs focus:outline-none focus:border-[var(--color-primary)] rounded"
-                  >
-                    <option value="all">{isEn ? "All Devices (Desktop & Mobile)" : "সকল ডিভাইস (Desktop & Mobile)"}</option>
-                    <option value="desktop">{isEn ? "Desktop Only" : "শুধু ডেস্কটপ"}</option>
-                    <option value="mobile">{isEn ? "Mobile Only" : "শুধু মোবাইল"}</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center pt-5">
-                  <label className="flex items-center gap-2 text-xs font-bold text-[var(--color-text)] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isActive}
-                      onChange={(e) => setIsActive(e.target.checked)}
-                      className="rounded text-[var(--color-primary)]"
-                    />
-                    <span>{isEn ? "Keep advertisement active immediately" : "বিজ্ঞাপনটি অবিলম্বে সক্রিয় রাখুন"}</span>
-                  </label>
-                </div>
-              </div>
+              <h2 id="ad-editor-title">
+                {editingAdId
+                  ? text("Edit advertisement", "বিজ্ঞাপন সম্পাদনা")
+                  : text("Create an advertisement", "নতুন বিজ্ঞাপন তৈরি করুন")}
+              </h2>
             </div>
-
-            {/* Live Preview Column */}
-            <div className="lg:col-span-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] p-4 rounded flex flex-col items-center justify-center text-center">
-              <span className="text-[11px] font-bold text-[var(--color-text-muted)] uppercase tracking-wide mb-3">
-                {isEn ? "Live Banner Preview" : "লাইভ ব্যানার প্রিভিউ"}
-              </span>
-
-              {imageUrl ? (
-                <div className="relative w-full aspect-video bg-zinc-900 border border-[var(--color-border)] rounded overflow-hidden">
-                  <Image
-                    src={imageUrl}
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                    onError={() => {}}
-                  />
-                </div>
-              ) : (
-                <div className="w-full aspect-video border border-dashed border-[var(--color-border)] rounded flex flex-col items-center justify-center text-[var(--color-text-muted)]">
-                  <ImageIcon size={28} className="mb-1" />
-                  <span className="text-xs">
-                    {isEn ? "Provide image URL to see preview" : "ইমেজ লিংক দিলে প্রিভিউ প্রদর্শিত হবে"}
-                  </span>
-                </div>
-              )}
-
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
-                {isEn ? "Slot size:" : "স্লট:"}{" "}
-                {isEn
-                  ? STANDARD_SLOTS.find((s) => s.id === placement)?.size
-                  : STANDARD_SLOTS.find((s) => s.id === placement)?.sizeBn}
-              </p>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={resetForm}
-              className="px-4 py-2 border border-[var(--color-border)] text-xs font-bold rounded hover:bg-[var(--color-bg-secondary)] transition-colors cursor-pointer"
-            >
-              {isEn ? "Cancel" : "বাতিল"}
-            </button>
-
-            <button
-              type="submit"
+              className={styles.iconButton}
+              onClick={closeEditor}
               disabled={isSubmitting}
-              className="px-5 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold rounded transition-colors shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              aria-label={text("Close editor", "এডিটর বন্ধ করুন")}
             >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw size={13} className="animate-spin" />
-                  {isEn ? "Saving..." : "সংরক্ষণ হচ্ছে..."}
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={14} />
-                  {editingAdId ? (isEn ? "Save Changes" : "আপডেট সংরক্ষণ করুন") : (isEn ? "Publish Advertisement" : "বিজ্ঞাপন প্রকাশ করুন")}
-                </>
-              )}
+              <X size={19} />
             </button>
           </div>
-        </form>
-      )}
-
-      {/* Slots & Assigned Ads List */}
-      <div className="space-y-4">
-        <h3 className="text-base font-bold text-[var(--color-text)] border-b border-[var(--color-border)] pb-2 flex items-center justify-between">
-          <span>{isEn ? "Standard Ad Slots & Current Performance" : "বিজ্ঞাপন স্লট ও বর্তমান পারফরম্যান্স তালিকা"}</span>
-          <span className="text-xs text-[var(--color-text-muted)] font-normal">
-            {isEn ? "Total 7 standard placements" : "মোট ৭টি আদর্শ স্লট"}
-          </span>
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {STANDARD_SLOTS.map((slot) => {
-            const assignedAd = adsList.find((a) => a.placement === slot.id && a.isActive) || adsList.find((a) => a.placement === slot.id);
-            const impressions = assignedAd?.impressions || 0;
-            const clicks = assignedAd?.clicks || 0;
-            const ctr = impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : "0.00";
-            const isLoading = assignedAd ? actionLoadingId === assignedAd.id : false;
-
-            return (
-              <div
-                key={slot.id}
-                className="border border-[var(--color-border)] rounded-md bg-[var(--color-bg)] p-4 space-y-3 shadow-xs hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors"
-              >
-                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
-                  <div>
-                    <h4 className="font-bold text-sm text-[var(--color-text)]">
-                      {isEn ? slot.nameEn : slot.nameBn}
-                    </h4>
-                    <span className="text-[11px] font-mono text-[var(--color-text-muted)]">
-                      {isEn ? `Slot: ${slot.id} (${slot.size})` : `স্লট: ${slot.id} (${slot.sizeBn})`}
-                    </span>
+          <form onSubmit={handleSubmit}>
+            <fieldset disabled={isSubmitting} className={styles.editorGrid}>
+              <div className={styles.formFields}>
+                <div className={styles.formSection}>
+                  <h3>
+                    <span>01</span>
+                    {text("Campaign details", "ক্যাম্পেইনের তথ্য")}
+                  </h3>
+                  <label className={styles.field} htmlFor="ad-name">
+                    {text("Advertisement name", "বিজ্ঞাপনের নাম")}
+                    <span className={styles.required}>*</span>
+                    <input
+                      id="ad-name"
+                      required
+                      minLength={2}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={text(
+                        "e.g. Bkash cashback campaign",
+                        "যেমন: বিকাশ ক্যাশব্যাক ক্যাম্পেইন",
+                      )}
+                    />
+                  </label>
+                  <div className={styles.fieldGrid}>
+                    <label className={styles.field} htmlFor="ad-placement">
+                      {text("Placement", "বিজ্ঞাপনের স্লট")}
+                      <select
+                        id="ad-placement"
+                        value={placement}
+                        onChange={(e) =>
+                          setPlacement(e.target.value as AdPlacement)
+                        }
+                      >
+                        {STANDARD_SLOTS.map((slot) => (
+                          <option key={slot.id} value={slot.id}>
+                            {slotName(slot)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={styles.field} htmlFor="ad-type">
+                      {text("Format", "বিজ্ঞাপনের ধরন")}
+                      <select
+                        id="ad-type"
+                        value={type}
+                        onChange={(e) => setType(e.target.value as AdType)}
+                      >
+                        <option value="direct_image">
+                          {text("Image banner", "ইমেজ ব্যানার")}
+                        </option>
+                        <option value="sponsored">
+                          {text("Sponsored banner", "স্পন্সরড ব্যানার")}
+                        </option>
+                        <option value="adsense">
+                          {text(
+                            "AdSense / custom HTML",
+                            "অ্যাডসেন্স / কাস্টম HTML",
+                          )}
+                        </option>
+                      </select>
+                    </label>
                   </div>
-
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                      assignedAd?.isActive
-                        ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800"
-                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-300 dark:border-zinc-700"
-                    }`}
-                  >
-                    {assignedAd?.isActive
-                      ? (isEn ? "● Active Live" : "● লাইভ সক্রিয়")
-                      : (isEn ? "○ Empty / Inactive" : "○ খালি / নিষ্ক্রিয়")}
+                </div>
+                <div className={styles.formSection}>
+                  <h3>
+                    <span>02</span>
+                    {text("Creative & destination", "ব্যানার ও গন্তব্য")}
+                  </h3>
+                  {type === "adsense" ? (
+                    <label className={styles.field} htmlFor="ad-code">
+                      {text("AdSense / HTML code", "অ্যাডসেন্স / HTML কোড")}
+                      <span className={styles.required}>*</span>
+                      <textarea
+                        id="ad-code"
+                        required
+                        rows={6}
+                        value={adCode}
+                        onChange={(e) => setAdCode(e.target.value)}
+                        placeholder={'<ins class="adsbygoogle" ...></ins>'}
+                        spellCheck={false}
+                      />
+                      <small>
+                        {text(
+                          "Code is saved securely and is not executed in this preview.",
+                          "কোড নিরাপদে সংরক্ষিত হয় এবং এই প্রিভিউতে চালানো হয় না।",
+                        )}
+                      </small>
+                    </label>
+                  ) : (
+                    <>
+                      <label className={styles.field} htmlFor="ad-image">
+                        {text("Banner image URL", "ব্যানার ইমেজ লিংক")}
+                        <span className={styles.required}>*</span>
+                        <input
+                          id="ad-image"
+                          type="url"
+                          required
+                          value={imageUrl}
+                          onChange={(e) => setImageUrl(e.target.value)}
+                          placeholder="https://example.com/banner.jpg"
+                        />
+                        <small>
+                          {text("Recommended dimensions:", "প্রস্তাবিত মাপ:")}{" "}
+                          {slotSize(selectedSlot)} px
+                        </small>
+                      </label>
+                      <label className={styles.field} htmlFor="ad-alt">
+                        {text("Image description", "ছবির বিবরণ")}
+                        <span className={styles.optional}>
+                          {text("Optional", "ঐচ্ছিক")}
+                        </span>
+                        <input
+                          id="ad-alt"
+                          value={altText}
+                          onChange={(e) => setAltText(e.target.value)}
+                          placeholder={text(
+                            "Describe the banner for screen readers",
+                            "স্ক্রিন রিডারের জন্য ব্যানারের বিবরণ",
+                          )}
+                        />
+                      </label>
+                    </>
+                  )}
+                  <label className={styles.field} htmlFor="ad-destination">
+                    {text("Destination URL", "গন্তব্য লিংক")}
+                    <span className={styles.optional}>
+                      {text("Optional", "ঐচ্ছিক")}
+                    </span>
+                    <input
+                      id="ad-destination"
+                      type="url"
+                      value={destinationUrl}
+                      onChange={(e) => setDestinationUrl(e.target.value)}
+                      placeholder="https://example.com/campaign"
+                    />
+                  </label>
+                </div>
+                <div className={styles.formSection}>
+                  <h3>
+                    <span>03</span>
+                    {text("Delivery settings", "প্রদর্শন সেটিংস")}
+                  </h3>
+                  <label className={styles.field} htmlFor="ad-device">
+                    {text("Target devices", "টার্গেট ডিভাইস")}
+                    <select
+                      id="ad-device"
+                      value={deviceTarget}
+                      onChange={(e) =>
+                        setDeviceTarget(e.target.value as AdDeviceTarget)
+                      }
+                    >
+                      <option value="all">
+                        {text("All devices", "সকল ডিভাইস")}
+                      </option>
+                      <option value="desktop">
+                        {text("Desktop only", "শুধু ডেস্কটপ")}
+                      </option>
+                      <option value="mobile">
+                        {text("Mobile only", "শুধু মোবাইল")}
+                      </option>
+                    </select>
+                  </label>
+                  <label className={styles.activeSetting}>
+                    <span>
+                      <strong>
+                        {text("Enable advertisement", "বিজ্ঞাপন সক্রিয় করুন")}
+                      </strong>
+                      <small>
+                        {text(
+                          "Allow this campaign to serve in its placement.",
+                          "নির্ধারিত স্লটে এই ক্যাম্পেইন প্রদর্শনের অনুমতি দিন।",
+                        )}
+                      </small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                    />
+                  </label>
+                </div>
+              </div>
+              <aside className={styles.previewPanel}>
+                <div className={styles.previewHeading}>
+                  <span>{text("Creative preview", "ব্যানার প্রিভিউ")}</span>
+                  <span className={styles.previewTag}>
+                    {text("Preview", "প্রিভিউ")}
                   </span>
                 </div>
-
-                {assignedAd ? (
-                  <div className="space-y-2.5">
-                    {/* Banner Image Preview */}
-                    {assignedAd.imageUrl ? (
-                      <div className="relative w-full h-24 bg-zinc-900 border border-[var(--color-border)] rounded overflow-hidden">
-                        <Image
-                          src={assignedAd.imageUrl}
-                          alt={assignedAd.name}
-                          fill
-                          className="object-cover"
-                        />
+                <div className={styles.previewCanvas}>
+                  <div className={styles.browserFrame}>
+                    <div className={styles.browserBar}>
+                      <i />
+                      <i />
+                      <i />
+                      <span>yesnews24.com</span>
+                    </div>
+                    <div className={styles.mockPage}>
+                      <div className={styles.mockMasthead} />
+                      <div className={styles.mockRule} />
+                      <div
+                        className={styles.creativeFrame}
+                        style={{
+                          aspectRatio: `${selectedSlot.width} / ${selectedSlot.height}`,
+                        }}
+                      >
+                        {type === "adsense" ? (
+                          <div className={styles.previewPlaceholder}>
+                            <Code2 size={24} />
+                            <span>
+                              {text(
+                                "AdSense / HTML creative",
+                                "অ্যাডসেন্স / HTML বিজ্ঞাপন",
+                              )}
+                            </span>
+                          </div>
+                        ) : imageUrl ? (
+                          <BannerPreview
+                            src={imageUrl}
+                            alt={
+                              altText ||
+                              name ||
+                              text(
+                                "Advertisement preview",
+                                "বিজ্ঞাপনের প্রিভিউ",
+                              )
+                            }
+                            codeLabel={text(
+                              "Image unavailable",
+                              "ছবি পাওয়া যায়নি",
+                            )}
+                          />
+                        ) : (
+                          <div className={styles.previewPlaceholder}>
+                            <ImageIcon size={23} strokeWidth={1.4} />
+                            <span>
+                              {text(
+                                "Your creative appears here",
+                                "আপনার ব্যানার এখানে দেখা যাবে",
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="p-3 bg-[var(--color-bg-secondary)] text-center text-xs text-[var(--color-text-muted)] rounded font-mono">
-                        {assignedAd.type === "adsense"
-                          ? (isEn ? "Google AdSense script active" : "গুগল অ্যাডসেন্স স্ক্রিপ্ট অ্যাক্টিভ")
-                          : (isEn ? "Custom HTML code slot" : "কাস্টম কোড স্লট")}
+                      <div className={styles.mockColumns}>
+                        <div />
+                        <div />
+                        <div />
                       </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.previewDetails}>
+                  <strong>
+                    {name ||
+                      text("Untitled advertisement", "নামবিহীন বিজ্ঞাপন")}
+                  </strong>
+                  <dl>
+                    <div>
+                      <dt>{text("Placement", "স্লট")}</dt>
+                      <dd>{slotName(selectedSlot)}</dd>
+                    </div>
+                    <div>
+                      <dt>{text("Dimensions", "মাপ")}</dt>
+                      <dd>{slotSize(selectedSlot)} px</dd>
+                    </div>
+                    <div>
+                      <dt>{text("Format", "ধরন")}</dt>
+                      <dd>{typeName(type)}</dd>
+                    </div>
+                  </dl>
+                  <p>
+                    <AlertCircle size={14} />
+                    {text(
+                      "Scaled preview. Actual display depends on the page and device.",
+                      "এটি ছোট আকারের প্রিভিউ। পাতা ও ডিভাইস অনুযায়ী প্রদর্শন ভিন্ন হতে পারে।",
                     )}
-
-                    <div className="space-y-1">
-                      <h5 className="font-bold text-xs text-[var(--color-text)] line-clamp-1">
-                        {assignedAd.name}
-                      </h5>
-                      {assignedAd.destinationUrl && (
-                        <a
-                          href={assignedAd.destinationUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-[var(--color-primary)] hover:underline truncate max-w-xs flex items-center gap-1 font-mono"
-                        >
-                          <span>{assignedAd.destinationUrl}</span>
-                          <ExternalLink size={10} />
-                        </a>
+                  </p>
+                </div>
+              </aside>
+            </fieldset>
+            <div className={styles.formFooter}>
+              <span>
+                {text(
+                  "Fields marked * are required.",
+                  "* চিহ্নিত ঘর পূরণ করা আবশ্যক।",
+                )}
+              </span>
+              <div>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={closeEditor}
+                  disabled={isSubmitting}
+                >
+                  {text("Cancel", "বাতিল")}
+                </button>
+                <button
+                  type="submit"
+                  className={styles.primaryButton}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <LoaderCircle size={16} className={styles.spinner} />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  {isSubmitting
+                    ? text("Saving...", "সংরক্ষণ হচ্ছে...")
+                    : editingAdId
+                      ? text("Save changes", "পরিবর্তন সংরক্ষণ")
+                      : text("Create advertisement", "বিজ্ঞাপন তৈরি করুন")}
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+      )}
+      <section
+        className={styles.inventory}
+        aria-label={text("Advertisement inventory", "বিজ্ঞাপনের তালিকা")}
+      >
+        <div className={styles.inventoryTop}>
+          <div
+            className={styles.tabs}
+            aria-label={text("Inventory view", "তালিকার ধরন")}
+          >
+            <button
+              type="button"
+              aria-pressed={view === "campaigns"}
+              className={view === "campaigns" ? styles.selectedTab : ""}
+              onClick={() => setView("campaigns")}
+            >
+              {text("Campaigns", "ক্যাম্পেইন")}
+              <span>{formatNumber(adsList.length)}</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === "placements"}
+              className={view === "placements" ? styles.selectedTab : ""}
+              onClick={() => setView("placements")}
+            >
+              {text("Placements", "বিজ্ঞাপনের স্লট")}
+              <span>{formatNumber(STANDARD_SLOTS.length)}</span>
+            </button>
+          </div>
+          <span className={styles.inventoryNote}>
+            {text("Lifetime performance", "সর্বকালের পারফরম্যান্স")}
+          </span>
+        </div>
+        {view === "campaigns" ? (
+          <div>
+            <div className={styles.toolbar}>
+              <label className={styles.search}>
+                <Search size={17} />
+                <span className={styles.srOnly}>
+                  {text("Search campaigns", "ক্যাম্পেইন খুঁজুন")}
+                </span>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={text(
+                    "Search campaigns...",
+                    "ক্যাম্পেইন খুঁজুন...",
+                  )}
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label={text("Clear search", "অনুসন্ধান মুছুন")}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </label>
+              <div className={styles.filters}>
+                <select
+                  aria-label={text(
+                    "Filter by status",
+                    "স্ট্যাটাস অনুযায়ী দেখুন",
+                  )}
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">
+                    {text("All statuses", "সকল স্ট্যাটাস")}
+                  </option>
+                  <option value="active">{text("Active", "সক্রিয়")}</option>
+                  <option value="paused">{text("Paused", "বিরত")}</option>
+                </select>
+                <select
+                  aria-label={text(
+                    "Filter by placement",
+                    "স্লট অনুযায়ী দেখুন",
+                  )}
+                  value={placementFilter}
+                  onChange={(e) => setPlacementFilter(e.target.value)}
+                >
+                  <option value="all">
+                    {text("All placements", "সকল স্লট")}
+                  </option>
+                  {STANDARD_SLOTS.map((slot) => (
+                    <option value={slot.id} key={slot.id}>
+                      {slotName(slot)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {filteredAds.length ? (
+              <>
+                <div
+                  className={styles.tableScroll}
+                  tabIndex={0}
+                  role="region"
+                  aria-label={text(
+                    "Campaign performance table",
+                    "ক্যাম্পেইন পারফরম্যান্স তালিকা",
+                  )}
+                >
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th scope="col">{text("Advertisement", "বিজ্ঞাপন")}</th>
+                        <th scope="col">
+                          {text("Placement / device", "স্লট / ডিভাইস")}
+                        </th>
+                        <th scope="col">{text("Status", "স্ট্যাটাস")}</th>
+                        <th scope="col" className={styles.numeric}>
+                          {text("Impressions", "ইম্প্রেশন")}
+                        </th>
+                        <th scope="col" className={styles.numeric}>
+                          {text("Clicks", "ক্লিক")}
+                        </th>
+                        <th scope="col" className={styles.numeric}>
+                          {text("CTR", "সিটিআর")}
+                        </th>
+                        <th scope="col">
+                          <span className={styles.srOnly}>
+                            {text("Actions", "পদক্ষেপ")}
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAds.map((ad) => {
+                        const slot = STANDARD_SLOTS.find(
+                          (item) => item.id === ad.placement,
+                        )!;
+                        const DeviceIcon =
+                          ad.deviceTarget === "mobile" ? Smartphone : Monitor;
+                        const busy = actionLoadingId !== null || isSubmitting;
+                        return (
+                          <tr key={ad.id}>
+                            <td>
+                              <div className={styles.campaignCell}>
+                                <div className={styles.thumbnail}>
+                                  <BannerPreview
+                                    src={
+                                      ad.type === "adsense" ? null : ad.imageUrl
+                                    }
+                                    alt={ad.altText || ad.name}
+                                    codeLabel=""
+                                  />
+                                </div>
+                                <div className={styles.campaignIdentity}>
+                                  <button
+                                    type="button"
+                                    className={styles.campaignName}
+                                    onClick={() => openEditor(ad)}
+                                    disabled={busy}
+                                  >
+                                    {ad.name}
+                                  </button>
+                                  <span>
+                                    {typeName(ad.type)}
+                                    {ad.destinationUrl && (
+                                      <a
+                                        href={ad.destinationUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={text(
+                                          "Open destination",
+                                          "গন্তব্য লিংক খুলুন",
+                                        )}
+                                        aria-label={`${text("Open destination for", "গন্তব্য লিংক খুলুন:")} ${ad.name}`}
+                                      >
+                                        <ExternalLink size={12} />
+                                      </a>
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <div className={styles.placementCell}>
+                                <strong>{slotName(slot)}</strong>
+                                <span>
+                                  <DeviceIcon size={12} />
+                                  {ad.deviceTarget === "mobile"
+                                    ? text("Mobile", "মোবাইল")
+                                    : ad.deviceTarget === "desktop"
+                                      ? text("Desktop", "ডেস্কটপ")
+                                      : text("All devices", "সকল ডিভাইস")}
+                                  <span className={styles.dotSeparator}>·</span>
+                                  {slotSize(slot)}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <span
+                                className={`${styles.status} ${ad.isActive ? styles.active : styles.paused}`}
+                              >
+                                <i />
+                                {ad.isActive
+                                  ? text("Active", "সক্রিয়")
+                                  : text("Paused", "বিরত")}
+                              </span>
+                            </td>
+                            <td className={styles.numeric}>
+                              {formatNumber(ad.impressions)}
+                            </td>
+                            <td className={styles.numeric}>
+                              {formatNumber(ad.clicks)}
+                            </td>
+                            <td className={styles.numeric}>
+                              {ctr(ad.impressions, ad.clicks)}%
+                            </td>
+                            <td>
+                              <div className={styles.rowActions}>
+                                <button
+                                  type="button"
+                                  className={styles.iconButton}
+                                  disabled={busy}
+                                  onClick={() => handleToggle(ad)}
+                                  title={
+                                    ad.isActive
+                                      ? text("Pause", "বিরতি দিন")
+                                      : text("Activate", "সক্রিয় করুন")
+                                  }
+                                  aria-label={`${ad.isActive ? text("Pause", "বিরতি দিন:") : text("Activate", "সক্রিয় করুন:")} ${ad.name}`}
+                                >
+                                  {actionLoadingId === ad.id ? (
+                                    <LoaderCircle
+                                      size={15}
+                                      className={styles.spinner}
+                                    />
+                                  ) : ad.isActive ? (
+                                    <Pause size={15} />
+                                  ) : (
+                                    <Play size={15} />
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  className={styles.iconButton}
+                                  disabled={busy}
+                                  onClick={() => openEditor(ad)}
+                                  title={text("Edit", "সম্পাদনা")}
+                                  aria-label={`${text("Edit", "সম্পাদনা:")} ${ad.name}`}
+                                >
+                                  <Pencil size={15} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`${styles.iconButton} ${styles.deleteButton}`}
+                                  disabled={busy}
+                                  onClick={() => handleDelete(ad)}
+                                  title={text("Delete", "মুছে ফেলুন")}
+                                  aria-label={`${text("Delete", "মুছে ফেলুন:")} ${ad.name}`}
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className={styles.tableFooter}>
+                  <span>
+                    {text("Showing", "দেখানো হচ্ছে")}{" "}
+                    <strong>{formatNumber(filteredAds.length)}</strong>{" "}
+                    {text("of", "/")} {formatNumber(adsList.length)}{" "}
+                    {text("advertisements", "বিজ্ঞাপন")}
+                  </span>
+                  <span>
+                    <span className={styles.liveDot} />
+                    {formatNumber(activeCount)} {text("enabled", "সক্রিয়")}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>
+                  {adsList.length ? (
+                    <Search size={25} strokeWidth={1.4} />
+                  ) : (
+                    <ImageIcon size={27} strokeWidth={1.4} />
+                  )}
+                </div>
+                <h3>
+                  {adsList.length
+                    ? text("No matching campaigns", "কোনো ক্যাম্পেইন মেলেনি")
+                    : text(
+                        "Make room for your next campaign",
+                        "আপনার প্রথম ক্যাম্পেইন শুরু করুন",
                       )}
+                </h3>
+                <p>
+                  {adsList.length
+                    ? text(
+                        "Try a different search or adjust your filters.",
+                        "ভিন্ন নামে খুঁজুন অথবা ফিল্টার পরিবর্তন করুন।",
+                      )
+                    : text(
+                        "Create an advertisement, choose its placement and start tracking performance.",
+                        "বিজ্ঞাপন তৈরি করুন, স্লট বেছে নিন এবং পারফরম্যান্স দেখুন।",
+                      )}
+                </p>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={() => {
+                    if (adsList.length) {
+                      setQuery("");
+                      setStatusFilter("all");
+                      setPlacementFilter("all");
+                    } else openEditor();
+                  }}
+                >
+                  {adsList.length ? <X size={15} /> : <Plus size={15} />}
+                  {adsList.length
+                    ? text("Clear filters", "ফিল্টার মুছুন")
+                    : text(
+                        "Create first advertisement",
+                        "প্রথম বিজ্ঞাপন তৈরি করুন",
+                      )}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <div className={styles.placementSummary}>
+              <div>
+                <h2>
+                  {text(
+                    "Your advertising inventory",
+                    "আপনার বিজ্ঞাপনের স্লটসমূহ",
+                  )}
+                </h2>
+                <p>
+                  {text(
+                    "Seven standard placements across the publication.",
+                    "পত্রিকার বিভিন্ন অংশে সাতটি নির্ধারিত বিজ্ঞাপনের স্লট।",
+                  )}
+                </p>
+              </div>
+              <span>
+                <strong>{formatNumber(occupiedCount)}</strong> /{" "}
+                {formatNumber(STANDARD_SLOTS.length)}{" "}
+                {text("with enabled ads", "স্লটে সক্রিয় বিজ্ঞাপন")}
+              </span>
+            </div>
+            <div className={styles.slotGrid}>
+              {STANDARD_SLOTS.map((slot, index) => {
+                const assigned = adsList.filter(
+                  (ad) => ad.placement === slot.id,
+                );
+                const enabled = assigned.filter((ad) => ad.isActive).length;
+                return (
+                  <article key={slot.id} className={styles.slotCard}>
+                    <div className={styles.slotCardTop}>
+                      <span className={styles.slotIndex}>
+                        {formatNumber(String(index + 1).padStart(2, "0"))}
+                      </span>
+                      <span
+                        className={`${styles.status} ${enabled ? styles.active : styles.paused}`}
+                      >
+                        <i />
+                        {enabled
+                          ? text("Enabled", "সক্রিয়")
+                          : text("Available", "খালি")}
+                      </span>
                     </div>
-
-                    {/* Performance metrics pill */}
-                    <div className="grid grid-cols-3 gap-2 bg-[var(--color-bg-secondary)] p-2 rounded text-center text-xs font-mono">
-                      <div>
-                        <span className="text-[10px] text-[var(--color-text-muted)] block">
-                          {isEn ? "Impressions" : "ইম্প্রেশন"}
-                        </span>
-                        <span className="font-bold text-[var(--color-text)]">{formatNumber(impressions)}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-[var(--color-text-muted)] block">
-                          {isEn ? "Clicks" : "ক্লিক"}
-                        </span>
-                        <span className="font-bold text-[var(--color-primary)]">{formatNumber(clicks)}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-[var(--color-text-muted)] block">
-                          {isEn ? "CTR" : "সিটিআর"}
-                        </span>
-                        <span className="font-bold text-purple-600">{formatNumber(ctr)}%</span>
+                    <div className={styles.slotDiagram} aria-hidden="true">
+                      <div
+                        className={styles.pageDiagram}
+                        data-placement={slot.id}
+                      >
+                        <div className={styles.diagramHeader} />
+                        <div className={styles.diagramBanner} />
+                        <div className={styles.diagramBody}>
+                          <div />
+                          <div />
+                        </div>
+                        <div className={styles.diagramFooter} />
                       </div>
                     </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between pt-1">
+                    <h3>{slotName(slot)}</h3>
+                    <p className={styles.slotDimensions}>
+                      {slotSize(slot)} <span>px</span>
+                    </p>
+                    <div className={styles.slotCardFooter}>
+                      <span>
+                        {formatNumber(assigned.length)}{" "}
+                        {text("campaigns", "ক্যাম্পেইন")}
+                        <small>
+                          {formatNumber(enabled)} {text("enabled", "সক্রিয়")}
+                        </small>
+                      </span>
                       <button
                         type="button"
-                        disabled={isLoading}
-                        onClick={() => handleToggleStatus(assignedAd.id, assignedAd.isActive)}
-                        className={`px-2.5 py-1 text-xs font-bold rounded transition-colors cursor-pointer ${
-                          assignedAd.isActive
-                            ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-200"
-                            : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200"
-                        }`}
+                        className={styles.iconButton}
+                        disabled={isSubmitting}
+                        onClick={() => openEditor(undefined, slot.id)}
+                        aria-label={`${text("Add advertisement to", "বিজ্ঞাপন যুক্ত করুন:")} ${slotName(slot)}`}
                       >
-                        {assignedAd.isActive ? (isEn ? "Pause" : "পজ করুন") : (isEn ? "Activate" : "সক্রিয় করুন")}
+                        <Plus size={19} />
                       </button>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(assignedAd)}
-                          className="p-1.5 text-zinc-500 hover:text-[var(--color-primary)] rounded hover:bg-[var(--color-bg-secondary)] transition-colors cursor-pointer"
-                          title={isEn ? "Edit" : "সম্পাদনা করুন"}
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isLoading}
-                          onClick={() => handleDelete(assignedAd.id)}
-                          className="p-1.5 text-zinc-400 hover:text-red-600 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-                          title={isEn ? "Delete" : "মুছে ফেলুন"}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="py-6 text-center text-xs text-[var(--color-text-muted)]">
-                    <p>{isEn ? "No active advertisement in this slot" : "এই স্লটে কোনো সক্রিয় বিজ্ঞাপন নেই"}</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlacement(slot.id);
-                        setShowAddForm(true);
-                      }}
-                      className="mt-2 text-xs font-bold text-[var(--color-primary)] hover:underline cursor-pointer"
-                    >
-                      {isEn ? "+ Add Advertisement" : "+ বিজ্ঞাপন যুক্ত করুন"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+                    {assigned.length > 0 && (
+                      <button
+                        type="button"
+                        className={styles.slotViewButton}
+                        onClick={() => {
+                          setPlacementFilter(slot.id);
+                          setStatusFilter("all");
+                          setQuery("");
+                          setView("campaigns");
+                        }}
+                      >
+                        {text("View campaigns", "ক্যাম্পেইন দেখুন")}
+                        <ArrowDownRight size={14} />
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+      <footer className={styles.pageFooter}>
+        <span>{text("Display advertising", "ডিসপ্লে বিজ্ঞাপন")}</span>
+        <p>
+          {text(
+            "Metrics reflect recorded impressions and clicks, not revenue.",
+            "পরিসংখ্যানে রেকর্ড করা ইম্প্রেশন ও ক্লিক দেখানো হয়, আয় নয়।",
+          )}
+        </p>
+      </footer>
     </div>
   );
 }
