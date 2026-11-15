@@ -13,18 +13,16 @@ flowchart TD
     
     subgraph Render Platform
         RenderWeb
-        RenderCron1[Render Cron: Flush Views every 10m]
         RenderCron2[Render Cron: Publish Scheduled every 5m]
     end
 
     subgraph Data & Storage
         NeonDB[(Neon Serverless PostgreSQL - Singapore)]
-        UpstashRedis[(Upstash Redis - Buffer & Rate Limit)]
+        UpstashRedis[(Upstash Redis - Cache & Rate Limit)]
     end
 
     RenderWeb -->|HTTP / Pooling| NeonDB
     RenderWeb -->|REST| UpstashRedis
-    RenderCron1 -->|cURL + Auth| RenderWeb
     RenderCron2 -->|cURL + Auth| RenderWeb
 ```
 
@@ -59,7 +57,7 @@ flowchart TD
 
 ## Step 2: Deploy to Render using Blueprints (`render.yaml`)
 
-The repository includes a production-ready `render.yaml` Blueprint file that configures the Next.js web service, Singapore region, and the two background cron jobs automatically.
+The `render.yaml` Blueprint configures the Next.js web service in Singapore and one background cron job for scheduled publishing. Remove any existing `news-portal-flush-views` cron: views now use a single atomic PostgreSQL write. Do not replay legacy Redis buffers. Read the [security upgrade notes](SECURITY_UPGRADE.md) before deploying.
 
 1. Push your repository to **GitHub** or **GitLab**.
 2. Go to the [Render Dashboard](https://dashboard.render.com).
@@ -67,15 +65,15 @@ The repository includes a production-ready `render.yaml` Blueprint file that con
 4. Connect your GitHub/GitLab repository.
 5. Render will automatically parse `render.yaml` and display the services to be created:
    - **`bangladeshi-news-portal`** (Web Service: Node.js / Next.js)
-   - **`news-portal-flush-views`** (Cron Job: runs every 10 minutes)
    - **`news-portal-publish-scheduled`** (Cron Job: runs every 5 minutes)
 6. Render will prompt you to enter the required secret environment variables:
    - `DATABASE_URL`: Paste your pooled Neon connection string from Step 1.
    - `BETTER_AUTH_URL`: Your Render service URL (e.g., `https://bangladeshi-news-portal.onrender.com` or custom domain).
-   - `UPSTASH_REDIS_REST_URL`: (Optional) Upstash Redis endpoint for buffered views.
-   - `UPSTASH_REDIS_REST_TOKEN`: (Optional) Upstash Redis token.
+   - `UPSTASH_REDIS_REST_URL`: (Required in production) Upstash Redis endpoint for caching and rate limiting.
+   - `UPSTASH_REDIS_REST_TOKEN`: (Required in production) Upstash Redis token.
    - `RESEND_API_KEY`: (Optional) Resend API key for email delivery.
-   - `CLOUDFLARE_R2_*`: (Optional) Cloudflare R2 credentials for media uploads.
+   - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`: Cloudflare R2 credentials for media uploads.
+   - `R2_PUBLIC_URL`: Full HTTPS media URL (e.g., `https://media.yourdomain.com`).
 7. Click **Apply**. Render will automatically run `npm install --legacy-peer-deps && npm run build` and launch the service!
 
 ---
@@ -102,6 +100,8 @@ If you prefer to configure the Web Service manually through the Render Dashboard
    - `BETTER_AUTH_URL`: `https://your-service-name.onrender.com`
    - `ADMIN_BOOTSTRAP_SECRET`: *(Secret for initial admin account creation)*
    - `CRON_SECRET`: *(Secret protecting background cron tasks)*
+   - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: Required for production login, search, and view throttling.
+   - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`: Required for media uploads.
    - `NEXT_PUBLIC_SITE_NAME`: `দৈনিক বাংলাদেশ বার্তা`
    - `NEXT_PUBLIC_SITE_URL`: `https://your-service-name.onrender.com`
 6. Click **Create Web Service**.
@@ -123,7 +123,7 @@ curl -X POST https://your-service-name.onrender.com/api/bootstrap \
   }'
 ```
 
-You can now log in at `https://your-service-name.onrender.com/login` and access the newsroom at `/admin`.
+You can now log in at `https://your-service-name.onrender.com/login` and access the newsroom at `/admin`. Remove `ADMIN_BOOTSTRAP_SECRET` from the environment and redeploy after successful provisioning.
 
 ---
 

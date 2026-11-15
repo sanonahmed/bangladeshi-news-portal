@@ -1,14 +1,20 @@
 import type { NextConfig } from "next";
 
+const mediaHostname = process.env.R2_PUBLIC_URL
+  ? new URL(process.env.R2_PUBLIC_URL).hostname
+  : null;
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: process.env.R2_PUBLIC_HOSTNAME || "media.localhost",
-        pathname: "/**",
-      },
+      ...(mediaHostname
+        ? [{ protocol: "https" as const, hostname: mediaHostname, pathname: "/**" }]
+        : [
+            { protocol: "https" as const, hostname: "**.r2.dev", pathname: "/**" },
+            { protocol: "https" as const, hostname: "**.cloudflarestorage.com", pathname: "/**" },
+          ]),
+
       {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",

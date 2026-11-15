@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { z } from "zod";
+import { provisionCredentialAccount } from "@/lib/account-provisioning";
+import { publishableErrorMessage } from "@/lib/error-utils";
 
 export async function POST(request: NextRequest) {
   // Verify bootstrap secret
   const bootstrapSecret = process.env.ADMIN_BOOTSTRAP_SECRET;
-  if (!bootstrapSecret) {
-    return NextResponse.json({ error: "Bootstrap is disabled" }, { status: 403 });
+  if (!bootstrapSecret || bootstrapSecret.length < 32) {
+    return NextResponse.json({ error: "Bootstrap is not configured" }, { status: 503 });
   }
 
   const authHeader = request.headers.get("Authorization");
@@ -30,30 +32,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = (await request.json()) as {
-    name?: string;
-    email?: string;
-    password?: string;
-  };
-  const { name, email, password } = body;
-
-  if (!name || !email || !password || password.length < 12) {
-    return NextResponse.json(
-      { error: "name, email, and password (min 12 chars) are required" },
-      { status: 400 }
-    );
+  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const parsed = z.object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().email().max(320).toLowerCase(),
+    password: z.string().min(12).max(128),
+  }).safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "A valid name, email, and password (12–128 chars) are required" }, { status: 400 });
   }
+  const { name, email, password } = parsed.data;
 
   try {
-    await auth.api.signUpEmail({
-      body: { name, email, password },
-    });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Failed to create user" }, { status: 500 });
+    await provisionCredentialAccount({ name, email, password, role: "super_admin" }, true);
+  } catch (error: unknown) {
+    const message = publishableErrorMessage(error, "Failed to create user");
+    console.error("Bootstrap failed:", message);
+    const conflict = error instanceof Error && error.message.includes("already exists");
+    return NextResponse.json(
+      { error: message },
+      { status: conflict ? 409 : 500 },
+    );
   }
-
-  // Elevate to super_admin
-  await db.update(users).set({ role: "super_admin" }).where(eq(users.email, email));
 
   return NextResponse.json({
     success: true,

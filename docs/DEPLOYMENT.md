@@ -54,7 +54,7 @@ This document outlines the end-to-end production deployment process for the Bang
 
 ---
 
-## 3. Upstash Redis Setup (Buffered Views & Rate Limiting)
+## 3. Upstash Redis Setup (Rate Limiting)
 
 1. Sign up or log into [Upstash Console](https://console.upstash.com).
 2. Click **Create Database**:
@@ -91,36 +91,33 @@ This document outlines the end-to-end production deployment process for the Bang
    - `DATABASE_URL`
    - `BETTER_AUTH_SECRET` (generate using `openssl rand -base64 32`)
    - `BETTER_AUTH_URL` (`https://yournewspaper.com`)
-   - `BOOTSTRAP_SECRET` (generate a strong alphanumeric string)
-   - `CLOUDFLARE_R2_ACCOUNT_ID`
-   - `CLOUDFLARE_R2_ACCESS_KEY_ID`
-   - `CLOUDFLARE_R2_SECRET_ACCESS_KEY`
-   - `CLOUDFLARE_R2_BUCKET_NAME`
-   - `CLOUDFLARE_R2_PUBLIC_DOMAIN`
+   - `ADMIN_BOOTSTRAP_SECRET` (one-time, 32+ character bootstrap token)
+   - `R2_ACCOUNT_ID`
+   - `R2_ACCESS_KEY_ID`
+   - `R2_SECRET_ACCESS_KEY`
+   - `R2_BUCKET_NAME`
+   - `R2_PUBLIC_URL` (full HTTPS URL, e.g., `https://media.yournewspaper.com`)
    - `UPSTASH_REDIS_REST_URL`
    - `UPSTASH_REDIS_REST_TOKEN`
    - `RESEND_API_KEY`
    - `CRON_SECRET`
-   - `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+   - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 5. Click **Deploy**.
 
 ---
 
 ## 6. Vercel Cron Jobs Verification
 
-The `vercel.json` file in the repository root automatically configures two scheduled cron tasks:
+The `vercel.json` file configures one scheduled task (requires a Vercel plan that supports a five-minute schedule):
 
-1. **Flush Buffered Views**:
-   - Route: `/api/cron/aggregate-views`
-   - Schedule: `*/10 * * * *` (Every 10 minutes)
-   - Flushes Redis buffered article view counters to PostgreSQL in bulk.
-
-2. **Publish Scheduled Articles**:
+1. **Publish Scheduled Articles**:
    - Route: `/api/cron/publish-scheduled`
    - Schedule: `*/5 * * * *` (Every 5 minutes)
    - Checks for articles with `status: "approved"` and `scheduledAt <= now()` and flips them to `published`.
 
 Vercel will send the header `Authorization: Bearer <CRON_SECRET>` with each invocation.
+
+Views are now recorded directly in PostgreSQL. Remove any old `/api/cron/aggregate-views` schedule; that endpoint is an authenticated no-op for compatibility. Do not replay legacy Redis view buffers, since those views were already recorded. See [security upgrade notes](SECURITY_UPGRADE.md) before deploying this update.
 
 ---
 
@@ -131,7 +128,7 @@ After deployment completes:
 ```bash
 curl -X POST https://yournewspaper.com/api/bootstrap \
   -H "Content-Type: application/json" \
-  -H "x-bootstrap-secret: <YOUR_BOOTSTRAP_SECRET>" \
+  -H "Authorization: Bearer <YOUR_ADMIN_BOOTSTRAP_SECRET>" \
   -d '{
     "name": "Super Admin",
     "email": "editor@yournewspaper.com",
@@ -139,7 +136,7 @@ curl -X POST https://yournewspaper.com/api/bootstrap \
   }'
 ```
 
-You can now log in at `https://yournewspaper.com/login` and access the newsroom at `/admin`.
+You can now log in at `https://yournewspaper.com/login` and access the newsroom at `/admin`. Remove `ADMIN_BOOTSTRAP_SECRET` from the environment and redeploy after successful provisioning.
 
 ---
 

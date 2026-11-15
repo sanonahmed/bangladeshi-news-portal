@@ -1,8 +1,9 @@
 import { neon } from "@neondatabase/serverless";
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://neondb_owner:npg_5UR2YsILmoSE@ep-proud-mountain-b3kkn4fs-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is required to run this migration.");
+}
 
 const sql = neon(connectionString);
 

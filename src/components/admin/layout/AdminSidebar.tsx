@@ -37,12 +37,13 @@ import {
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 import { authClient } from "@/lib/auth-client";
+import type { LucideIcon } from "lucide-react";
 import { type UserRole, isRoleAtLeast } from "@/lib/permissions";
 
 interface NavItemDef {
   key: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   exact?: boolean;
   badge?: string;
 }
@@ -119,7 +120,6 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { t, language } = useAdminLanguage();
-  const { data: session } = authClient.useSession();
   const [dbRole, setDbRole] = useState<UserRole | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
@@ -140,7 +140,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       .catch(() => {});
   }, [pathname]);
 
-  const userRole: UserRole = dbRole || ((session?.user as any)?.role as UserRole) || "super_admin";
+  const userRole: UserRole = dbRole || "reader";
 
   async function handleSignOut() {
     try {

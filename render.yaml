@@ -22,7 +22,7 @@ services:
       - key: CRON_SECRET
         generateValue: true
       - key: NEXT_PUBLIC_SITE_NAME
-        value: "দৈনিক বাংলাদেশ বার্তা"
+        value: "Yes News 24"
       - key: NEXT_PUBLIC_SITE_URL
         sync: false # e.g. https://bangladeshi-news-portal.onrender.com
       - key: UPSTASH_REDIS_REST_URL
@@ -31,37 +31,18 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
-      - key: CLOUDFLARE_R2_ACCOUNT_ID
+      - key: R2_ACCOUNT_ID
         sync: false
-      - key: CLOUDFLARE_R2_ACCESS_KEY_ID
+      - key: R2_ACCESS_KEY_ID
         sync: false
-      - key: CLOUDFLARE_R2_SECRET_ACCESS_KEY
+      - key: R2_SECRET_ACCESS_KEY
         sync: false
-      - key: CLOUDFLARE_R2_BUCKET_NAME
+      - key: R2_BUCKET_NAME
         sync: false
-      - key: CLOUDFLARE_R2_PUBLIC_DOMAIN
-        sync: false
+      - key: R2_PUBLIC_URL
+        sync: false # e.g. https://media.yournewspaper.com
 
-  # Cron Job 1: Flush Redis Buffered Views to Neon PostgreSQL (Every 10 mins)
-  - type: cron
-    name: news-portal-flush-views
-    runtime: node
-    plan: starter
-    region: singapore
-    schedule: "*/10 * * * *"
-    buildCommand: ""
-    startCommand: "curl -s -f -H \"Authorization: Bearer $CRON_SECRET\" $RENDER_EXTERNAL_URL/api/cron/aggregate-views || true"
-    envVars:
-      - fromService:
-          type: web
-          name: bangladeshi-news-portal
-          envVarKey: CRON_SECRET
-      - fromService:
-          type: web
-          name: bangladeshi-news-portal
-          envVarKey: RENDER_EXTERNAL_URL
-
-  # Cron Job 2: Publish Scheduled Editorial Articles (Every 5 mins)
+  # Cron Job: Publish Scheduled Editorial Articles (Every 5 mins)
   - type: cron
     name: news-portal-publish-scheduled
     runtime: node
@@ -69,13 +50,15 @@ services:
     region: singapore
     schedule: "*/5 * * * *"
     buildCommand: ""
-    startCommand: "curl -s -f -H \"Authorization: Bearer $CRON_SECRET\" $RENDER_EXTERNAL_URL/api/cron/publish-scheduled || true"
+    startCommand: "curl -s -f -H \"Authorization: Bearer $CRON_SECRET\" \"$NEXT_PUBLIC_SITE_URL/api/cron/publish-scheduled\""
     envVars:
-      - fromService:
+      - key: CRON_SECRET
+        fromService:
           type: web
           name: bangladeshi-news-portal
           envVarKey: CRON_SECRET
-      - fromService:
+      - key: NEXT_PUBLIC_SITE_URL
+        fromService:
           type: web
           name: bangladeshi-news-portal
-          envVarKey: RENDER_EXTERNAL_URL
+          envVarKey: NEXT_PUBLIC_SITE_URL

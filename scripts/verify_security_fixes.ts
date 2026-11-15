@@ -23,8 +23,8 @@ async function runTests() {
       } else {
         console.error(`[FAIL] ${name} - Assertion returned false`);
       }
-    } catch (err: any) {
-      console.error(`[ERROR] ${name}:`, err.message);
+    } catch (err: unknown) {
+      console.error(`[ERROR] ${name}:`, err instanceof Error ? err.message : String(err));
     }
   }
 

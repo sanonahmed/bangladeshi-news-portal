@@ -44,8 +44,8 @@ export default function NewArticlePage() {
   const isEn = language === "en";
 
   const { data: session } = authClient.useSession();
-  const userRole = ((session?.user as any)?.role as string) || "admin";
-  const canPublishDirectly = hasPermission(userRole as any, "article:publish");
+  const userRole = (session?.user as { role?: string } | undefined)?.role || "reader";
+  const canPublishDirectly = hasPermission(userRole, "article:publish");
 
   // Editorial content states
   const [kicker, setKicker] = useState("");

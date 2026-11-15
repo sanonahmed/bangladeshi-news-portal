@@ -5,11 +5,13 @@ import { user as usersTable, account, session as sessionTable } from "@/db/schem
 import { authorProfiles } from "@/db/schema/authors";
 import { auditLogs } from "@/db/schema/security";
 import { articles } from "@/db/schema/articles";
-import { eq, desc, and, sql, count } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { eq, desc, count } from "drizzle-orm";
+import { provisionCredentialAccount } from "@/lib/account-provisioning";
+import { getErrorMessage, publishableErrorMessage } from "@/lib/error-utils";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getCurrentAdminUser } from "@/lib/admin-guard";
+import type { UserRole } from "@/lib/permissions";
 
 export interface AdminUserItem {
   id: string;
@@ -36,7 +38,7 @@ async function recordAudit(
   actorId: string | null,
   action: string,
   entityId: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) {
   try {
     const headerList = await headers();
@@ -62,6 +64,8 @@ async function recordAudit(
  */
 export async function getAdminUsersList(): Promise<AdminUserItem[]> {
   try {
+    const actor = await getCurrentAdminUser();
+    if (!actor || !["super_admin", "admin", "editor"].includes(actor.role)) return [];
     const rows = await db
       .select({
         id: usersTable.id,
@@ -131,13 +135,6 @@ export async function updateUserRole(
       return { success: false, error: "Permission denied: Only administrators can update roles" };
     }
 
-    // Only super_admin can grant or revoke super_admin role
-    if ((newRole === "super_admin" || actorRole !== "super_admin") && newRole === "super_admin") {
-      if (actorRole !== "super_admin") {
-        return { success: false, error: "Only a Super Admin can promote someone to Super Admin" };
-      }
-    }
-
     // Check target user
     const targetUser = await db
       .select()
@@ -151,6 +148,12 @@ export async function updateUserRole(
     }
 
     const oldRole = target.role;
+    if (!["super_admin", "admin", "editor", "journalist", "reader"].includes(newRole)) {
+      return { success: false, error: "Invalid role" };
+    }
+    if ((oldRole === "super_admin" || newRole === "super_admin") && actorRole !== "super_admin") {
+      return { success: false, error: "Only a Super Admin can grant or revoke the Super Admin role" };
+    }
 
     // Prevent demoting the only super_admin
     if (oldRole === "super_admin" && newRole !== "super_admin") {
@@ -184,9 +187,9 @@ export async function updateUserRole(
     revalidatePath("/admin/audit-logs");
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("updateUserRole error:", error);
-    return { success: false, error: error?.message || "Failed to update role" };
+    return { success: false, error: getErrorMessage(error, "Failed to update role") };
   }
 }
 
@@ -259,9 +262,9 @@ export async function toggleUserBan(
     revalidatePath("/admin/audit-logs");
 
     return { success: true, isBanned: nextBanned };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("toggleUserBan error:", error);
-    return { success: false, error: error?.message || "Failed to update account status" };
+    return { success: false, error: getErrorMessage(error, "Failed to update account status") };
   }
 }
 
@@ -352,9 +355,9 @@ export async function updateStaffProfile(
     revalidatePath("/authors");
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("updateStaffProfile error:", error);
-    return { success: false, error: error?.message || "Failed to update journalist profile" };
+    return { success: false, error: getErrorMessage(error, "Failed to update journalist profile") };
   }
 }
 
@@ -404,70 +407,51 @@ export async function createStaffMember(data: {
       return { success: false, error: "An account with this email already exists" };
     }
 
-    // Create via Better Auth API
-    await auth.api.signUpEmail({
-      body: {
-        name,
-        email,
-        password,
-      },
+    const assignedRole: UserRole = ["super_admin", "admin", "editor", "journalist", "reader"].includes(data.role)
+      ? data.role as UserRole
+      : "journalist";
+    if (assignedRole === "super_admin" && actor.role !== "super_admin") {
+      return { success: false, error: "Only a Super Admin can create another Super Admin" };
+    }
+
+    const newUser = await provisionCredentialAccount({ name, email, password, role: assignedRole });
+    const baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || `staff-${Date.now().toString(36)}`;
+
+    await db.insert(authorProfiles).values({
+      userId: newUser.id,
+      slug: `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`,
+      nameBangla: name,
+      nameEnglish: name,
+      designation: data.designation.trim() || "প্রতিবেদক",
+      department: data.department?.trim() || "বার্তা বিভাগ",
+      bureau: data.bureau?.trim() || "কেন্দ্রীয় বার্তা কক্ষ",
+      isBureauChief: Boolean(data.isBureauChief),
+      isStaff: true,
+      email,
     });
 
-    // Elevate role and assign details
-    const assignedRole = ["super_admin", "admin", "editor", "journalist", "reader"].includes(data.role)
-      ? data.role
-      : "journalist";
-
-    await db
-      .update(usersTable)
-      .set({ role: assignedRole, updatedAt: new Date() })
-      .where(eq(usersTable.email, email));
-
-    // Get newly created user ID
-    const newlyCreated = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email))
-      .limit(1);
-
-    const newUser = newlyCreated[0];
-    if (newUser) {
-      const baseSlug = name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") || `staff-${Date.now().toString(36)}`;
-
-      await db.insert(authorProfiles).values({
-        userId: newUser.id,
-        slug: `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`,
-        nameBangla: name,
-        nameEnglish: name,
-        designation: data.designation.trim() || "প্রতিবেদক",
-        department: data.department?.trim() || "বার্তা বিভাগ",
-        bureau: data.bureau?.trim() || "কেন্দ্রীয় বার্তা কক্ষ",
-        isBureauChief: Boolean(data.isBureauChief),
-        isStaff: true,
-        email,
-      });
-
-      await recordAudit(actor.id, "STAFF_ACCOUNT_CREATED", newUser.id, {
-        email,
-        name,
-        role: assignedRole,
-        designation: data.designation,
-        bureau: data.bureau,
-        actorName: actor.name,
-      });
-    }
+    await recordAudit(actor.id, "STAFF_ACCOUNT_CREATED", newUser.id, {
+      email,
+      name,
+      role: assignedRole,
+      designation: data.designation,
+      bureau: data.bureau,
+      actorName: actor.name,
+    });
 
     revalidatePath("/admin/users");
     revalidatePath("/admin/roles");
     revalidatePath("/admin/audit-logs");
 
     return { success: true };
-  } catch (error: any) {
-    console.error("createStaffMember error:", error);
-    return { success: false, error: error?.message || "Failed to create staff member" };
+  } catch (error: unknown) {
+    // Driver errors may include SQL parameters (including the password hash).
+    const message = publishableErrorMessage(error, "Failed to create staff member");
+    console.error("createStaffMember error:", message);
+    return { success: false, error: message };
   }
 }
 
@@ -534,8 +518,8 @@ export async function deleteStaffMember(
     revalidatePath("/authors");
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("deleteStaffMember error:", error);
-    return { success: false, error: error?.message || "Failed to delete staff member" };
+    return { success: false, error: getErrorMessage(error, "Failed to delete staff member") };
   }
 }

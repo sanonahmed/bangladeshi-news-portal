@@ -15,7 +15,7 @@ export const CACHE_TAGS = {
 
 export function safeRevalidateTag(tag: string) {
   try {
-    (revalidateTag as any)(tag, { expire: 0 });
+    revalidateTag(tag, "max");
   } catch {
     // Graceful fallback
   }

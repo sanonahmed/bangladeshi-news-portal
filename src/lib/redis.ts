@@ -1,5 +1,5 @@
 /**
- * Upstash Redis client, rate limiters, view-count buffer, and breaking-news cache.
+ * Upstash Redis client, rate limiters, and application caches.
  *
  * Required environment variables:
  *   UPSTASH_REDIS_REST_URL   – Upstash Redis REST endpoint
@@ -57,68 +57,6 @@ export const searchRatelimit = new Ratelimit({
   analytics: false,
   prefix: "rl:search",
 });
-
-// ---------------------------------------------------------------------------
-// Article view-count buffer
-// ---------------------------------------------------------------------------
-
-/**
- * Redis key prefix for buffered view counts.
- * Format: views:buffer:<articleId>
- */
-const VIEW_BUFFER_PREFIX = "views:buffer:";
-
-/**
- * TTL for view-count keys (24 hours).
- * A cron job should flush these to Postgres before they expire.
- */
-const VIEW_TTL = 86_400; // seconds
-
-/**
- * Increments the buffered view count for an article in Redis.
- * The cron flush job later drains this into Postgres.
- */
-export async function incrementArticleView(articleId: string): Promise<void> {
-  const key = `${VIEW_BUFFER_PREFIX}${articleId}`;
-  await redis.incr(key);
-  await redis.expire(key, VIEW_TTL);
-}
-
-/**
- * Returns all buffered view counts as a map of articleId → count.
- * Keys with no count are excluded.
- */
-export async function getBufferedViewCounts(): Promise<Record<string, number>> {
-  const keys = await redis.keys(`${VIEW_BUFFER_PREFIX}*`);
-  if (keys.length === 0) return {};
-
-  const result: Record<string, number> = {};
-
-  // Fetch all values. Upstash REST does not support MGET in all SDK versions;
-  // process sequentially to stay safe, or batch with Promise.all for speed.
-  await Promise.all(
-    keys.map(async (key) => {
-      const count = await redis.get<number>(key);
-      const articleId = key.slice(VIEW_BUFFER_PREFIX.length);
-      if (count != null && articleId) {
-        result[articleId] = count;
-      }
-    })
-  );
-
-  return result;
-}
-
-/**
- * Removes buffered view-count keys for the given article IDs.
- * Call this after successfully flushing counts to Postgres.
- */
-export async function clearBufferedViews(articleIds: string[]): Promise<void> {
-  if (articleIds.length === 0) return;
-  const keys = articleIds.map((id) => `${VIEW_BUFFER_PREFIX}${id}`);
-  // redis.del accepts a spread of keys
-  await redis.del(...keys);
-}
 
 // ---------------------------------------------------------------------------
 // Breaking-news cache

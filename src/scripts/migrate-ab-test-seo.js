@@ -1,7 +1,10 @@
-const { neon } = require('@neondatabase/serverless');
-const sql = neon('postgresql://neondb_owner:npg_5UR2YsILmoSE@ep-proud-mountain-b3kkn4fs-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require');
-
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('DATABASE_URL is required to run this migration.');
+}
 async function main() {
+  const { neon } = await import('@neondatabase/serverless');
+  const sql = neon(connectionString);
   console.log('Migrating articles table for SEO and Headline A/B Testing...');
   
   await sql`ALTER TABLE articles ADD COLUMN IF NOT EXISTS focus_keyword text;`;
@@ -19,4 +22,7 @@ async function main() {
   console.log('Columns:', cols.map(c => c.column_name).join(', '));
 }
 
-main().catch(console.error);
+main().catch(() => {
+  console.error('Migration failed. Check database access and schema.');
+  process.exitCode = 1;
+});

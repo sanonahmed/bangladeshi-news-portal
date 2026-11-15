@@ -17,22 +17,34 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "crypto";
+import path from "path";
 
 // ---------------------------------------------------------------------------
-// Client
+// Client configuration
 // ---------------------------------------------------------------------------
 
-const r2Client = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID || "mock-account"}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "mock_key",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "mock_secret",
-  },
-});
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Media storage is not configured: ${name} is required.`);
+  return value;
+}
 
-const BUCKET = process.env.R2_BUCKET_NAME || "news-media";
-const PUBLIC_URL = process.env.R2_PUBLIC_URL || "https://media.localhost";
+// Read configuration on use so build-time collection never supplies fake credentials.
+export function getR2Configuration() {
+  const bucket = requiredEnv("R2_BUCKET_NAME");
+  const publicUrl = new URL(requiredEnv("R2_PUBLIC_URL"));
+  if (publicUrl.protocol !== "https:" || publicUrl.username || publicUrl.password || publicUrl.search || publicUrl.hash) {
+    throw new Error("R2_PUBLIC_URL must use HTTPS and contain no credentials, query, or fragment.");
+  }
+  return {
+    accountId: requiredEnv("R2_ACCOUNT_ID"),
+    accessKeyId: requiredEnv("R2_ACCESS_KEY_ID"),
+    secretAccessKey: requiredEnv("R2_SECRET_ACCESS_KEY"),
+    bucket,
+    publicUrl: publicUrl.href.replace(/\/$/, ""),
+    publicHostname: publicUrl.hostname,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -48,7 +60,18 @@ export const ALLOWED_MIME_TYPES = [
 
 export type AllowedMimeType = (typeof ALLOWED_MIME_TYPES)[number];
 
-/** Maximum upload size: 10 MB */
+const EXTENSIONS: Record<AllowedMimeType, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+};
+
+export function isAllowedMimeType(value: string): value is AllowedMimeType {
+  return (ALLOWED_MIME_TYPES as readonly string[]).includes(value);
+}
+
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 /** Presigned URL validity window in seconds (5 minutes). */
@@ -74,13 +97,24 @@ export interface PresignedUploadResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Extracts a safe file extension from a filename.
- * Falls back to "bin" for unknown extensions.
+ * Validates the filename against its image MIME type and returns a canonical extension.
  */
-function safeExtension(filename: string): string {
-  const parts = filename.split(".");
-  if (parts.length < 2) return "bin";
-  return (parts.pop() ?? "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+function safeExtension(filename: string, mimeType: AllowedMimeType): string {
+  if (filename.includes("/") || filename.includes("\\")) {
+    throw new Error("Only a filename, not a path, is allowed.");
+  }
+  const ext = path.extname(filename).slice(1).toLowerCase();
+  const allowedExtensions: Record<AllowedMimeType, string[]> = {
+    "image/jpeg": ["jpg", "jpeg"],
+    "image/png": ["png"],
+    "image/webp": ["webp"],
+    "image/gif": ["gif"],
+    "image/avif": ["avif"],
+  };
+  if (!allowedExtensions[mimeType].includes(ext)) {
+    throw new Error("The filename extension does not match its image MIME type.");
+  }
+  return EXTENSIONS[mimeType];
 }
 
 // ---------------------------------------------------------------------------
@@ -100,26 +134,33 @@ export async function createPresignedUpload(
   mimeType: string,
   folder: string = "uploads"
 ): Promise<PresignedUploadResult> {
-  if (!ALLOWED_MIME_TYPES.includes(mimeType as AllowedMimeType)) {
-    throw new Error(
-      `Unsupported file type: ${mimeType}. Allowed: ${ALLOWED_MIME_TYPES.join(", ")}`
-    );
+  if (!isAllowedMimeType(mimeType)) {
+    throw new Error(`Unsupported image MIME type: ${mimeType}`);
   }
 
-  const ext = safeExtension(filename);
+  const ext = safeExtension(filename, mimeType);
   const r2Key = `${folder}/${randomUUID()}.${ext}`;
 
+  const config = getR2Configuration();
+  const client = new S3Client({
+    region: "auto",
+    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
   const command = new PutObjectCommand({
-    Bucket: BUCKET,
+    Bucket: config.bucket,
     Key: r2Key,
     ContentType: mimeType,
   });
 
-  const uploadUrl = await getSignedUrl(r2Client, command, {
+  const uploadUrl = await getSignedUrl(client, command, {
     expiresIn: PRESIGNED_EXPIRES_IN,
   });
 
-  const publicUrl = getPublicUrl(r2Key);
+  const publicUrl = `${config.publicUrl}/${r2Key}`;
 
   return { uploadUrl, r2Key, publicUrl, expiresIn: PRESIGNED_EXPIRES_IN };
 }
@@ -129,18 +170,27 @@ export async function createPresignedUpload(
  * Resolves silently even if the object does not exist.
  */
 export async function deleteR2Object(r2Key: string): Promise<void> {
+  const config = getR2Configuration();
+  const client = new S3Client({
+    region: "auto",
+    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
   const command = new DeleteObjectCommand({
-    Bucket: BUCKET,
+    Bucket: config.bucket,
     Key: r2Key,
   });
-  await r2Client.send(command);
+  await client.send(command);
 }
 
 /**
  * Returns the publicly accessible URL for a stored R2 key.
  */
 export function getPublicUrl(r2Key: string): string {
-  return `${PUBLIC_URL}/${r2Key}`;
+  return `${getR2Configuration().publicUrl}/${r2Key}`;
 }
 
 /**
@@ -149,25 +199,29 @@ export function getPublicUrl(r2Key: string): string {
  */
 export async function r2ObjectExists(r2Key: string): Promise<boolean> {
   try {
+    const config = getR2Configuration();
+    const client = new S3Client({
+      region: "auto",
+      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    });
     const command = new HeadObjectCommand({
-      Bucket: BUCKET,
+      Bucket: config.bucket,
       Key: r2Key,
     });
-    await r2Client.send(command);
+    await client.send(command);
     return true;
   } catch {
     return false;
   }
 }
 
-/**
- * Builds a folder-scoped R2 key for a given use-case.
- * Useful for organising uploads by article, thumbnail, avatar, etc.
- */
+/** Builds an opaque R2 key. Browser uploads must use createPresignedUpload instead. */
 export function buildR2Key(
   folder: "articles" | "avatars" | "uploads" | "thumbnails",
-  filename: string
 ): string {
-  const ext = safeExtension(filename);
-  return `${folder}/${randomUUID()}.${ext}`;
+  return `${folder}/${randomUUID()}`;
 }

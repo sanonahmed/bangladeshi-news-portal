@@ -37,7 +37,8 @@ A complete, production-ready, high-performance Bangladeshi online newspaper plat
   - Unicode-compatible Bengali full-text search with trigram indexing.
 
 - **Performance & Caching**:
-  - **Upstash Redis** buffered view counting (zero database write bottlenecks on page loads; batched cron sync).
+  - **Upstash Redis** rate limiting for authentication, search, and article-view endpoints.
+  - Atomic PostgreSQL view counting with article and aggregate totals updated together.
   - Next.js 16 On-demand tag revalidation (`revalidateTag`).
   - Edge rate limiting on authentication and API endpoints.
 
@@ -103,17 +104,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `DATABASE_URL` | Neon Serverless PostgreSQL connection string |
 | `BETTER_AUTH_SECRET` | 32+ character random secret for JWT/session encryption |
 | `BETTER_AUTH_URL` | Application base URL (`http://localhost:3000` or production domain) |
-| `BOOTSTRAP_SECRET` | Secret token to authenticate the initial Super Admin provisioning |
-| `CLOUDFLARE_R2_ACCOUNT_ID` | Cloudflare account identifier |
-| `CLOUDFLARE_R2_ACCESS_KEY_ID` | R2 API token access key ID |
-| `CLOUDFLARE_R2_SECRET_ACCESS_KEY` | R2 API token secret access key |
-| `CLOUDFLARE_R2_BUCKET_NAME` | S3 bucket name on R2 |
-| `CLOUDFLARE_R2_PUBLIC_DOMAIN` | CDN domain serving media (e.g., `media.yourdomain.com`) |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL for buffered views and rate limits |
+| `ADMIN_BOOTSTRAP_SECRET` | One-time bootstrap token (32+ characters); remove it after creating the initial Super Admin |
+| `R2_ACCOUNT_ID` | Cloudflare account identifier |
+| `R2_ACCESS_KEY_ID` | R2 API token access key ID |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret access key |
+| `R2_BUCKET_NAME` | S3 bucket name on R2 |
+| `R2_PUBLIC_URL` | HTTPS media base URL (e.g., `https://media.yourdomain.com`) |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL for caching and rate limits |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST Token |
 | `RESEND_API_KEY` | Resend API key for transactional emails |
 | `CRON_SECRET` | Secret for protecting Vercel Cron endpoints |
-| `NEXT_PUBLIC_GA4_MEASUREMENT_ID` | Google Analytics 4 Measurement ID (`G-XXXXXXXXXX`) |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics 4 Measurement ID (`G-XXXXXXXXXX`) |
 
 ---
 
@@ -121,11 +122,11 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 To create the initial Super Admin user safely without manual database SQL queries:
 
-1. Send a POST request to `/api/bootstrap` with your `BOOTSTRAP_SECRET`:
+1. Send a POST request to `/api/bootstrap` with your `ADMIN_BOOTSTRAP_SECRET`:
 ```bash
 curl -X POST http://localhost:3000/api/bootstrap \
   -H "Content-Type: application/json" \
-  -H "x-bootstrap-secret: your_secure_bootstrap_secret" \
+  -H "Authorization: Bearer your_secure_bootstrap_secret" \
   -d '{
     "name": "Super Admin",
     "email": "admin@yournewspaper.com",
@@ -134,6 +135,9 @@ curl -X POST http://localhost:3000/api/bootstrap \
 ```
 2. Navigate to `/login` and sign in with your credentials.
 3. Access the full newsroom dashboard at `/admin`.
+4. Remove `ADMIN_BOOTSTRAP_SECRET` from your deployment environment and restart/redeploy.
+
+Public email and Google OAuth registration are disabled. Create staff accounts from the authorized admin panel. Upstash credentials are required for production login, search, and view requests: protection failures return 503 instead of silently allowing unthrottled traffic. Read the [security upgrade notes](docs/SECURITY_UPGRADE.md) when upgrading an existing deployment.
 
 ---
 

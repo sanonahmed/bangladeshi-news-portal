@@ -1,29 +1,27 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { Menu, LogOut, Sun, Moon, Globe, Check, ChevronDown, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useSyncExternalStore } from "react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
+
+const subscribeToMount = () => () => {};
 
 interface AdminTopNavProps {
   onToggleSidebar: () => void;
 }
 
 export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
-  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useAdminLanguage();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToMount, () => true, () => false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { data: session } = authClient.useSession();
   const [dbUser, setDbUser] = useState<{ name: string; role: string; image?: string | null } | null>(null);
 
   useEffect(() => {
-    setMounted(true);
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((data) => {
@@ -65,9 +63,9 @@ export function AdminTopNav({ onToggleSidebar }: AdminTopNavProps) {
     window.location.href = "/login";
   }
 
-  const userName = dbUser?.name ?? session?.user?.name ?? (language === "bn" ? "সুপার অ্যাডমিন" : "Super Admin");
-  const userRole = dbUser?.role ?? (session?.user as any)?.role ?? "super_admin";
-  const userAvatar = dbUser?.image ?? (session?.user as any)?.image ?? null;
+  const userName = dbUser?.name ?? (language === "bn" ? "নিউজরুম ব্যবহারকারী" : "Newsroom User");
+  const userRole = dbUser?.role ?? "reader";
+  const userAvatar = dbUser?.image ?? null;
 
   return (
     <header className="h-16 bg-[var(--color-bg)] border-b border-[var(--color-border)] flex items-center justify-between px-4 lg:px-8 z-40 sticky top-0">

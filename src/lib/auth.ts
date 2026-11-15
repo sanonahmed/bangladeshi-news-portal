@@ -4,6 +4,11 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { sendVerificationEmail, sendPasswordResetEmail } from "@/lib/resend";
 
+const authSecret = process.env.BETTER_AUTH_SECRET;
+if (process.env.NODE_ENV === "production" && (!authSecret || authSecret.length < 32)) {
+  throw new Error("BETTER_AUTH_SECRET must contain at least 32 characters in production.");
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -36,16 +41,18 @@ export const auth = betterAuth({
     },
   },
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-  secret: process.env.BETTER_AUTH_SECRET || "default_dev_secret_at_least_32_characters_long_for_security",
+  secret: authSecret || "local-development-secret-only-32-characters",
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
+    autoSignIn: false,
     requireEmailVerification: false,
-    sendResetPassword: async ({ user, url }: { user: any; url: string }) => {
+    sendResetPassword: async ({ user, url }) => {
       await sendPasswordResetEmail(user.email, user.name, url);
     },
   },
   emailVerification: {
-    sendVerificationEmail: async ({ user, url }: { user: any; url: string }) => {
+    sendVerificationEmail: async ({ user, url }) => {
       await sendVerificationEmail(user.email, user.name, url);
     },
   },
@@ -53,6 +60,7 @@ export const auth = betterAuth({
     process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? {
           google: {
+            disableSignUp: true,
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
           },

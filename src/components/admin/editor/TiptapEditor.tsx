@@ -169,7 +169,7 @@ export function TiptapEditor({
       editor.commands.setYoutubeVideo({ src: trimmed });
     } else if (platform === "facebook") {
       const embedSrc = getFacebookEmbedUrl(trimmed, false);
-      (editor.chain().focus() as any)
+      editor.chain().focus()
         .insertContent({
           type: "iframe",
           attrs: {
@@ -201,7 +201,7 @@ export function TiptapEditor({
     if (!url || !url.trim()) return;
 
     const embedSrc = getFacebookEmbedUrl(url.trim(), false);
-    (editor.chain().focus() as any)
+    editor.chain().focus()
       .insertContent({
         type: "iframe",
         attrs: {
