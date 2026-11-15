@@ -2,525 +2,199 @@
 
 import Link from "next/link";
 import {
-  FileText,
-  Clock,
-  Plus,
-  Zap,
-  Vote,
-  MessageSquare,
-  ShieldCheck,
-  Sparkles,
-  ExternalLink,
-  Bell,
+  Activity,
   ArrowUpRight,
+  CalendarDays,
+  ChevronRight,
+  Clock3,
+  FileEdit,
+  FileText,
+  Newspaper,
+  Plus,
+  Sparkles,
+  ShieldCheck,
+  Bell,
+  BarChart3,
+  TriangleAlert,
 } from "lucide-react";
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 import { TrendingVelocityCard } from "@/components/admin/dashboard/TrendingVelocityCard";
-import type { TrendingVelocityData } from "@/actions/articles";
-
-interface AdminDashboardClientProps {
-  trendingData: TrendingVelocityData;
-  features?: Record<string, boolean>;
-  stats: {
-    published: number;
-    drafts: number;
-    pending: number;
-    journalists: number;
-    activeBreaking: number;
-    activePolls: number;
-    pendingComments: number;
-  };
-  recentArticles: Array<{
-    id: string;
-    title: string;
-    slug: string;
-    status: string;
-    viewCount: number;
-    publishedAt: Date | string | null;
-    createdAt: Date | string;
-  }>;
-  pendingReviews: Array<{
-    id: string;
-    title: string;
-    slug: string;
-    status: string;
-    createdAt: Date | string;
-  }>;
-  activeBreakingList: Array<{
-    id: string;
-    headline: string;
-    priority: number;
-    createdAt: Date | string;
-  }>;
-  featuredPoll: {
-    id: string;
-    question: string;
-    options: any;
-    votes: any;
-    totalVotes: number;
-  } | null;
-  categoryBreakdown: Array<{
-    name: string;
-    count: number;
-  }>;
-}
+import { type AdminDashboardProps } from "@/components/admin/dashboard/types";
+import { MetricCard } from "@/components/admin/dashboard/MetricCard";
+import { RecentStories } from "@/components/admin/dashboard/RecentStories";
+import { DashboardSidebar } from "@/components/admin/dashboard/DashboardSidebar";
+import { DashboardInsights } from "@/components/admin/dashboard/DashboardInsights";
 
 export function AdminDashboardClient({
   trendingData,
   features,
+  dataUnavailable = false,
   stats,
   recentArticles,
   pendingReviews,
   activeBreakingList,
   featuredPoll,
   categoryBreakdown,
-}: AdminDashboardClientProps) {
-  const {
-    t,
-    formatNumber,
-    formatDateString,
-    formatDateTimeString,
-    formatDayString,
-    language,
-  } = useAdminLanguage();
-
-  const today = new Date();
+}: AdminDashboardProps) {
+  const { t, formatNumber, formatDateString, formatDayString, language } =
+    useAdminLanguage();
+  const isEn = language === "en";
+  const now = new Date();
+  const quickTools = [
+    {
+      href: "/admin/ai-assistant",
+      icon: Sparkles,
+      label: t("widget.ai"),
+      flag: "admin_ai_assistant",
+    },
+    {
+      href: "/admin/fact-checks",
+      icon: ShieldCheck,
+      label: t("widget.factCheck"),
+      flag: "admin_fact_check_manager",
+    },
+    {
+      href: "/admin/notifications",
+      icon: Bell,
+      label: t("widget.push"),
+      flag: null,
+    },
+    {
+      href: "/admin/analytics",
+      icon: BarChart3,
+      label: isEn ? "Analytics" : "বিশ্লেষণ",
+      flag: null,
+    },
+  ].filter((tool) => !tool.flag || features?.[tool.flag] !== false);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Editorial Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--color-border)]">
+    <div className="mx-auto w-full max-w-[1440px] space-y-6 pb-6">
+      <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <h1
-            className="text-2xl font-bold text-[var(--color-text)] tracking-tight"
-            style={language === "bn" ? { fontFamily: "var(--font-noto-bengali, sans-serif)" } : undefined}
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500"
           >
+            <span>{isEn ? "Workspace" : "ওয়ার্কস্পেস"}</span>
+            <ChevronRight size={12} />
+            <span className="text-indigo-600 dark:text-indigo-400">
+              {isEn ? "Overview" : "ওভারভিউ"}
+            </span>
+          </nav>
+          <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.035em] text-[var(--color-text)] sm:text-[2rem]">
             {t("dash.title")}
           </h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1 font-medium">
-            {formatDayString(today)}, {formatDateString(today)} &bull; {t("dash.bureau")}
-          </p>
+          <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <CalendarDays size={14} className="text-slate-400" />
+            <span>
+              {formatDayString(now)}, {formatDateString(now)}
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">/</span>
+            <span>{t("dash.bureau")}</span>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Link
-            href="/admin/breaking-news"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[var(--color-border)] bg-[var(--color-bg)] hover:bg-[var(--color-bg-secondary)] text-xs font-medium text-[var(--color-text)] transition-colors rounded"
+            href="/"
+            target="_blank"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.07]"
           >
-            <Zap size={14} className="text-red-600" />
-            <span>{t("dash.btnBreaking")}</span>
+            <Newspaper size={15} />
+            {isEn ? "View website" : "ওয়েবসাইট দেখুন"}
+            <ArrowUpRight size={13} />
           </Link>
-
           <Link
             href="/admin/articles/new"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xs font-bold transition-colors rounded shadow-xs"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow-[0_5px_12px_-5px_rgba(79,70,229,0.7)] transition-colors hover:bg-indigo-700"
           >
-            <Plus size={15} />
-            <span>{t("dash.btnNewArticle")}</span>
+            <Plus size={16} />
+            {t("dash.btnNewArticle")}
           </Link>
         </div>
-      </div>
+      </header>
 
-      {/* Primary Newsroom Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Published */}
-        <Link
+      {dataUnavailable && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"
+        >
+          <TriangleAlert size={18} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold">
+              {isEn
+                ? "Newsroom metrics are unavailable"
+                : "নিউজরুমের তথ্য পাওয়া যাচ্ছে না"}
+            </p>
+            <p className="mt-0.5 text-xs opacity-80">
+              {isEn
+                ? "Refresh to retry. Zeros or empty lists below may not reflect the newsroom."
+                : "আবার চেষ্টা করতে পেজটি রিফ্রেশ করুন। নিচের শূন্য বা খালি তালিকা সঠিক নাও হতে পারে।"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <section
+        aria-label={isEn ? "Newsroom summary" : "নিউজরুমের সারসংক্ষেপ"}
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
+      >
+        <MetricCard
+          href="/admin/analytics"
+          icon={Activity}
+          accent
+          label={isEn ? "Readers online" : "সক্রিয় পাঠক"}
+          value={formatNumber(trendingData.activeReaders)}
+          detail={
+            isEn ? "Active in the last 2 min" : "সর্বশেষ ২ মিনিটে সক্রিয়"
+          }
+        />
+        <MetricCard
           href="/admin/articles"
-          className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors group"
-        >
-          <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-medium">
-            <span>{t("stat.published")}</span>
-            <FileText size={15} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
-              {formatNumber(stats.published)}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] flex items-center">
-              {t("stat.viewAll")} <ArrowUpRight size={12} className="ml-0.5" />
-            </span>
-          </div>
-        </Link>
-
-        {/* Pending Reviews */}
-        <Link
+          icon={FileText}
+          label={t("stat.published")}
+          value={formatNumber(stats.published)}
+          detail={`${formatNumber(trendingData.todayPublishedCount)} ${isEn ? "published today" : "আজ প্রকাশিত"}`}
+        />
+        <MetricCard
           href="/admin/reviews"
-          className={`p-4 border rounded transition-colors group ${
-            stats.pending > 0
-              ? "bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80"
-              : "bg-[var(--color-bg)] border-[var(--color-border)] hover:border-zinc-400 dark:hover:border-zinc-700"
-          }`}
-        >
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className={stats.pending > 0 ? "text-amber-800 dark:text-amber-300 font-bold" : "text-[var(--color-text-muted)]"}>
-              {t("stat.pending")}
-            </span>
-            <Clock size={15} className={stats.pending > 0 ? "text-amber-600" : "text-[var(--color-text-muted)]"} />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
-              {formatNumber(stats.pending)}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] flex items-center">
-              {stats.pending > 0 ? t("stat.approve") : t("stat.updated")} <ArrowUpRight size={12} className="ml-0.5" />
-            </span>
-          </div>
-        </Link>
+          icon={Clock3}
+          label={t("stat.pending")}
+          value={formatNumber(stats.pending)}
+          detail={
+            stats.pending
+              ? isEn
+                ? "Waiting for an editor"
+                : "সম্পাদকের পর্যালোচনায়"
+              : t("stat.updated")
+          }
+        />
+        <MetricCard
+          href="/admin/articles?status=draft"
+          icon={FileEdit}
+          label={isEn ? "Work in progress" : "চলমান খসড়া"}
+          value={formatNumber(stats.drafts)}
+          detail={`${formatNumber(stats.journalists)} ${isEn ? "newsroom members" : "নিউজরুম সদস্য"}`}
+        />
+      </section>
 
-        {/* Active Breaking News */}
-        <Link
-          href="/admin/breaking-news"
-          className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors group"
-        >
-          <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-medium">
-            <span>{t("stat.breaking")}</span>
-            <Zap size={15} className="text-red-600" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
-              {formatNumber(stats.activeBreaking)}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-red-600 flex items-center">
-              {t("stat.manage")} <ArrowUpRight size={12} className="ml-0.5" />
-            </span>
-          </div>
-        </Link>
-
-        {/* Active Polls */}
-        <Link
-          href="/admin/polls"
-          className="p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded hover:border-zinc-400 dark:hover:border-zinc-700 transition-colors group"
-        >
-          <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] font-medium">
-            <span>{t("stat.polls")}</span>
-            <Vote size={15} className="text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors" />
-          </div>
-          <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl lg:text-3xl font-bold text-[var(--color-text)]">
-              {formatNumber(stats.activePolls)}
-            </span>
-            <span className="text-[11px] text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] flex items-center">
-              {t("stat.results")} <ArrowUpRight size={12} className="ml-0.5" />
-            </span>
-          </div>
-        </Link>
-      </div>
-
-      {/* Main Workspace (Editorial Layout) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Trending Velocity, Review Queue & Recent Stories (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Trending Stories & Real-Time Traffic Velocity Card */}
-          {features?.admin_velocity_radar !== false && (
-            <TrendingVelocityCard initialData={trendingData} />
-          )}
-
-          {/* Pending Reviews Queue */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock size={15} className="text-[var(--color-primary)]" />
-                <h2 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
-                  {t("section.pendingQueue")} ({formatNumber(stats.pending)})
-                </h2>
-              </div>
-              <Link
-                href="/admin/reviews"
-                className="text-xs text-[var(--color-primary)] hover:underline font-semibold"
-              >
-                {t("section.reviewAll")}
-              </Link>
-            </div>
-
-            {pendingReviews.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[var(--color-text-muted)]">
-                {t("section.noPending")}
-              </div>
-            ) : (
-              <div className="divide-y divide-[var(--color-border)]">
-                {pendingReviews.map((art) => (
-                  <div
-                    key={art.id}
-                    className="p-3.5 flex items-center justify-between gap-4 hover:bg-[var(--color-bg-secondary)] transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <h3 className="text-xs font-bold text-[var(--color-text)] truncate">
-                        {art.title}
-                      </h3>
-                      <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-                        {t("label.submittedAt")}: {formatDateTimeString(art.createdAt)}
-                      </p>
-                    </div>
-                    <Link
-                      href="/admin/reviews"
-                      className="px-2.5 py-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-[11px] font-semibold rounded flex-shrink-0 transition-colors"
-                    >
-                      {t("action.review")}
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Recent Editorial Stories Table */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText size={15} className="text-[var(--color-text-muted)]" />
-                <h2 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
-                  {t("section.recentArticles")}
-                </h2>
-              </div>
-              <Link
-                href="/admin/articles"
-                className="text-xs text-[var(--color-primary)] hover:underline font-semibold"
-              >
-                {t("section.viewAllArticles")}
-              </Link>
-            </div>
-
-            {recentArticles.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[var(--color-text-muted)]">
-                {t("section.noArticles")}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] text-[var(--color-text-muted)] font-medium">
-                    <tr>
-                      <th className="px-4 py-2.5">{t("th.title")}</th>
-                      <th className="px-3 py-2.5">{t("th.status")}</th>
-                      <th className="px-3 py-2.5">{t("th.date")}</th>
-                      <th className="px-4 py-2.5 text-right">{t("th.action")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-border)]">
-                    {recentArticles.map((art) => {
-                      const statusKey = `status.${art.status}`;
-                      const statusLabel = t(statusKey, art.status);
-
-                      return (
-                        <tr key={art.id} className="hover:bg-[var(--color-bg-secondary)] transition-colors">
-                          <td className="px-4 py-3 font-semibold text-[var(--color-text)] max-w-sm truncate">
-                            {art.title}
-                          </td>
-                          <td className="px-3 py-3">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
-                                art.status === "published"
-                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                  : art.status === "draft"
-                                  ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                                  : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                              }`}
-                            >
-                              {statusLabel}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-[var(--color-text-muted)] whitespace-nowrap">
-                            {formatDateString(art.publishedAt ?? art.createdAt)}
-                          </td>
-                          <td className="px-4 py-3 text-right space-x-3 whitespace-nowrap">
-                            <Link
-                              href={`/admin/articles/${art.id}/edit`}
-                              className="text-[var(--color-primary)] hover:underline font-semibold"
-                            >
-                              {t("action.edit")}
-                            </Link>
-                            {art.status === "published" && (
-                              <Link
-                                href={`/news/${art.slug}`}
-                                target="_blank"
-                                className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                                title={t("action.viewPublic")}
-                              >
-                                <ExternalLink size={12} className="inline ml-1" />
-                              </Link>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+        <div className="min-w-0 space-y-6">
+          <TrendingVelocityCard initialData={trendingData} />
+          <RecentStories articles={recentArticles} />
         </div>
-
-        {/* Right Column: Breaking News, Live Poll & Tools (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Active Breaking Headlines */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap size={14} className="text-red-600" />
-                <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
-                  {t("widget.activeBreaking")}
-                </h3>
-              </div>
-              <Link
-                href="/admin/breaking-news"
-                className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
-              >
-                {t("action.edit")}
-              </Link>
-            </div>
-
-            {activeBreakingList.length === 0 ? (
-              <div className="p-4 text-center text-xs text-[var(--color-text-muted)]">
-                {t("widget.noBreaking")}
-              </div>
-            ) : (
-              <div className="divide-y divide-[var(--color-border)]">
-                {activeBreakingList.map((item) => (
-                  <div key={item.id} className="p-3.5 space-y-1">
-                    <p className="text-xs font-semibold text-[var(--color-text)] leading-snug">
-                      {item.headline}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">
-                      {t("widget.priority")}: {formatNumber(item.priority)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Active Poll Overview */}
-          {features?.admin_polls_manager !== false && (
-            <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
-              <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Vote size={14} className="text-[var(--color-text-muted)]" />
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
-                    {t("widget.activePoll")}
-                  </h3>
-                </div>
-                <Link
-                  href="/admin/polls"
-                  className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
-                >
-                  {t("widget.allPolls")}
-                </Link>
-              </div>
-
-              {featuredPoll ? (
-                <div className="p-4 space-y-3">
-                  <p className="text-xs font-bold text-[var(--color-text)] leading-relaxed">
-                    {featuredPoll.question}
-                  </p>
-
-                  <div className="space-y-2 pt-1">
-                    {Array.isArray(featuredPoll.options) &&
-                      featuredPoll.options.map((opt: string, idx: number) => {
-                        const count = Array.isArray(featuredPoll?.votes)
-                          ? (featuredPoll?.votes[idx] as number) || 0
-                          : 0;
-                        const total = featuredPoll?.totalVotes || 0;
-                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-
-                        return (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-[var(--color-text-muted)] truncate max-w-[160px]">
-                                {opt}
-                              </span>
-                              <span className="font-semibold text-[var(--color-text)]">
-                                {formatNumber(pct)}% ({formatNumber(count)})
-                              </span>
-                            </div>
-                            <div className="w-full h-1 bg-[var(--color-border)] rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-[var(--color-primary)]"
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-
-                  <div className="pt-2 border-t border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)] flex justify-between">
-                    <span>{t("widget.totalVotes")}:</span>
-                    <span className="font-semibold text-[var(--color-text)]">
-                      {formatNumber(featuredPoll.totalVotes)}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 text-center text-xs text-[var(--color-text-muted)]">
-                  {t("widget.noPolls")}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Section Distribution */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded overflow-hidden">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-between">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-[var(--color-text)]">
-                {t("widget.categories")}
-              </h3>
-              <Link
-                href="/admin/categories"
-                className="text-[11px] text-[var(--color-primary)] hover:underline font-semibold"
-              >
-                {t("widget.categoryList")}
-              </Link>
-            </div>
-
-            <div className="p-3.5 space-y-2">
-              {categoryBreakdown.map((cat, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--color-text)] font-medium">{cat.name}</span>
-                  <span className="text-xs font-semibold text-[var(--color-text-muted)]">
-                    {formatNumber(cat.count)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Editorial Quick Tools */}
-          <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded p-4 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-              {t("widget.quickTools")}
-            </h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Link
-                href="/admin/notifications"
-                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
-              >
-                <Bell size={13} className="text-[var(--color-primary)]" />
-                <span>{t("widget.push")}</span>
-              </Link>
-              <Link
-                href="/admin/ai-assistant"
-                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
-              >
-                <Sparkles size={13} className="text-[var(--color-primary)]" />
-                <span>{t("widget.ai")}</span>
-              </Link>
-              <Link
-                href="/admin/fact-checks"
-                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
-              >
-                <ShieldCheck size={13} className="text-[var(--color-primary)]" />
-                <span>{t("widget.factCheck")}</span>
-              </Link>
-              <Link
-                href="/admin/comments"
-                className="p-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] rounded flex items-center gap-1.5 transition-colors text-[var(--color-text)]"
-              >
-                <MessageSquare size={13} className="text-[var(--color-primary)]" />
-                <span>{t("widget.comments")}</span>
-              </Link>
-            </div>
-          </div>
-        </div>
+        <DashboardSidebar
+          pending={pendingReviews}
+          stats={stats}
+          breaking={activeBreakingList}
+          tools={quickTools}
+          enabledComments={features?.admin_comments_moderation !== false}
+        />
       </div>
+      <DashboardInsights
+        poll={featuredPoll}
+        categories={categoryBreakdown}
+        enabledPolls={features?.admin_polls_manager !== false}
+      />
     </div>
   );
 }

@@ -170,33 +170,30 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
   }
 
   return (
-    <div className="border border-[var(--color-border)] bg-[var(--color-bg)] rounded-md shadow-2xs overflow-hidden relative font-sans">
-      {/* Toast Alert */}
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
+      {/* A quiet live pulse complements, rather than replaces, status text. */}
       {toastMessage && (
-        <div className="absolute top-3 right-3 z-50 flex items-center gap-2 px-3.5 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-bold rounded shadow-lg border border-zinc-800 dark:border-zinc-200">
+        <div className="fixed right-4 bottom-4 z-50 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-3 text-xs font-semibold text-slate-700 shadow-xl dark:border-emerald-400/20 dark:bg-slate-900 dark:text-slate-200" role="status">
           <CheckCircle2 size={14} className="text-emerald-400 dark:text-emerald-600 flex-shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Terminal Masthead Header */}
-      <div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col justify-between gap-4 border-b border-[var(--color-border)] bg-slate-50/50 px-5 py-5 dark:bg-white/[0.025] sm:flex-row sm:items-center sm:px-6">
         {/* Left: Terminal Identity & Live Pulse */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 shadow-2xs">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-400/10 dark:text-indigo-400 dark:ring-indigo-400/20">
             <Activity size={16} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-[var(--color-text)] tracking-tight">
-                {isEn ? "Real-Time Traffic & Velocity Terminal" : "রিয়েল-টাইম ট্র্যাফিক ও সংবাদ ভেলোসিটি"}
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{isEn ? "Audience intelligence" : "পাঠকের তথ্য"}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-[15px] font-bold tracking-tight text-[var(--color-text)]">
+                {isEn ? "Real-Time Traffic & Velocity" : "রিয়েল-টাইম ট্রাফিক ও সংবাদ ভেলোসিটি"}
               </h2>
               {/* Live Network Pulse */}
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
+                <span className={`relative inline-flex size-2 rounded-full ${isRefreshing ? "bg-slate-400" : "bg-emerald-500"}`}></span>
                 <span className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
                   LIVE
                 </span>
@@ -230,9 +227,23 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
         {/* Right: Manual Refresh & Tab Sort */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {/* Segmented Sort Controls */}
-          <div className="inline-flex items-center p-0.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded text-xs font-mono">
+          <div className="inline-flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] p-0.5 text-xs" role="tablist" aria-label={isEn ? "Sort trending stories" : "ট্রেন্ডিং সংবাদ সাজান"} onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const tabs = ["velocity", "today", "allTime"] as const;
+            const current = tabs.indexOf(activeTab);
+            const next = (event.key === "ArrowLeft" ? (current + 2) % 3 : event.key === "ArrowRight" ? (current + 1) % 3 : 0) as 0 | 1 | 2;
+            const newTab = tabs[next];
+            setActiveTab(newTab);
+            document.getElementById(`tab-${newTab}`)?.focus();
+          }}>
             <button
-              type="button"
+            role="tab"
+            aria-selected={activeTab === "velocity"}
+            aria-controls="trending-panel"
+            id="tab-velocity"
+            tabIndex={activeTab === "velocity" ? 0 : -1}
+            type="button"
               onClick={() => setActiveTab("velocity")}
               className={`px-2.5 py-1 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
                 activeTab === "velocity"
@@ -243,6 +254,11 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
               {isEn ? "Velocity" : "গতিবেগ"}
             </button>
             <button
+              role="tab"
+              id="tab-today"
+              aria-controls="trending-panel"
+              aria-selected={activeTab === "today"}
+              tabIndex={activeTab === "today" ? 0 : -1}
               type="button"
               onClick={() => setActiveTab("today")}
               className={`px-2.5 py-1 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${
@@ -254,6 +270,11 @@ export function TrendingVelocityCard({ initialData }: TrendingVelocityCardProps)
               {isEn ? "24h Top" : "আজকের সেরা"}
             </button>
             <button
+              id="tab-allTime"
+              role="tab"
+              aria-controls="trending-panel"
+              aria-selected={activeTab === "allTime"}
+              tabIndex={activeTab === "allTime" ? 0 : -1}
               type="button"
               onClick={() => setActiveTab("allTime")}
               className={`px-2.5 py-1 text-xs font-semibold rounded-xs transition-colors cursor-pointer ${

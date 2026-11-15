@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -29,6 +29,7 @@ import {
   Bell,
   Search,
   ExternalLink,
+  X,
   Newspaper,
   SlidersHorizontal,
   BookOpen,
@@ -38,6 +39,14 @@ import {
 import { useAdminLanguage } from "@/contexts/AdminLanguageContext";
 import { authClient } from "@/lib/auth-client";
 import type { LucideIcon } from "lucide-react";
+
+const isMobileViewport = () => window.matchMedia("(max-width: 1023px)").matches;
+const subscribeToMobile = (listener: () => void) => {
+  const query = window.matchMedia("(max-width: 1023px)");
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+};
+
 import { type UserRole, isRoleAtLeast } from "@/lib/permissions";
 
 interface NavItemDef {
@@ -57,16 +66,36 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     groupKey: "group.overview",
     items: [
-      { key: "menu.dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
+      {
+        key: "menu.dashboard",
+        href: "/admin",
+        icon: LayoutDashboard,
+        exact: true,
+      },
       { key: "menu.analytics", href: "/admin/analytics", icon: BarChart3 },
     ],
   },
   {
     groupKey: "group.newsroom",
     items: [
-      { key: "menu.articles", href: "/admin/articles", icon: FileText, exact: true },
-      { key: "menu.newArticle", href: "/admin/articles/new", icon: PlusCircle, exact: true },
-      { key: "menu.profile", href: "/admin/profile", icon: UserCircle, exact: true },
+      {
+        key: "menu.articles",
+        href: "/admin/articles",
+        icon: FileText,
+        exact: true,
+      },
+      {
+        key: "menu.newArticle",
+        href: "/admin/articles/new",
+        icon: PlusCircle,
+        exact: true,
+      },
+      {
+        key: "menu.profile",
+        href: "/admin/profile",
+        icon: UserCircle,
+        exact: true,
+      },
       { key: "menu.guidelines", href: "/admin/guidelines", icon: BookOpen },
       { key: "menu.reviews", href: "/admin/reviews", icon: CheckSquare },
       { key: "menu.aiAssistant", href: "/admin/ai-assistant", icon: Sparkles },
@@ -77,7 +106,11 @@ const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { key: "menu.breaking", href: "/admin/breaking-news", icon: Zap },
       { key: "menu.notifications", href: "/admin/notifications", icon: Bell },
-      { key: "menu.socialPreview", href: "/admin/social-preview", icon: Share2 },
+      {
+        key: "menu.socialPreview",
+        href: "/admin/social-preview",
+        icon: Share2,
+      },
     ],
   },
   {
@@ -105,7 +138,11 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: "menu.users", href: "/admin/users", icon: Users },
       { key: "menu.roles", href: "/admin/roles", icon: Shield },
       { key: "menu.ads", href: "/admin/advertisements", icon: DollarSign },
-      { key: "menu.features", href: "/admin/features", icon: SlidersHorizontal },
+      {
+        key: "menu.features",
+        href: "/admin/features",
+        icon: SlidersHorizontal,
+      },
       { key: "menu.settings", href: "/admin/settings", icon: Settings },
       { key: "menu.auditLogs", href: "/admin/audit-logs", icon: ScrollText },
     ],
@@ -114,11 +151,22 @@ const NAV_GROUPS: NavGroupDef[] = [
 
 interface AdminSidebarProps {
   isOpen: boolean;
-  onClose?: () => void;
+  onClose?: (returnFocus?: boolean) => void;
+  sidebarRef: React.RefObject<HTMLElement | null>;
 }
 
-export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+export function AdminSidebar({
+  isOpen,
+  onClose,
+  sidebarRef,
+}: AdminSidebarProps) {
   const pathname = usePathname();
+  const isMobile = useSyncExternalStore(
+    subscribeToMobile,
+    isMobileViewport,
+    () => false,
+  );
+  const isInvisibleToA11y = !isOpen && isMobile;
   const { t, language } = useAdminLanguage();
   const [dbRole, setDbRole] = useState<UserRole | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -173,7 +221,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       "/admin/comments": "editor",
       "/admin/profile": "journalist",
     }),
-    []
+    [],
   );
 
   const ROUTE_FEATURE_MAP: Record<string, string> = useMemo(
@@ -185,7 +233,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       "/admin/fact-checks": "admin_fact_check_manager",
       "/admin/comments": "admin_comments_moderation",
     }),
-    []
+    [],
   );
 
   // Filter navigation items by search query, active feature flags, and role permissions
@@ -221,42 +269,53 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         items: matchedItems,
       };
     }).filter((group) => group.items.length > 0);
-  }, [searchQuery, t, featureFlags, ROUTE_FEATURE_MAP, ROUTE_ROLE_MAP, userRole]);
+  }, [
+    searchQuery,
+    t,
+    featureFlags,
+    ROUTE_FEATURE_MAP,
+    ROUTE_ROLE_MAP,
+    userRole,
+  ]);
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#111317] text-zinc-200 flex flex-col border-r border-zinc-800 transition-transform duration-200 lg:translate-x-0 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      }`}
+      ref={sidebarRef}
+      id="admin-navigation"
+      aria-label={language === "bn" ? "প্রশাসন নেভিগেশন" : "Admin navigation"}
+      aria-modal={isOpen ? true : undefined}
+      role={isOpen ? "dialog" : undefined}
+      inert={isInvisibleToA11y ? true : undefined}
+      className={`fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col border-r border-white/[0.06] bg-[#111827] text-slate-300 shadow-2xl transition-transform duration-300 ease-out lg:translate-x-0 lg:shadow-none ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
     >
       {/* Editorial Masthead */}
-      <div className="h-16 flex items-center justify-between px-5 border-b border-zinc-800/80 bg-[#0d0f12]">
-        <Link href="/admin" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded bg-[var(--color-primary)] text-white font-mono font-black flex items-center justify-center text-xs tracking-wider shadow-xs select-none">
+      <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-white/[0.06] px-5">
+        <Link href="/admin" className="group flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-indigo-600 text-[11px] font-black tracking-wide text-white shadow-[0_5px_15px_-5px_rgba(99,102,241,0.65)]">
             YN
           </div>
           <div className="leading-tight">
-            <span className="text-sm font-bold tracking-tight text-white block truncate max-w-[180px]">
+            <span className="block text-[15px] font-bold tracking-tight text-white">
               {t("brand.title")}
             </span>
-            <span className="text-[11px] text-zinc-400 block">
+            <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-500">
               {t("brand.subtitle")}
             </span>
           </div>
         </Link>
         {onClose && (
           <button
-            onClick={onClose}
+            onClick={() => onClose?.(true)}
             className="lg:hidden text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800"
             aria-label="Close menu"
           >
-            ✕
+            <X size={17} />
           </button>
         )}
       </div>
 
-      {/* Clean Search Input */}
-      <div className="p-3 border-b border-zinc-800/60 bg-[#111317]">
+      {/* Navigation search */}
+      <div className="shrink-0 border-b border-white/[0.06] p-4 pb-5">
         <div className="relative">
           <Search
             size={13}
@@ -267,21 +326,22 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("search.menu")}
-            className="w-full pl-8 pr-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 transition-colors"
+            aria-label={t("search.menu")}
+            className="w-full rounded-lg border border-white/[0.06] bg-[#0b1220] py-2.5 pl-8 pr-2.5 text-xs text-slate-200 outline-none transition-colors placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10"
           />
         </div>
       </div>
 
       {/* Categorized Navigation Links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4 text-xs scrollbar-thin scrollbar-thumb-zinc-800">
+      <nav className="admin-nav-scroll flex-1 space-y-5 overflow-y-auto px-4 py-5 text-xs">
         {filteredGroups.length === 0 ? (
           <div className="p-4 text-center text-xs text-zinc-500">
             &ldquo;{searchQuery}&rdquo; {t("search.noMatch")}
           </div>
         ) : (
           filteredGroups.map((group, gIdx) => (
-            <div key={gIdx} className={`space-y-1 ${gIdx > 0 ? "pt-2 border-t border-zinc-900" : ""}`}>
-              <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-between">
+            <div key={gIdx} className="space-y-1.5">
+              <div className="group-label mb-2 px-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                 <span>{t(group.groupKey)}</span>
               </div>
 
@@ -290,7 +350,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                   const isActive = item.exact
                     ? pathname === item.href
                     : pathname === item.href ||
-                      (item.href !== "/admin" && pathname.startsWith(item.href));
+                      (item.href !== "/admin" &&
+                        pathname.startsWith(item.href));
                   const Icon = item.icon;
                   const label = t(item.key);
 
@@ -298,18 +359,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={onClose}
-                      className={`flex items-center justify-between px-2.5 py-2 rounded transition-colors ${
+                      onClick={() => onClose?.()}
+                      className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors ${
                         isActive
-                          ? "bg-zinc-800 text-white font-semibold border-l-2 border-[var(--color-primary)]"
-                          : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900"
+                          ? "bg-indigo-500/[0.13] font-semibold text-white ring-1 ring-inset ring-indigo-400/15"
+                          : "text-slate-400 hover:bg-white/[0.045] hover:text-slate-100"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Icon
                           size={15}
                           className={`flex-shrink-0 ${
-                            isActive ? "text-[var(--color-primary)]" : "text-zinc-400"
+                            isActive ? "text-indigo-400" : "text-slate-500"
                           }`}
                         />
                         <span className="truncate">{label}</span>
@@ -330,11 +391,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       </nav>
 
       {/* Portal & Sign Out Footer */}
-      <div className="p-3 border-t border-zinc-800/80 bg-[#0d0f12] space-y-1">
+      <div className="shrink-0 space-y-1 border-t border-white/[0.06] bg-[#0d1422] p-4">
         <Link
           href="/"
           target="_blank"
-          className="flex items-center justify-between text-xs text-zinc-400 hover:text-white py-1.5 px-2.5 rounded hover:bg-zinc-800/80 transition-colors"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-xs text-slate-400 transition-colors hover:bg-white/[0.045] hover:text-white"
         >
           <span className="flex items-center gap-2">
             <Newspaper size={14} className="text-zinc-400" />
@@ -345,11 +406,13 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center justify-between text-xs text-red-400 hover:text-red-300 py-1.5 px-2.5 rounded hover:bg-red-950/40 transition-colors cursor-pointer text-left"
+          className="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs text-rose-300 transition-colors hover:bg-rose-400/10 hover:text-rose-200"
         >
           <span className="flex items-center gap-2">
             <LogOut size={14} className="text-red-400" />
-            <span>{language === "bn" ? "বার্তা কক্ষ থেকে প্রস্থান" : "Sign Out"}</span>
+            <span>
+              {language === "bn" ? "বার্তা কক্ষ থেকে প্রস্থান" : "Sign Out"}
+            </span>
           </span>
         </button>
       </div>

@@ -6,7 +6,10 @@ import { polls } from "@/db/schema/polls";
 import { comments } from "@/db/schema/comments";
 import { categories } from "@/db/schema/categories";
 import { eq, desc, count } from "drizzle-orm";
-import { getTrendingArticlesWithVelocity, type TrendingVelocityData } from "@/actions/articles";
+import {
+  getTrendingArticlesWithVelocity,
+  type TrendingVelocityData,
+} from "@/actions/articles";
 import { getFeatureFlags } from "@/actions/features";
 import { type FeatureFlags, getDefaultFeatureFlags } from "@/lib/features";
 import { AdminDashboardClient } from "./AdminDashboardClient";
@@ -14,6 +17,7 @@ import { AdminDashboardClient } from "./AdminDashboardClient";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
+  let dataUnavailable = false;
   let stats = {
     published: 0,
     drafts: 0,
@@ -52,8 +56,8 @@ export default async function AdminDashboardPage() {
   let featuredPoll: {
     id: string;
     question: string;
-    options: any;
-    votes: any;
+    options: string[];
+    votes: number[];
     totalVotes: number;
   } | null = null;
 
@@ -90,13 +94,28 @@ export default async function AdminDashboardPage() {
       trendingRes,
       featuresResult,
     ] = await Promise.all([
-      db.select({ count: count() }).from(articles).where(eq(articles.status, "published")),
-      db.select({ count: count() }).from(articles).where(eq(articles.status, "draft")),
-      db.select({ count: count() }).from(articles).where(eq(articles.status, "pending_review")),
+      db
+        .select({ count: count() })
+        .from(articles)
+        .where(eq(articles.status, "published")),
+      db
+        .select({ count: count() })
+        .from(articles)
+        .where(eq(articles.status, "draft")),
+      db
+        .select({ count: count() })
+        .from(articles)
+        .where(eq(articles.status, "pending_review")),
       db.select({ count: count() }).from(user),
-      db.select({ count: count() }).from(breakingNews).where(eq(breakingNews.isActive, true)),
+      db
+        .select({ count: count() })
+        .from(breakingNews)
+        .where(eq(breakingNews.isActive, true)),
       db.select({ count: count() }).from(polls).where(eq(polls.isActive, true)),
-      db.select({ count: count() }).from(comments).where(eq(comments.status, "pending")),
+      db
+        .select({ count: count() })
+        .from(comments)
+        .where(eq(comments.status, "pending")),
       db
         .select({
           id: articles.id,
@@ -151,7 +170,10 @@ export default async function AdminDashboardPage() {
           count: count(articleCategories.articleId),
         })
         .from(categories)
-        .leftJoin(articleCategories, eq(categories.id, articleCategories.categoryId))
+        .leftJoin(
+          articleCategories,
+          eq(categories.id, articleCategories.categoryId),
+        )
         .groupBy(categories.id, categories.name)
         .orderBy(desc(count(articleCategories.articleId)))
         .limit(6),
@@ -173,7 +195,7 @@ export default async function AdminDashboardPage() {
     pendingReviews = pendingList;
     activeBreakingList = breakingItems;
     if (topPoll && topPoll.length > 0) {
-      featuredPoll = topPoll[0] as any;
+      featuredPoll = topPoll[0] ?? null;
     }
     categoryBreakdown = categoriesData.map((c) => ({
       name: c.name,
@@ -189,12 +211,14 @@ export default async function AdminDashboardPage() {
         pendingReviews={pendingReviews}
         activeBreakingList={activeBreakingList}
         featuredPoll={featuredPoll}
+        dataUnavailable={dataUnavailable}
         categoryBreakdown={categoryBreakdown}
         trendingData={trendingData}
         features={features}
       />
     );
   } catch (error) {
+    dataUnavailable = true;
     console.error("Could not query admin dashboard stats from DB:", error);
   }
 

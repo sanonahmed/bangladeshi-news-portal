@@ -170,6 +170,19 @@ body {
   margin: 1rem 0;
 }
 
+.admin-workspace {
+  background-color: #f7f8fb;
+  background-image: radial-gradient(rgba(100,116,139,0.09) 0.6px, transparent 0.6px);
+  background-size: 16px 16px;
+}
+.dark .admin-workspace {
+  background-color: #0d1119;
+  background-image: radial-gradient(rgba(148,163,184,0.045) 0.6px, transparent 0.6px);
+}
+.admin-nav-scroll {
+  scrollbar-gutter: stable;
+}
+
 /* Breaking news ticker */
 .breaking-ticker {
   animation: ticker-scroll linear infinite;
