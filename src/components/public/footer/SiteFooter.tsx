@@ -372,24 +372,6 @@ export function SiteFooter({ settings }: SiteFooterProps) {
 
         </div>
 
-        {/* 3. Editorial & Management Credentials Strip */}
-        <div className="mt-8 pt-6 border-t border-gray-800/80 bg-gray-900/30 rounded-xl p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-gray-400 text-center md:text-left">
-            <div>
-              <p className="text-gray-300 font-semibold">ভারপ্রাপ্ত সম্পাদক ও প্রকাশক</p>
-              <p className="text-white font-bold">মোঃ আরিফুল ইসলাম</p>
-            </div>
-            <div>
-              <p className="text-gray-300 font-semibold">বার্তা ও বাণিজ্যিক কার্যালয়</p>
-              <p className="text-gray-400 truncate">{settings.address || "প্রগতি সরণি, বারিধারা, ঢাকা-১২১২"}</p>
-            </div>
-            <div className="md:text-right">
-              <p className="text-gray-300 font-semibold">নিবন্ধন ও সংস্করণ</p>
-              <p className="text-gray-400">অনলাইন ও জাতীয় মুদ্রণ সংস্করণ</p>
-            </div>
-          </div>
-        </div>
-
         {/* 4. Bottom Copyright & Admin Link */}
         <div className="mt-6 pt-4 border-t border-gray-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 text-center sm:text-left">
           <p>
