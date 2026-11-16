@@ -54,8 +54,8 @@ export function LiveMatchTickerBar() {
   return (
     <div className="bg-[#0f1115] text-white border-b border-zinc-800 text-xs py-1.5 px-3 select-none relative z-30">
       <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-3">
-        {/* Left Label */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Left Label (hidden on mobile) */}
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           <Link
             href="/live-score"
             className="flex items-center gap-1.5 bg-[var(--color-primary)] text-white px-2 py-0.5 font-bold uppercase tracking-wider text-[10px]"
@@ -120,8 +120,8 @@ export function LiveMatchTickerBar() {
           </Link>
         </div>
 
-        {/* Right: Controls & All Scores Link */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Controls & All Scores Link (hidden on mobile) */}
+        <div className="hidden md:flex items-center gap-2 shrink-0">
           <div className="hidden sm:flex items-center gap-0.5">
             <button
               onClick={() => setActiveIndex((prev) => (prev - 1 + matches.length) % matches.length)}

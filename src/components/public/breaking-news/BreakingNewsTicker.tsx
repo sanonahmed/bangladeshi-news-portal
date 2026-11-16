@@ -49,7 +49,7 @@ export function BreakingNewsTicker({ items }: BreakingNewsTickerProps) {
         {/* Urgent Badge */}
         <Link
           href="/breaking"
-          className="flex-shrink-0 bg-black/30 hover:bg-black/40 px-3 py-1.5 font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap flex items-center gap-1.5 rounded transition-colors"
+          className="hidden md:flex flex-shrink-0 bg-black/30 hover:bg-black/40 px-3 py-1.5 font-bold text-xs sm:text-sm tracking-wide whitespace-nowrap items-center gap-1.5 rounded transition-colors"
           title="ব্রেকিং নিউজ আর্কাইভ দেখুন"
         >
           <span className="relative flex h-2.5 w-2.5">
@@ -105,7 +105,7 @@ export function BreakingNewsTicker({ items }: BreakingNewsTickerProps) {
         </div>
 
         {/* Ticker Controls (Pause/Play, Archive & Dismiss) */}
-        <div className="flex-shrink-0 flex items-center gap-1 pl-1 border-l border-white/20">
+        <div className="hidden md:flex flex-shrink-0 items-center gap-1 pl-1 border-l border-white/20">
           <button
             type="button"
             onClick={() => setIsPaused(!isPaused)}

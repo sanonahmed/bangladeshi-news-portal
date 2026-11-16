@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/public/header/SiteHeader";
 import { LiveMatchTickerBar } from "@/components/public/sports/LiveMatchTickerBar";
 import { BreakingNewsTicker } from "@/components/public/breaking-news/BreakingNewsTicker";
 import { FloatingBreakingAlert } from "@/components/public/notifications/FloatingBreakingAlert";
+import { PublicNotificationPermissionPrompt } from "@/components/public/notifications/PublicNotificationPermissionPrompt";
 import { SiteFooter } from "@/components/public/footer/SiteFooter";
 import { SitePresenceTracker } from "@/components/public/SitePresenceTracker";
 import { getBreakingNews } from "@/actions/breaking-news";
@@ -33,6 +34,9 @@ export default async function PublicLayout({
       <main className="flex-1">
         {children}
       </main>
+      {features.push_notifications !== false && (
+        <PublicNotificationPermissionPrompt enabled />
+      )}
       {features.breaking_ticker !== false && <FloatingBreakingAlert />}
       <SiteFooter settings={settings} />
     </div>
